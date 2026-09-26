@@ -1,0 +1,449 @@
+package com.example.ui
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.local.AppDatabase
+import com.example.data.local.entity.*
+import com.example.data.repository.CampusRepository
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.max
+
+data class SubjectAttendanceStats(
+    val subject: SubjectEntity,
+    val attended: Int,
+    val totalConducted: Int,
+    val facultyCancelled: Int,
+    val collegeOff: Int,
+    val proxyCount: Int,
+    val percentage: Double,
+    val bunksAvailable: Int,
+    val classesNeeded: Int
+)
+
+data class GlobalAttendanceSummary(
+    val totalAttended: Int,
+    val totalConducted: Int,
+    val totalFacultyCancelled: Int,
+    val totalProxy: Int,
+    val overallPercentage: Double,
+    val atRiskSubjectCount: Int,
+    val criticalSubjectCount: Int
+)
+
+data class SlotDisplayItem(
+    val slot: TimetableSlotEntity,
+    val subject: SubjectEntity?,
+    val currentLog: AttendanceLogEntity?,
+    val isOngoing: Boolean
+)
+
+data class CiaAssessmentBreakdown(
+    val attendanceScore: Double, // max 10
+    val sessionalsScore: Double, // max 20
+    val classTestsScore: Double, // max 10
+    val practicalWorkshopScore: Double, // max 10
+    val totalInternalScore: Double // max 50
+)
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository: CampusRepository
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+
+    private val _selectedDate = MutableStateFlow(LocalDate.now().format(dateFormatter))
+    val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
+
+    init {
+        val db = AppDatabase.getDatabase(application)
+        repository = CampusRepository(db)
+        viewModelScope.launch {
+            repository.checkAndInitializeDefaultData()
+        }
+    }
+
+    val subjects: StateFlow<List<SubjectEntity>> = repository.allSubjects
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val slots: StateFlow<List<TimetableSlotEntity>> = repository.allSlots
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val logs: StateFlow<List<AttendanceLogEntity>> = repository.allLogs
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val assessments: StateFlow<List<AssessmentEntity>> = repository.allAssessments
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val dayStatuses: StateFlow<List<DailyDayStatusEntity>> = repository.allDayStatuses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val medicalLeaves: StateFlow<List<MedicalLeaveEntity>> = repository.allMedicalLeaves
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Per-subject detailed attendance statistics with the strict mathematical formulas
+    val subjectStats: StateFlow<List<SubjectAttendanceStats>> = combine(
+        subjects,
+        logs
+    ) { subjectList, logList ->
+        subjectList.map { subject ->
+            val subLogs = logList.filter { it.subjectId == subject.id }
+
+            // Logs marked attended (including proxies)
+            val logAttended = subLogs.count { it.status == "attended" }
+            val proxyCount = subLogs.count { it.status == "attended" && it.isProxy }
+            val logBunked = subLogs.count { it.status == "bunked" }
+            val facultyCancelled = subLogs.count { it.status == "cancelled_by_faculty" }
+            val collegeOff = subLogs.count { it.status == "college_off" }
+
+            // Conducted classes = attended + bunked (excluded: faculty cancelled & college off)
+            val baseConducted = logAttended + logBunked
+
+            // Total official = app logs + reconciled offsets
+            val totalConducted = max(0, baseConducted + subject.reconciledTotalOffset)
+            val attended = max(0, logAttended + subject.reconciledAttendedOffset)
+
+            val percentage = if (totalConducted > 0) {
+                (attended.toDouble() / totalConducted.toDouble()) * 100.0
+            } else {
+                100.0
+            }
+
+            // Predictive bunk / catch-up calculation per engineering specification:
+            // If % >= 75: Bunks Available = floor((Attended - (0.75 * Total)) / 0.75)
+            // If % < 75: Classes Needed = ceil(((0.75 * Total) - Attended) / 0.25)
+            val bunksAvailable = if (percentage >= 75.0) {
+                val safe = floor((attended.toDouble() - (0.75 * totalConducted.toDouble())) / 0.75).toInt()
+                max(0, safe)
+            } else {
+                0
+            }
+
+            val classesNeeded = if (percentage < 75.0) {
+                val needed = ceil(((0.75 * totalConducted.toDouble()) - attended.toDouble()) / 0.25).toInt()
+                max(1, needed)
+            } else {
+                0
+            }
+
+            SubjectAttendanceStats(
+                subject = subject,
+                attended = attended,
+                totalConducted = totalConducted,
+                facultyCancelled = facultyCancelled,
+                collegeOff = collegeOff,
+                proxyCount = proxyCount,
+                percentage = percentage,
+                bunksAvailable = bunksAvailable,
+                classesNeeded = classesNeeded
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Global summary across all subjects
+    val globalSummary: StateFlow<GlobalAttendanceSummary> = subjectStats.map { statsList ->
+        var totalAtt = 0
+        var totalCond = 0
+        var totalCan = 0
+        var totalProxy = 0
+        var atRisk = 0
+        var critical = 0
+
+        for (stat in statsList) {
+            totalAtt += stat.attended
+            totalCond += stat.totalConducted
+            totalCan += stat.facultyCancelled
+            totalProxy += stat.proxyCount
+            if (stat.percentage < 65.0) {
+                critical++
+            } else if (stat.percentage < 75.0) {
+                atRisk++
+            }
+        }
+
+        val overallPct = if (totalCond > 0) {
+            (totalAtt.toDouble() / totalCond.toDouble()) * 100.0
+        } else {
+            100.0
+        }
+
+        GlobalAttendanceSummary(
+            totalAttended = totalAtt,
+            totalConducted = totalCond,
+            totalFacultyCancelled = totalCan,
+            totalProxy = totalProxy,
+            overallPercentage = overallPct,
+            atRiskSubjectCount = atRisk,
+            criticalSubjectCount = critical
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        GlobalAttendanceSummary(0, 0, 0, 0, 100.0, 0, 0)
+    )
+
+    // Today's display slots with live ongoing class indicator
+    val currentDaySlots: StateFlow<List<SlotDisplayItem>> = combine(
+        selectedDate,
+        slots,
+        subjects,
+        logs
+    ) { dateStr, slotList, subList, logList ->
+        val localDate = try {
+            LocalDate.parse(dateStr, dateFormatter)
+        } catch (_: Exception) {
+            LocalDate.now()
+        }
+        val dayOfWeek = localDate.dayOfWeek.value // 1..7
+
+        val isToday = (dateStr == LocalDate.now().format(dateFormatter))
+        val nowTime = LocalTime.now()
+
+        val daySlots = slotList.filter { it.dayOfWeek == dayOfWeek }
+            .sortedBy { it.startTime }
+
+        val dayLogs = logList.filter { it.date == dateStr }
+
+        daySlots.map { slot ->
+            val sub = subList.find { it.id == slot.subjectId }
+            val log = dayLogs.find { it.slotId == slot.id }
+
+            var isOngoing = false
+            if (isToday) {
+                try {
+                    val sTime = LocalTime.parse(slot.startTime)
+                    val eTime = LocalTime.parse(slot.endTime)
+                    isOngoing = (nowTime.isAfter(sTime) || nowTime == sTime) && nowTime.isBefore(eTime)
+                } catch (_: Exception) {}
+            }
+
+            SlotDisplayItem(
+                slot = slot,
+                subject = sub,
+                currentLog = log,
+                isOngoing = isOngoing
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Ad-hoc / extra classes for the selected date
+    val currentDayExtraClasses: StateFlow<List<Pair<AttendanceLogEntity, SubjectEntity?>>> = combine(
+        selectedDate,
+        subjects,
+        logs
+    ) { dateStr, subList, logList ->
+        logList.filter { it.date == dateStr && (it.isExtraClass || it.slotId == null) }
+            .map { log ->
+                val sub = subList.find { it.id == log.subjectId }
+                Pair(log, sub)
+            }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Selected day's status (holiday / strike / mass bunk / normal)
+    val selectedDayStatus: StateFlow<DailyDayStatusEntity?> = combine(
+        selectedDate,
+        dayStatuses
+    ) { dateStr, statusList ->
+        statusList.find { it.date == dateStr }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // Continuous Internal Assessment (CIA) calculation
+    val ciaBreakdown: StateFlow<CiaAssessmentBreakdown> = combine(
+        globalSummary,
+        assessments
+    ) { summary, assessmentList ->
+        // 1. Attendance component (10 Marks)
+        val attScore = when {
+            summary.overallPercentage >= 90.0 -> 10.0
+            summary.overallPercentage >= 85.0 -> 8.5
+            summary.overallPercentage >= 80.0 -> 7.0
+            summary.overallPercentage >= 75.0 -> 5.0
+            else -> 0.0
+        }
+
+        // 2. Sessionals component (20 Marks)
+        val sessionalList = assessmentList.filter { it.type.startsWith("sessional") && it.obtainedMarks != null }
+        val sessionalScore = if (sessionalList.isNotEmpty()) {
+            val totalObtained = sessionalList.sumOf { it.obtainedMarks ?: 0.0 }
+            val totalMax = sessionalList.sumOf { it.maxMarks }
+            if (totalMax > 0) (totalObtained / totalMax) * 20.0 else 16.0
+        } else {
+            16.0 // projected default
+        }
+
+        // 3. Class tests & assignments (10 Marks)
+        val ctList = assessmentList.filter { (it.type == "ct" || it.type == "assignment") && it.obtainedMarks != null }
+        val ctScore = if (ctList.isNotEmpty()) {
+            val totalObt = ctList.sumOf { it.obtainedMarks ?: 0.0 }
+            val totalMax = ctList.sumOf { it.maxMarks }
+            if (totalMax > 0) (totalObt / totalMax) * 10.0 else 8.0
+        } else {
+            8.0
+        }
+
+        // 4. Practical / Workshop / Drawing (10 Marks)
+        val practicalList = assessmentList.filter {
+            (it.type == "drawing_sheet" || it.type == "workshop_job" || it.type.startsWith("viva"))
+        }
+        val practicalScore = if (practicalList.isNotEmpty()) {
+            val evaluated = practicalList.filter { it.obtainedMarks != null }
+            if (evaluated.isNotEmpty()) {
+                val totalObt = evaluated.sumOf { it.obtainedMarks ?: 0.0 }
+                val totalMax = evaluated.sumOf { it.maxMarks }
+                (totalObt / totalMax) * 10.0
+            } else {
+                8.5
+            }
+        } else {
+            8.5
+        }
+
+        val total = attScore + sessionalScore + ctScore + practicalScore
+
+        CiaAssessmentBreakdown(
+            attendanceScore = attScore,
+            sessionalsScore = sessionalScore,
+            classTestsScore = ctScore,
+            practicalWorkshopScore = practicalScore,
+            totalInternalScore = total
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        CiaAssessmentBreakdown(10.0, 16.0, 8.0, 8.5, 42.5)
+    )
+
+    // User actions
+    fun setSelectedDate(date: String) {
+        _selectedDate.value = date
+    }
+
+    fun stepDay(delta: Long) {
+        val current = try {
+            LocalDate.parse(_selectedDate.value, dateFormatter)
+        } catch (_: Exception) {
+            LocalDate.now()
+        }
+        _selectedDate.value = current.plusDays(delta).format(dateFormatter)
+    }
+
+    fun resetToToday() {
+        _selectedDate.value = LocalDate.now().format(dateFormatter)
+    }
+
+    fun setSlotAttendance(
+        slotId: Long,
+        subjectId: Long,
+        status: String,
+        isProxy: Boolean = false,
+        notes: String? = null
+    ) {
+        viewModelScope.launch {
+            repository.setSlotAttendance(
+                date = _selectedDate.value,
+                slotId = slotId,
+                subjectId = subjectId,
+                status = status,
+                isProxy = isProxy,
+                isExtraClass = false,
+                notes = notes
+            )
+        }
+    }
+
+    fun markWholeDayPresent() {
+        viewModelScope.launch {
+            val items = currentDaySlots.value
+            val slotEntities = items.map { it.slot }
+            repository.markWholeDayPresent(_selectedDate.value, slotEntities)
+        }
+    }
+
+    fun markMassBunkOrOff(category: String) {
+        viewModelScope.launch {
+            val items = currentDaySlots.value
+            val slotEntities = items.map { it.slot }
+            repository.markMassBunkOrOff(_selectedDate.value, slotEntities, category)
+        }
+    }
+
+    fun logExtraClass(subjectId: Long, status: String, isProxy: Boolean, notes: String) {
+        viewModelScope.launch {
+            repository.logAdHocExtraClass(_selectedDate.value, subjectId, status, isProxy, notes)
+        }
+    }
+
+    fun reconcileSubject(subjectId: Long, officialAttended: Int, officialTotal: Int) {
+        viewModelScope.launch {
+            val currentStat = subjectStats.value.find { it.subject.id == subjectId }
+            val currentAttended = currentStat?.attended ?: 0
+            val currentTotal = currentStat?.totalConducted ?: 0
+            repository.reconcileSubject(subjectId, officialAttended, officialTotal, currentAttended, currentTotal)
+        }
+    }
+
+    fun saveSubject(subject: SubjectEntity) {
+        viewModelScope.launch {
+            if (subject.id == 0L) {
+                repository.addSubject(subject)
+            } else {
+                repository.updateSubject(subject)
+            }
+        }
+    }
+
+    fun deleteSubject(subject: SubjectEntity) {
+        viewModelScope.launch {
+            repository.deleteSubject(subject)
+        }
+    }
+
+    fun saveAssessment(assessment: AssessmentEntity) {
+        viewModelScope.launch {
+            if (assessment.id == 0L) {
+                repository.addAssessment(assessment)
+            } else {
+                repository.updateAssessment(assessment)
+            }
+        }
+    }
+
+    fun deleteAssessment(id: Long) {
+        viewModelScope.launch {
+            repository.deleteAssessment(id)
+        }
+    }
+
+    fun saveMedicalLeave(leave: MedicalLeaveEntity) {
+        viewModelScope.launch {
+            if (leave.id == 0L) {
+                repository.addMedicalLeave(leave)
+            } else {
+                repository.updateMedicalLeave(leave)
+            }
+        }
+    }
+
+    fun deleteMedicalLeave(id: Long) {
+        viewModelScope.launch {
+            repository.deleteMedicalLeave(id)
+        }
+    }
+
+    fun preloadDefaultData() {
+        viewModelScope.launch {
+            repository.preloadDefaultIertData()
+        }
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            repository.clearAllData()
+        }
+    }
+}

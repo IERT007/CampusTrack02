@@ -1,0 +1,6 @@
+{
+  "name": "CampusTrack IERT",
+  "description": "Offline-first Academic & Attendance Management app for IERT students featuring real-time safe zone bunk calculator, recurring timetable, sessional assessment tracker, and audit analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
