@@ -11,7 +11,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class CampusRepository(private val db: AppDatabase) {
-
     val allSubjects: Flow<List<SubjectEntity>> = db.subjectDao().getAllSubjects()
     val allSlots: Flow<List<TimetableSlotEntity>> = db.timetableSlotDao().getAllSlots()
     val allLogs: Flow<List<AttendanceLogEntity>> = db.attendanceLogDao().getAllLogs()
@@ -72,7 +71,7 @@ class CampusRepository(private val db: AppDatabase) {
     suspend fun markMassBunkOrOff(
         date: String,
         slots: List<TimetableSlotEntity>,
-        category: String // "college_holiday", "mass_bunk", "strike"
+        category: String
     ) = withContext(Dispatchers.IO) {
         val statusString = if (category == "mass_bunk") "bunked" else "college_off"
         db.dailyDayStatusDao().insertOrUpdate(
@@ -169,11 +168,11 @@ class CampusRepository(private val db: AppDatabase) {
     }
 
     suspend fun updateTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
-        db.timetableSlotDao().updateSlot(slot)
+        db.timetableSlotDao().insertSlot(slot)
     }
 
     suspend fun deleteTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
-        db.timetableSlotDao().deleteSlot(slot)
+        db.timetableSlotDao().deleteSlotById(slot.id)
     }
 
     suspend fun deleteTimetableSlotById(id: Long) = withContext(Dispatchers.IO) {
@@ -181,7 +180,10 @@ class CampusRepository(private val db: AppDatabase) {
     }
 
     suspend fun checkAndInitializeDefaultData() = withContext(Dispatchers.IO) {
-        // App starts fresh with an empty database per specification
+        val currentSubjects = db.subjectDao().getAllSubjects().first()
+        if (currentSubjects.isEmpty()) {
+            preloadDefaultIertData()
+        }
     }
 
     suspend fun preloadDefaultIertData() = withContext(Dispatchers.IO) {
@@ -194,92 +196,6 @@ class CampusRepository(private val db: AppDatabase) {
 
         db.subjectDao().insertSubjects(IertDefaultData.defaultSubjects)
         db.timetableSlotDao().insertSlots(IertDefaultData.createDefaultSlots())
-        db.assessmentDao().insertAssessments(IertDefaultData.createDefaultAssessments())
-        db.medicalLeaveDao().insertMedicalLeave(IertDefaultData.createDefaultMedicalLeaves().first())
-
-        // Populate sample attendance logs for past 5 weekdays
-        val today = LocalDate.now()
-        val dtf = DateTimeFormatter.ISO_LOCAL_DATE
-        val slots = IertDefaultData.createDefaultSlots()
-
-        for (i in 1..5) {
-            val pastDate = today.minusDays(i.toLong())
-            val dayOfWeekVal = pastDate.dayOfWeek.value
-            if (dayOfWeekVal in 1..6) {
-                val daySlots = slots.filter { it.dayOfWeek == dayOfWeekVal }
-                for ((idx, slot) in daySlots.withIndex()) {
-                    val status = when {
-                        i == 2 && idx == 1 -> "cancelled_by_faculty"
-                        i == 4 && idx == 2 -> "bunked"
-                        i == 3 && idx == 0 -> "attended" // proxy example
-                        else -> "attended"
-                    }
-                    val isProxy = (i == 3 && idx == 0)
-                    db.attendanceLogDao().insertLog(
-                        AttendanceLogEntity(
-                            date = pastDate.format(dtf),
-                            slotId = slot.id,
-                            subjectId = slot.subjectId,
-                            status = status,
-                            isProxy = isProxy,
-                            isExtraClass = false,
-                            notes = if (isProxy) "Proxy marked by batchmate" else if (status == "cancelled_by_faculty") "Faculty on CL" else null
-                        )
-                    )
-                }
-            }
-        }
-    }
-    
-    suspend fun checkAndInitializeDefaultData() = withContext(Dispatchers.IO) {
-        // App starts fresh with an empty database per specification
-    }
-
-    suspend fun preloadDefaultIertData() = withContext(Dispatchers.IO) {
-        db.subjectDao().deleteAllSubjects()
-        db.timetableSlotDao().deleteAllSlots()
-        db.attendanceLogDao().deleteAllLogs()
-        db.assessmentDao().deleteAllAssessments()
-        db.dailyDayStatusDao().deleteAllDayStatuses()
-        db.medicalLeaveDao().deleteAllMedicalLeaves()
-
-        db.subjectDao().insertSubjects(IertDefaultData.defaultSubjects)
-        db.timetableSlotDao().insertSlots(IertDefaultData.createDefaultSlots())
-        db.assessmentDao().insertAssessments(IertDefaultData.createDefaultAssessments())
-        db.medicalLeaveDao().insertMedicalLeave(IertDefaultData.createDefaultMedicalLeaves().first())
-
-        // Populate sample attendance logs for past 5 weekdays
-        val today = LocalDate.now()
-        val dtf = DateTimeFormatter.ISO_LOCAL_DATE
-        val slots = IertDefaultData.createDefaultSlots()
-
-        for (i in 1..5) {
-            val pastDate = today.minusDays(i.toLong())
-            val dayOfWeekVal = pastDate.dayOfWeek.value
-            if (dayOfWeekVal in 1..6) {
-                val daySlots = slots.filter { it.dayOfWeek == dayOfWeekVal }
-                for ((idx, slot) in daySlots.withIndex()) {
-                    val status = when {
-                        i == 2 && idx == 1 -> "cancelled_by_faculty"
-                        i == 4 && idx == 2 -> "bunked"
-                        i == 3 && idx == 0 -> "attended" // proxy example
-                        else -> "attended"
-                    }
-                    val isProxy = (i == 3 && idx == 0)
-                    db.attendanceLogDao().insertLog(
-                        AttendanceLogEntity(
-                            date = pastDate.format(dtf),
-                            slotId = slot.id,
-                            subjectId = slot.subjectId,
-                            status = status,
-                            isProxy = isProxy,
-                            isExtraClass = false,
-                            notes = if (isProxy) "Proxy marked by batchmate" else if (status == "cancelled_by_faculty") "Faculty on CL" else null
-                        )
-                    )
-                }
-            }
-        }
     }
 
     suspend fun clearAllData() = withContext(Dispatchers.IO) {
