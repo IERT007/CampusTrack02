@@ -45,6 +45,12 @@ interface TimetableSlotDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSlot(slot: TimetableSlotEntity): Long
 
+    @Update
+    suspend fun updateSlot(slot: TimetableSlotEntity)
+
+    @Delete
+    suspend fun deleteSlot(slot: TimetableSlotEntity)
+
     @Query("DELETE FROM timetable_slots WHERE id = :id")
     suspend fun deleteSlotById(id: Long)
 

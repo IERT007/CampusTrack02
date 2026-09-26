@@ -164,11 +164,24 @@ class CampusRepository(private val db: AppDatabase) {
         db.medicalLeaveDao().deleteMedicalLeaveById(id)
     }
 
+    suspend fun addTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
+        db.timetableSlotDao().insertSlot(slot)
+    }
+
+    suspend fun updateTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
+        db.timetableSlotDao().updateSlot(slot)
+    }
+
+    suspend fun deleteTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
+        db.timetableSlotDao().deleteSlot(slot)
+    }
+
+    suspend fun deleteTimetableSlotById(id: Long) = withContext(Dispatchers.IO) {
+        db.timetableSlotDao().deleteSlotById(id)
+    }
+
     suspend fun checkAndInitializeDefaultData() = withContext(Dispatchers.IO) {
-        val currentSubjects = db.subjectDao().getAllSubjects().first()
-        if (currentSubjects.isEmpty()) {
-            preloadDefaultIertData()
-        }
+        // App starts fresh with an empty database per specification
     }
 
     suspend fun preloadDefaultIertData() = withContext(Dispatchers.IO) {

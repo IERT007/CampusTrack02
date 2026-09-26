@@ -29,6 +29,8 @@ import com.example.ui.MainViewModel
 import com.example.ui.SlotDisplayItem
 import com.example.ui.components.*
 import com.example.ui.dialogs.ExtraClassDialog
+import com.example.ui.dialogs.RetroactiveDatePickerDialog
+import com.example.ui.dialogs.WeeklyTimetableEditorDialog
 import com.example.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -40,6 +42,7 @@ fun TodayOperationsDashboard(
 ) {
     val context = LocalContext.current
     val selectedDateStr by viewModel.selectedDate.collectAsState()
+    val allSlots by viewModel.slots.collectAsState()
     val slotItems by viewModel.currentDaySlots.collectAsState()
     val extraClasses by viewModel.currentDayExtraClasses.collectAsState()
     val dayStatus by viewModel.selectedDayStatus.collectAsState()
@@ -47,6 +50,8 @@ fun TodayOperationsDashboard(
     val globalSummary by viewModel.globalSummary.collectAsState()
 
     var showExtraClassDialog by remember { mutableStateOf(false) }
+    var showWeeklyTimetableDialog by remember { mutableStateOf(false) }
+    var showDatePickerDialog by remember { mutableStateOf(false) }
     var showDayEndConfirmPrompt by remember { mutableStateOf(true) }
 
     val parsedDate = remember(selectedDateStr) {
@@ -56,8 +61,12 @@ fun TodayOperationsDashboard(
             LocalDate.now()
         }
     }
+    val today = remember { LocalDate.now() }
     val isToday = remember(selectedDateStr) {
-        selectedDateStr == LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        selectedDateStr == today.format(DateTimeFormatter.ISO_LOCAL_DATE)
+    }
+    val isPastDate = remember(parsedDate, today) {
+        parsedDate.isBefore(today)
     }
 
     val dayName = remember(parsedDate) {
@@ -79,52 +88,198 @@ fun TodayOperationsDashboard(
         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Date Switcher Header
+        // 0. Top Management & Calendar Navigation Bar
         item {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0x1A1F293D))
-                    .border(1.dp, GlassBorderTop, RoundedCornerShape(16.dp))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(onClick = { viewModel.stepDay(-1) }) {
+                Button(
+                    onClick = {
+                        triggerHapticFeedback(context, false)
+                        showWeeklyTimetableDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.7f)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("manage_weekly_timetable_btn")
+                ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Previous Day",
-                        tint = NeonCyan
+                        imageVector = Icons.Default.EditCalendar,
+                        contentDescription = null,
+                        tint = NeonCyan,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Manage Weekly Timetable",
+                        color = NeonCyan,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (isToday) "Today • $formattedDate" else formattedDate,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isToday) NeonCyan else TextPrimary
+                Button(
+                    onClick = {
+                        triggerHapticFeedback(context, false)
+                        showDatePickerDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderTop),
+                    modifier = Modifier.testTag("open_calendar_picker_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = "Calendar",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(16.dp)
                     )
-                    Text(
-                        text = "IERT Prayagraj • Mechanical Engg",
-                        fontSize = 10.sp,
-                        color = TextMuted
-                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Calendar", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+        }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (!isToday) {
-                        TextButton(onClick = { viewModel.resetToToday() }) {
-                            Text("Today", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    IconButton(onClick = { viewModel.stepDay(1) }) {
+        // 1. Date Switcher Header
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0x1A1F293D))
+                        .border(1.dp, GlassBorderTop, RoundedCornerShape(16.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { viewModel.stepDay(-1) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Next Day",
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Previous Day",
                             tint = NeonCyan
                         )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { showDatePickerDialog = true }
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isToday) "Today • $formattedDate" else formattedDate,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isToday) NeonCyan else (if (isPastDate) WarningAmber else TextPrimary)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Pick Date", tint = NeonCyan, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text = "IERT Prayagraj • Mechanical Engg",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!isToday) {
+                            TextButton(onClick = { viewModel.resetToToday() }) {
+                                Text("Today", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        IconButton(onClick = { viewModel.stepDay(1) }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Next Day",
+                                tint = NeonCyan
+                            )
+                        }
+                    }
+                }
+
+                // Horizontal Past / Current Days Strip for quick 1-tap retroactive jumping
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0x12FFFFFF))
+                        .padding(vertical = 4.dp, horizontal = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Show last 6 days up to today
+                    for (offset in -5..1) {
+                        val stripDate = today.plusDays(offset.toLong())
+                        val stripDateStr = stripDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        val isSelected = (stripDateStr == selectedDateStr)
+                        val isDayToday = (stripDate.isEqual(today))
+                        val isDayPast = (stripDate.isBefore(today))
+                        val dayLabel = stripDate.format(DateTimeFormatter.ofPattern("EEE"))
+                        val dayNum = stripDate.dayOfMonth
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 2.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isSelected) NeonCyan.copy(alpha = 0.3f) else Color.Transparent
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isSelected) NeonCyan else (if (isDayToday) NeonCyan.copy(alpha = 0.5f) else Color.Transparent),
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .clickable {
+                                    triggerHapticFeedback(context, false)
+                                    viewModel.setSelectedDate(stripDateStr)
+                                }
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = dayLabel,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) NeonCyan else (if (isDayPast) TextSecondary else TextMuted)
+                                )
+                                Text(
+                                    text = "$dayNum",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected || isDayToday) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) NeonCyan else (if (isDayToday) NeonCyan else TextPrimary)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Retroactive Logging Banner if past date is active
+                if (isPastDate) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(WarningAmber.copy(alpha = 0.15f))
+                            .border(1.dp, WarningAmber.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.History, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Retroactive Mode: Attendance updates recorded for past date ($formattedDate)",
+                                color = WarningAmber,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
@@ -318,17 +473,35 @@ fun TodayOperationsDashboard(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "No Scheduled Classes Today",
+                            text = "No Scheduled Classes for $dayName",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Enjoy your Sunday or revise for Sessional exams! Use '+ Extra Lecture' if an ad-hoc class was held.",
+                            text = if (dayName.equals("Sunday", ignoreCase = true)) {
+                                "Enjoy your Sunday or revise for Sessional exams! Use '+ Extra Lecture' if an ad-hoc class was held."
+                            } else {
+                                "No recurring slots defined for $dayName yet. Tap below to set up your weekly schedule."
+                            },
                             fontSize = 12.sp,
                             color = TextSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Button(
+                            onClick = {
+                                triggerHapticFeedback(context, false)
+                                showWeeklyTimetableDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.7f)),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.EditCalendar, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("+ Configure $dayName Slots", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -457,6 +630,25 @@ fun TodayOperationsDashboard(
             onConfirm = { subId, status, isProxy, notes ->
                 viewModel.logExtraClass(subId, status, isProxy, notes)
             }
+        )
+    }
+
+    if (showWeeklyTimetableDialog) {
+        WeeklyTimetableEditorDialog(
+            slots = allSlots,
+            subjects = subjects,
+            onDismiss = { showWeeklyTimetableDialog = false },
+            onSaveSlot = { slot -> viewModel.saveSlot(slot) },
+            onDeleteSlot = { slotId -> viewModel.deleteSlot(slotId) },
+            onAddNewSubject = { newSub -> viewModel.saveSubject(newSub) }
+        )
+    }
+
+    if (showDatePickerDialog) {
+        RetroactiveDatePickerDialog(
+            initialDate = selectedDateStr,
+            onDismiss = { showDatePickerDialog = false },
+            onDateSelected = { dateStr -> viewModel.setSelectedDate(dateStr) }
         )
     }
 }

@@ -397,6 +397,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun saveSlot(slot: TimetableSlotEntity) {
+        viewModelScope.launch {
+            if (slot.id == 0L) {
+                repository.addTimetableSlot(slot)
+            } else {
+                repository.updateTimetableSlot(slot)
+            }
+        }
+    }
+
+    fun deleteSlot(id: Long) {
+        viewModelScope.launch {
+            repository.deleteTimetableSlotById(id)
+        }
+    }
+
     fun deleteSubject(subject: SubjectEntity) {
         viewModelScope.launch {
             repository.deleteSubject(subject)
