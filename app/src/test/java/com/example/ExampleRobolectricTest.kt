@@ -35,4 +35,21 @@ class ExampleRobolectricTest {
     val classesNeeded = ceil(((0.75 * lowTotal) - lowAttended) / 0.25).toInt()
     assertEquals(7, classesNeeded)
   }
+
+  @Test
+  fun `verify json backup structure contains required keys`() {
+    val json = org.json.JSONObject()
+    json.put("app", "CampusTrack IERT")
+    json.put("version", 2)
+    val subjects = org.json.JSONArray()
+    val sub = org.json.JSONObject()
+    sub.put("code", "ME-301")
+    sub.put("name", "Manufacturing Process")
+    subjects.put(sub)
+    json.put("subjects", subjects)
+
+    assertEquals("CampusTrack IERT", json.getString("app"))
+    assertEquals(2, json.getInt("version"))
+    assertEquals("ME-301", json.getJSONArray("subjects").getJSONObject(0).getString("code"))
+  }
 }

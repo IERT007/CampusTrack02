@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -29,6 +28,7 @@ import com.example.ui.MainViewModel
 import com.example.ui.SlotDisplayItem
 import com.example.ui.components.*
 import com.example.ui.dialogs.ExtraClassDialog
+import com.example.ui.dialogs.HolidayManagerDialog
 import com.example.ui.dialogs.RetroactiveDatePickerDialog
 import com.example.ui.dialogs.WeeklyTimetableEditorDialog
 import com.example.ui.theme.*
@@ -47,12 +47,15 @@ fun TodayOperationsDashboard(
     val extraClasses by viewModel.currentDayExtraClasses.collectAsState()
     val dayStatus by viewModel.selectedDayStatus.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
-    val globalSummary by viewModel.globalSummary.collectAsState()
+    val streak by viewModel.collegeStreak.collectAsState()
+    val currentHoliday by viewModel.currentHoliday.collectAsState()
+    val holidayRanges by viewModel.holidayRanges.collectAsState()
 
     var showExtraClassDialog by remember { mutableStateOf(false) }
     var showWeeklyTimetableDialog by remember { mutableStateOf(false) }
+    var showHolidayManagerDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
-    var showDayEndConfirmPrompt by remember { mutableStateOf(true) }
+    var showMarkedTray by remember { mutableStateOf(false) }
 
     val parsedDate = remember(selectedDateStr) {
         try {
@@ -76,10 +79,16 @@ fun TodayOperationsDashboard(
         parsedDate.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy"))
     }
 
-    val attendedCount = slotItems.count { it.currentLog?.status == "attended" }
-    val conductedCount = slotItems.count {
-        it.currentLog?.status == "attended" || it.currentLog?.status == "bunked"
+    // Dynamic Card Consumption Partitioning:
+    // Unmarked slots stay in primary active view; once marked, they transition to Marked Tray
+    val upcomingSlots = remember(slotItems) {
+        slotItems.filter { it.currentLog == null }
     }
+    val markedSlots = remember(slotItems) {
+        slotItems.filter { it.currentLog != null }
+    }
+
+    val attendedCount = slotItems.count { it.currentLog?.status == "attended" }
 
     LazyColumn(
         modifier = modifier
@@ -88,7 +97,7 @@ fun TodayOperationsDashboard(
         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 0. Top Management & Calendar Navigation Bar
+        // 0. Top Management & Action Bar
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -99,24 +108,49 @@ fun TodayOperationsDashboard(
                         triggerHapticFeedback(context, false)
                         showWeeklyTimetableDialog = true
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.18f)),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.7f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1.2f)
                         .testTag("manage_weekly_timetable_btn")
                 ) {
                     Icon(
                         imageVector = Icons.Default.EditCalendar,
                         contentDescription = null,
                         tint = NeonCyan,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Manage Weekly Timetable",
+                        text = "Timetable",
                         color = NeonCyan,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        triggerHapticFeedback(context, false)
+                        showHolidayManagerDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber.copy(alpha = 0.18f)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber.copy(alpha = 0.6f)),
+                    modifier = Modifier.weight(1.1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BeachAccess,
+                        contentDescription = null,
+                        tint = WarningAmber,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Holidays",
+                        color = WarningAmber,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -135,10 +169,10 @@ fun TodayOperationsDashboard(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = "Calendar",
                         tint = TextPrimary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Calendar", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Date", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -181,7 +215,7 @@ fun TodayOperationsDashboard(
                             Icon(Icons.Default.ArrowDropDown, contentDescription = "Pick Date", tint = NeonCyan, modifier = Modifier.size(16.dp))
                         }
                         Text(
-                            text = "IERT Prayagraj • Mechanical Engg",
+                            text = "IERT Prayagraj • Mechanical Engg (Tool)",
                             fontSize = 10.sp,
                             color = TextMuted
                         )
@@ -212,8 +246,7 @@ fun TodayOperationsDashboard(
                         .padding(vertical = 4.dp, horizontal = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Show last 6 days up to today
-                    for (offset in -5..1) {
+                    for (offset in -4..2) {
                         val stripDate = today.plusDays(offset.toLong())
                         val stripDateStr = stripDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
                         val isSelected = (stripDateStr == selectedDateStr)
@@ -228,7 +261,7 @@ fun TodayOperationsDashboard(
                                 .padding(horizontal = 2.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    if (isSelected) NeonCyan.copy(alpha = 0.3f) else Color.Transparent
+                                    if (isSelected) NeonCyan.copy(alpha = 0.25f) else Color.Transparent
                                 )
                                 .border(
                                     1.dp,
@@ -285,7 +318,69 @@ fun TodayOperationsDashboard(
             }
         }
 
-        // 2. Live Day Hero Card
+        // Institutional Holiday / College Off Banner if date falls in declared range
+        if (currentHoliday != null) {
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = WarningAmber.copy(alpha = 0.2f),
+                    borderColors = listOf(WarningAmber.copy(alpha = 0.8f), GlassBorderBottom)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(WarningAmber.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.EventBusy, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "OFFICIAL INSTITUTIONAL CLOSURE",
+                                    color = WarningAmber,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    text = currentHoliday?.title ?: "College Holiday",
+                                    color = TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Active: ${currentHoliday?.startDate} to ${currentHoliday?.endDate} • No attendance penalty",
+                                    color = TextSecondary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                triggerHapticFeedback(context, true)
+                                viewModel.applyHolidayToCurrentDay(currentHoliday?.title ?: "Holiday")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("Sync Off", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Live Day Hero Card with Streak Widget
         item {
             GlassCard(
                 modifier = Modifier
@@ -293,29 +388,58 @@ fun TodayOperationsDashboard(
                     .testTag("today_hero_card"),
                 borderColors = listOf(Color(0x6600E5FF), GlassBorderBottom)
             ) {
+                // Streak Widget on Top of Hero
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (isToday) NeonEmerald else WarningAmber)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isToday) "LIVE DAY OPERATIONS" else "SCHEDULE AUDIT",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isToday) NeonEmerald else WarningAmber,
+                            letterSpacing = 1.sp
+                        )
+                    }
+
+                    // Attendance Streak Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0x28FFB300))
+                            .border(1.dp, WarningAmber.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🔥", fontSize = 12.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "$streak-Day College Streak",
+                                color = WarningAmber,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isToday) NeonEmerald else WarningAmber)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isToday) "LIVE DAY OPERATIONS" else "SCHEDULE AUDIT",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isToday) NeonEmerald else WarningAmber,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "$dayName's Timetable",
                             fontSize = 22.sp,
@@ -351,7 +475,7 @@ fun TodayOperationsDashboard(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 1-Tap Quick Action Bar
+                // 1-Tap Quick Bulk Actions
                 Text("1-Tap Bulk Day Actions", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -432,13 +556,24 @@ fun TodayOperationsDashboard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "TIMETABLE PERIODS",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextMuted,
-                    letterSpacing = 1.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "UPCOMING PERIODS",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0x2200E5FF))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("${upcomingSlots.size} remaining", color = NeonCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
 
                 Button(
                     onClick = { showExtraClassDialog = true },
@@ -450,7 +585,7 @@ fun TodayOperationsDashboard(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("+ Extra Lecture", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("+ Extra Class", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -480,9 +615,9 @@ fun TodayOperationsDashboard(
                         )
                         Text(
                             text = if (dayName.equals("Sunday", ignoreCase = true)) {
-                                "Enjoy your Sunday or revise for Sessional exams! Use '+ Extra Lecture' if an ad-hoc class was held."
+                                "Enjoy your Sunday or revise for Sessional exams! Use '+ Extra Class' if an ad-hoc lecture was conducted."
                             } else {
-                                "No recurring slots defined for $dayName yet. Tap below to set up your weekly schedule."
+                                "No recurring slots set for $dayName yet. Tap below to manage the weekly schedule."
                             },
                             fontSize = 12.sp,
                             color = TextSecondary,
@@ -505,10 +640,47 @@ fun TodayOperationsDashboard(
                     }
                 }
             }
+        } else if (upcomingSlots.isEmpty()) {
+            // All scheduled slots marked! (Dynamic Card Consumption celebration state)
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColors = listOf(NeonEmerald.copy(alpha = 0.6f), GlassBorderBottom)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(NeonEmerald.copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "All Periods Logged For Today!",
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${markedSlots.size} of ${slotItems.size} periods recorded. Expand the tray below to review or undo.",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        // 4. Slots Items
-        items(slotItems, key = { it.slot.id }) { item ->
+        // 4. Primary Upcoming Slots (Dynamic Card Consumption: only unmarked slots stay here)
+        items(upcomingSlots, key = { it.slot.id }) { item ->
             SlotCard(
                 item = item,
                 onStatusChange = { status, isProxy, notes ->
@@ -527,7 +699,7 @@ fun TodayOperationsDashboard(
         if (extraClasses.isNotEmpty()) {
             item {
                 Text(
-                    text = "AD-HOC & EXTRA CLASSES LOGGED",
+                    text = "AD-HOC & EXTRA CLASSES",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = WarningAmber,
@@ -579,45 +751,66 @@ fun TodayOperationsDashboard(
             }
         }
 
-        // 5. Day-End Summary Prompt
-        if (showDayEndConfirmPrompt && slotItems.isNotEmpty()) {
+        // 5. Dynamic Card Consumption: Toggleable "Marked Periods (N/Total)" Tray
+        if (markedSlots.isNotEmpty()) {
             item {
                 GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(ElectricViolet.copy(alpha = 0.5f), GlassBorderBottom)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            triggerHapticFeedback(context, false)
+                            showMarkedTray = !showMarkedTray
+                        },
+                    borderColors = listOf(Color(0x33FFFFFF), GlassBorderBottom)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.VerifiedUser,
+                                imageVector = if (showMarkedTray) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
                                 contentDescription = null,
-                                tint = ElectricViolet,
-                                modifier = Modifier.size(24.dp)
+                                tint = NeonCyan,
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Day-End Attendance Verification",
-                                    color = TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Marked $attendedCount of ${slotItems.size} periods. All figures safely synced offline.",
-                                    color = TextSecondary,
-                                    fontSize = 11.sp
-                                )
-                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Marked Periods (${markedSlots.size} / ${slotItems.size})",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
                         }
 
-                        IconButton(onClick = { showDayEndConfirmPrompt = false }) {
-                            Icon(Icons.Default.Check, contentDescription = "Dismiss", tint = NeonEmerald)
-                        }
+                        Text(
+                            text = if (showMarkedTray) "Tap to Collapse" else "Tap to Inspect / Undo",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
                     }
+                }
+            }
+
+            if (showMarkedTray) {
+                items(markedSlots, key = { "marked_${it.slot.id}" }) { item ->
+                    MarkedSlotCard(
+                        item = item,
+                        onUndo = {
+                            triggerHapticFeedback(context, false)
+                            viewModel.undoSlotAttendance(item.slot.id)
+                        },
+                        onStatusChange = { status, isProxy, notes ->
+                            viewModel.setSlotAttendance(
+                                slotId = item.slot.id,
+                                subjectId = item.slot.subjectId,
+                                status = status,
+                                isProxy = isProxy,
+                                notes = notes
+                            )
+                        }
+                    )
                 }
             }
         }
@@ -644,6 +837,15 @@ fun TodayOperationsDashboard(
         )
     }
 
+    if (showHolidayManagerDialog) {
+        HolidayManagerDialog(
+            holidayRanges = holidayRanges,
+            onDismiss = { showHolidayManagerDialog = false },
+            onSaveHoliday = { range -> viewModel.saveHolidayRange(range) },
+            onDeleteHoliday = { id -> viewModel.deleteHolidayRange(id) }
+        )
+    }
+
     if (showDatePickerDialog) {
         RetroactiveDatePickerDialog(
             initialDate = selectedDateStr,
@@ -660,7 +862,7 @@ fun SlotCard(
 ) {
     val context = LocalContext.current
     val currentLog = item.currentLog
-    val currentStatus = currentLog?.status // "attended", "bunked", "cancelled_by_faculty", "college_off", or null
+    val currentStatus = currentLog?.status
     val isProxy = currentLog?.isProxy ?: false
 
     val borderColor = when {
@@ -889,6 +1091,82 @@ fun SlotCard(
                     },
                     colors = CheckboxDefaults.colors(checkedColor = NeonCyan)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun MarkedSlotCard(
+    item: SlotDisplayItem,
+    onUndo: () -> Unit,
+    onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit
+) {
+    val status = item.currentLog?.status ?: "attended"
+    val isProxy = item.currentLog?.isProxy ?: false
+
+    val (badgeText, badgeColor) = when (status) {
+        "attended" -> (if (isProxy) "PROXY PRESENT" else "PRESENT") to NeonEmerald
+        "bunked" -> "BUNKED" to StrictRed
+        "cancelled_by_faculty" -> "FACULTY CANCELLED" to WarningAmber
+        "college_off" -> "COLLEGE OFF" to TextSecondary
+        else -> "MARKED" to NeonCyan
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        borderColors = listOf(badgeColor.copy(alpha = 0.4f), GlassBorderBottom)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(badgeColor.copy(alpha = 0.2f))
+                            .border(0.5.dp, badgeColor, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(badgeText, color = badgeColor, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${item.slot.startTime} - ${item.slot.endTime}",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = item.subject?.name ?: "Subject",
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${item.subject?.code} • ${item.slot.roomNo}",
+                    color = TextMuted,
+                    fontSize = 11.sp
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(
+                    onClick = onUndo,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = WarningAmber),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber.copy(alpha = 0.6f)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Icon(Icons.Default.Undo, contentDescription = "Undo", tint = WarningAmber, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Undo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

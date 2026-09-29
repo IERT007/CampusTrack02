@@ -22,13 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.AssessmentEntity
+import com.example.data.local.entity.SubjectEntity
 import com.example.ui.MainViewModel
 import com.example.ui.components.*
 import com.example.ui.dialogs.AddAssessmentDialog
+import com.example.ui.dialogs.AddDeadlineDialog
 import com.example.ui.theme.*
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+import java.time.Duration
+import java.time.LocalDateTime
 
 @Composable
 fun AcademicsDashboard(
@@ -40,8 +41,9 @@ fun AcademicsDashboard(
     val subjects by viewModel.subjects.collectAsState()
     val ciaBreakdown by viewModel.ciaBreakdown.collectAsState()
 
-    var activeTab by remember { mutableStateOf("sessionals") } // "sessionals", "practical", "deadlines"
-    var showAddDialog by remember { mutableStateOf(false) }
+    var activeTab by remember { mutableStateOf("deadlines") } // "deadlines", "sessionals", "practical"
+    var showAddTestDialog by remember { mutableStateOf(false) }
+    var showAddDeadlineDialog by remember { mutableStateOf(false) }
 
     val sessionals = remember(assessments) {
         assessments.filter { it.type.startsWith("sessional") }
@@ -49,11 +51,13 @@ fun AcademicsDashboard(
     val classTests = remember(assessments) {
         assessments.filter { it.type == "ct" || it.type == "assignment" }
     }
-    val practicals = remember(assessments) {
-        assessments.filter { it.type == "drawing_sheet" || it.type == "workshop_job" || it.type.startsWith("viva") }
+    val submissions = remember(assessments) {
+        assessments.filter {
+            it.type in listOf("drawing_sheet", "workshop_job", "lab_file")
+        }
     }
-    val deadlines = remember(assessments) {
-        assessments.filter { it.status != "submitted" && it.status != "appeared" }
+    val allDeadlines = remember(assessments) {
+        assessments.sortedBy { it.dueDate }
     }
 
     LazyColumn(
@@ -177,9 +181,9 @@ fun AcademicsDashboard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 val tabs = listOf(
+                    "deadlines" to "Deadlines (${allDeadlines.count { it.status == "pending" }})",
                     "sessionals" to "Sessionals & CTs",
-                    "practical" to "Workshop & Sheets",
-                    "deadlines" to "Deadlines (${deadlines.size})"
+                    "practical" to "Sheets & Jobs"
                 )
 
                 tabs.forEach { (tabId, label) ->
@@ -214,6 +218,76 @@ fun AcademicsDashboard(
 
         // 3. Tab Content
         when (activeTab) {
+            "deadlines" -> {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "SUBMISSION DEADLINES & COUNTDOWN",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "Drawing sheets, workshop jobs & lab records",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                        }
+
+                        Button(
+                            onClick = { showAddDeadlineDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.7f)),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("+ Deadline", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (allDeadlines.isEmpty()) {
+                    item {
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(36.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("No Pending Submissions", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("Tap '+ Deadline' to track Drawing Sheets or Workshop Jobs with live countdowns.", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+
+                items(allDeadlines, key = { it.id }) { item ->
+                    val subject = subjects.find { it.id == item.subjectId }
+                    SubmissionDeadlineItemCard(
+                        assessment = item,
+                        subject = subject,
+                        onToggleStatus = {
+                            val newStatus = if (item.status == "submitted") "pending" else "submitted"
+                            viewModel.updateAssessmentStatus(item.id, newStatus)
+                        },
+                        onDelete = {
+                            viewModel.deleteAssessment(item.id)
+                        }
+                    )
+                }
+            }
+
             "sessionals" -> {
                 item {
                     Row(
@@ -230,7 +304,7 @@ fun AcademicsDashboard(
                         )
 
                         Button(
-                            onClick = { showAddDialog = true },
+                            onClick = { showAddTestDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
@@ -274,61 +348,43 @@ fun AcademicsDashboard(
 
             "practical" -> {
                 item {
-                    Text(
-                        text = "WORKSHOP JOBS & MACHINE DRAWING SHEETS",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextMuted,
-                        letterSpacing = 1.sp
-                    )
-                }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "DRAWING SHEETS & WORKSHOP JOBS",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextMuted,
+                            letterSpacing = 1.sp
+                        )
 
-                items(practicals, key = { it.id }) { item ->
-                    val subject = subjects.find { it.id == item.subjectId }
-                    AssessmentCard(
-                        assessment = item,
-                        subject = subject,
-                        onDelete = { viewModel.deleteAssessment(item.id) }
-                    )
-                }
-            }
-
-            "deadlines" -> {
-                item {
-                    Text(
-                        text = "DEADLINE COUNTDOWN VAULT",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = WarningAmber,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                if (deadlines.isEmpty()) {
-                    item {
-                        GlassCard(modifier = Modifier.fillMaxWidth()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(Icons.Default.Celebration, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(36.dp))
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("All Tasks Submitted!", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                Text("No pending assignment files, drawing sheets, or workshop jobs.", color = TextSecondary, fontSize = 12.sp)
-                            }
+                        Button(
+                            onClick = { showAddDeadlineDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add Item", color = NeonEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
-                items(deadlines, key = { it.id }) { item ->
+                items(submissions, key = { it.id }) { item ->
                     val subject = subjects.find { it.id == item.subjectId }
-                    DeadlineCountdownCard(
+                    SubmissionDeadlineItemCard(
                         assessment = item,
                         subject = subject,
-                        onMarkSubmitted = {
-                            viewModel.saveAssessment(item.copy(status = "submitted"))
+                        onToggleStatus = {
+                            val newStatus = if (item.status == "submitted") "pending" else "submitted"
+                            viewModel.updateAssessmentStatus(item.id, newStatus)
+                        },
+                        onDelete = {
+                            viewModel.deleteAssessment(item.id)
                         }
                     )
                 }
@@ -336,14 +392,196 @@ fun AcademicsDashboard(
         }
     }
 
-    if (showAddDialog) {
+    if (showAddTestDialog) {
         AddAssessmentDialog(
             subjects = subjects,
-            onDismiss = { showAddDialog = false },
-            onSave = { assessment ->
-                viewModel.saveAssessment(assessment)
+            onDismiss = { showAddTestDialog = false },
+            onSave = { entity ->
+                viewModel.saveAssessment(entity)
             }
         )
+    }
+
+    if (showAddDeadlineDialog) {
+        AddDeadlineDialog(
+            subjects = subjects,
+            onDismiss = { showAddDeadlineDialog = false },
+            onSave = { entity ->
+                viewModel.saveAssessment(entity)
+            }
+        )
+    }
+}
+
+@Composable
+fun SubmissionDeadlineItemCard(
+    assessment: AssessmentEntity,
+    subject: SubjectEntity?,
+    onToggleStatus: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val context = LocalContext.current
+    val (countdownText, countdownColor) = remember(assessment.dueDate, assessment.dueTime) {
+        calculateCountdown(assessment.dueDate, assessment.dueTime)
+    }
+
+    val isSubmitted = (assessment.status == "submitted")
+
+    val typeLabel = when (assessment.type) {
+        "drawing_sheet" -> "Drawing Sheet"
+        "workshop_job" -> "Workshop Job"
+        "lab_file" -> "Lab Record"
+        "assignment" -> "Assignment"
+        else -> assessment.type.replace("_", " ").uppercase()
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        borderColors = listOf(
+            if (isSubmitted) NeonEmerald.copy(alpha = 0.5f) else countdownColor.copy(alpha = 0.6f),
+            GlassBorderBottom
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0x2200E5FF))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(typeLabel, color = NeonCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${subject?.code ?: "ME"} • ${subject?.name ?: "Subject"}",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = assessment.title,
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccessTime, contentDescription = null, tint = TextMuted, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Target: ${assessment.dueDate} at ${assessment.dueTime}",
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                // Countdown Badge
+                if (!isSubmitted) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(countdownColor.copy(alpha = 0.18f))
+                            .border(1.dp, countdownColor.copy(alpha = 0.8f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = countdownText,
+                            color = countdownColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(NeonEmerald.copy(alpha = 0.18f))
+                            .border(1.dp, NeonEmerald, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text("SUBMITTED", color = NeonEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row {
+                    TextButton(
+                        onClick = {
+                            triggerHapticFeedback(context, false)
+                            onToggleStatus()
+                        },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = if (isSubmitted) "Mark Pending" else "Mark Done",
+                            color = if (isSubmitted) WarningAmber else NeonEmerald,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = TextMuted, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun calculateCountdown(dueDateStr: String, dueTimeStr: String): Pair<String, Color> {
+    try {
+        val dueTime = if (dueTimeStr.contains(":")) dueTimeStr else "$dueTimeStr:00"
+        val dueDateTime = LocalDateTime.parse("${dueDateStr}T${dueTime}")
+        val now = LocalDateTime.now()
+        val duration = Duration.between(now, dueDateTime)
+
+        if (duration.isNegative) {
+            return "Overdue" to DangerRed
+        }
+
+        val totalHours = duration.toHours()
+        val days = duration.toDays()
+        val remainingHours = totalHours % 24
+
+        val text = when {
+            days > 0 -> "Due in ${days}d ${remainingHours}h"
+            totalHours > 0 -> "Due in ${totalHours}h"
+            else -> "Due in < 1h"
+        }
+
+        val color = when {
+            totalHours < 24 -> DangerRed
+            totalHours < 72 -> WarningAmber
+            else -> NeonCyan
+        }
+
+        return text to color
+    } catch (_: Exception) {
+        return "Upcoming" to NeonCyan
     }
 }
 
@@ -390,7 +628,7 @@ fun CiaMetricPill(
 @Composable
 fun AssessmentCard(
     assessment: AssessmentEntity,
-    subject: com.example.data.local.entity.SubjectEntity?,
+    subject: SubjectEntity?,
     onDelete: () -> Unit
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -464,92 +702,6 @@ fun AssessmentCard(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DeadlineCountdownCard(
-    assessment: AssessmentEntity,
-    subject: com.example.data.local.entity.SubjectEntity?,
-    onMarkSubmitted: () -> Unit
-) {
-    val daysRemaining = remember(assessment.dueDate) {
-        try {
-            val due = LocalDate.parse(assessment.dueDate, DateTimeFormatter.ISO_LOCAL_DATE)
-            val today = LocalDate.now()
-            ChronoUnit.DAYS.between(today, due)
-        } catch (_: Exception) {
-            3L
-        }
-    }
-
-    val urgencyColor = when {
-        daysRemaining <= 2 -> DangerRed
-        daysRemaining <= 5 -> WarningAmber
-        else -> NeonCyan
-    }
-
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        borderColors = listOf(urgencyColor.copy(alpha = 0.6f), GlassBorderBottom)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${subject?.name ?: "Subject"} (${subject?.code ?: ""})",
-                    color = TextSecondary,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = assessment.title,
-                    color = TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Due: ${assessment.dueDate}",
-                    color = TextMuted,
-                    fontSize = 11.sp
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(urgencyColor.copy(alpha = 0.2f))
-                        .border(1.dp, urgencyColor, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (daysRemaining >= 0) "$daysRemaining d" else "Overdue",
-                            color = urgencyColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Text("Left", color = TextSecondary, fontSize = 9.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                TextButton(
-                    onClick = onMarkSubmitted,
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text("Submit", color = NeonEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

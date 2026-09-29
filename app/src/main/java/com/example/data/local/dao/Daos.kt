@@ -147,3 +147,49 @@ interface MedicalLeaveDao {
     @Query("DELETE FROM medical_leaves")
     suspend fun deleteAllMedicalLeaves()
 }
+
+@Dao
+interface HolidayRangeDao {
+    @Query("SELECT * FROM holiday_ranges ORDER BY startDate ASC")
+    fun getAllHolidayRanges(): Flow<List<HolidayRangeEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHolidayRange(range: HolidayRangeEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHolidayRanges(ranges: List<HolidayRangeEntity>)
+
+    @Update
+    suspend fun updateHolidayRange(range: HolidayRangeEntity)
+
+    @Query("DELETE FROM holiday_ranges WHERE id = :id")
+    suspend fun deleteHolidayRangeById(id: Long)
+
+    @Query("DELETE FROM holiday_ranges")
+    suspend fun deleteAllHolidayRanges()
+}
+
+@Dao
+interface AcademicTaskDao {
+    @Query("SELECT * FROM academic_tasks ORDER BY isCompleted ASC, dueDate ASC")
+    fun getAllTasks(): Flow<List<AcademicTaskEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTask(task: AcademicTaskEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTasks(tasks: List<AcademicTaskEntity>)
+
+    @Update
+    suspend fun updateTask(task: AcademicTaskEntity)
+
+    @Query("UPDATE academic_tasks SET isCompleted = :completed WHERE id = :id")
+    suspend fun updateTaskCompletion(id: Long, completed: Boolean)
+
+    @Query("DELETE FROM academic_tasks WHERE id = :id")
+    suspend fun deleteTaskById(id: Long)
+
+    @Query("DELETE FROM academic_tasks")
+    suspend fun deleteAllTasks()
+}
+

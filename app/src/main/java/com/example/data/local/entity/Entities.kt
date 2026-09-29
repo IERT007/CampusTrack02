@@ -21,9 +21,9 @@ data class SubjectEntity(
 data class TimetableSlotEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val dayOfWeek: Int, // 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday, 7 = Sunday
-    val startTime: String, // "09:00"
-    val endTime: String, // "10:00"
+    val dayOfWeek: Int, // 1 = Monday ... 6 = Saturday
+    val startTime: String, // "08:00"
+    val endTime: String, // "09:00"
     val roomNo: String, // "LT-4", "Workshop A", "CAD Lab"
     val subjectId: Long
 )
@@ -47,13 +47,14 @@ data class AssessmentEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val subjectId: Long,
-    val type: String, // "sessional_1", "sessional_2", "sessional_3", "ct", "viva_internal", "viva_external", "assignment", "drawing_sheet", "workshop_job"
+    val type: String, // "drawing_sheet", "workshop_job", "lab_file", "sessional_1", "sessional_2", "sessional_3", "ct", "viva_internal", "viva_external", "assignment"
     val title: String,
     val maxMarks: Double,
     val obtainedMarks: Double? = null,
-    val status: String, // "appeared", "missed", "cancelled", "submitted", "in_progress"
+    val status: String, // "pending", "in_progress", "submitted", "appeared", "missed", "cancelled"
     val missedReason: String? = null,
     val dueDate: String, // "YYYY-MM-DD"
+    val dueTime: String = "17:00", // "HH:mm" target time
     val syllabusCoveragePercent: Int = 0
 )
 
@@ -64,6 +65,30 @@ data class DailyDayStatusEntity(
     val wentToCollege: Boolean = true,
     val leaveCategory: String = "none", // "none", "college_holiday", "personal_bunk", "sick_leave", "mass_bunk", "strike"
     val notes: String? = null
+)
+
+@Entity(tableName = "holiday_ranges")
+data class HolidayRangeEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val title: String, // "Mid-Semester Break", "Diwali Vacation", "Institutional Strike"
+    val startDate: String, // "YYYY-MM-DD"
+    val endDate: String, // "YYYY-MM-DD"
+    val type: String = "holiday", // "holiday", "strike", "semester_break", "mass_bunk"
+    val notes: String? = null
+)
+
+@Entity(tableName = "academic_tasks")
+data class AcademicTaskEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val description: String,
+    val priority: String = "Medium", // "High", "Medium", "Low"
+    val category: String = "Assignment", // "Assignment", "Sheet Work", "Exam Prep", "Miscellaneous"
+    val dueDate: String, // "YYYY-MM-DD"
+    val isCompleted: Boolean = false,
+    val subjectId: Long? = null,
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 @Entity(tableName = "medical_leaves")

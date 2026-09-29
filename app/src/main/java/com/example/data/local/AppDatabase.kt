@@ -14,9 +14,11 @@ import com.example.data.local.entity.*
         AttendanceLogEntity::class,
         AssessmentEntity::class,
         DailyDayStatusEntity::class,
-        MedicalLeaveEntity::class
+        MedicalLeaveEntity::class,
+        HolidayRangeEntity::class,
+        AcademicTaskEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +28,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun assessmentDao(): AssessmentDao
     abstract fun dailyDayStatusDao(): DailyDayStatusDao
     abstract fun medicalLeaveDao(): MedicalLeaveDao
+    abstract fun holidayRangeDao(): HolidayRangeDao
+    abstract fun academicTaskDao(): AcademicTaskDao
 
     companion object {
         @Volatile

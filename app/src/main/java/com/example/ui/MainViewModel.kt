@@ -31,6 +31,7 @@ data class GlobalAttendanceSummary(
     val totalAttended: Int,
     val totalConducted: Int,
     val totalFacultyCancelled: Int,
+    val totalCollegeOff: Int,
     val totalProxy: Int,
     val overallPercentage: Double,
     val atRiskSubjectCount: Int,
@@ -86,6 +87,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val medicalLeaves: StateFlow<List<MedicalLeaveEntity>> = repository.allMedicalLeaves
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val holidayRanges: StateFlow<List<HolidayRangeEntity>> = repository.allHolidayRanges
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val tasks: StateFlow<List<AcademicTaskEntity>> = repository.allTasks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Current holiday if selected date falls into a declared holiday / institutional off range
+    val currentHoliday: StateFlow<HolidayRangeEntity?> = combine(
+        selectedDate,
+        holidayRanges
+    ) { dateStr, holidays ->
+        holidays.find { dateStr >= it.startDate && dateStr <= it.endDate }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // Per-subject detailed attendance statistics with the strict mathematical formulas
     val subjectStats: StateFlow<List<SubjectAttendanceStats>> = combine(
         subjects,
@@ -101,7 +116,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val facultyCancelled = subLogs.count { it.status == "cancelled_by_faculty" }
             val collegeOff = subLogs.count { it.status == "college_off" }
 
-            // Conducted classes = attended + bunked (excluded: faculty cancelled & college off)
+            // Conducted classes = attended + bunked (strictly excluded: faculty cancelled & college off)
             val baseConducted = logAttended + logBunked
 
             // Total official = app logs + reconciled offsets
@@ -150,6 +165,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         var totalAtt = 0
         var totalCond = 0
         var totalCan = 0
+        var totalOff = 0
         var totalProxy = 0
         var atRisk = 0
         var critical = 0
@@ -158,6 +174,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             totalAtt += stat.attended
             totalCond += stat.totalConducted
             totalCan += stat.facultyCancelled
+            totalOff += stat.collegeOff
             totalProxy += stat.proxyCount
             if (stat.percentage < 65.0) {
                 critical++
@@ -176,6 +193,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             totalAttended = totalAtt,
             totalConducted = totalCond,
             totalFacultyCancelled = totalCan,
+            totalCollegeOff = totalOff,
             totalProxy = totalProxy,
             overallPercentage = overallPct,
             atRiskSubjectCount = atRisk,
@@ -184,8 +202,87 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        GlobalAttendanceSummary(0, 0, 0, 0, 100.0, 0, 0)
+        GlobalAttendanceSummary(0, 0, 0, 0, 0, 100.0, 0, 0)
     )
+
+    // Consecutive collegiate attendance days streak (days attended without bunks)
+    val collegeStreak: StateFlow<Int> = combine(
+        logs,
+        dayStatuses,
+        slots,
+        holidayRanges
+    ) { logList, statusList, slotList, holidayList ->
+        calculateAttendanceStreak(logList, statusList, slotList, holidayList)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    private fun calculateAttendanceStreak(
+        logList: List<AttendanceLogEntity>,
+        statusList: List<DailyDayStatusEntity>,
+        slotList: List<TimetableSlotEntity>,
+        holidayList: List<HolidayRangeEntity>
+    ): Int {
+        val today = LocalDate.now()
+        var streak = 0
+        var checkDate = today
+        val todayStr = today.format(dateFormatter)
+        val todayLogs = logList.filter { it.date == todayStr }
+
+        if (todayLogs.any { it.status == "bunked" }) {
+            return 0
+        }
+        if (todayLogs.any { it.status == "attended" } && !todayLogs.any { it.status == "bunked" }) {
+            streak++
+            checkDate = checkDate.minusDays(1)
+        } else {
+            checkDate = checkDate.minusDays(1)
+        }
+
+        for (i in 1..90) {
+            val dateStr = checkDate.format(dateFormatter)
+            val dayOfWeek = checkDate.dayOfWeek.value // 1=Mon..7=Sun
+
+            val isSunday = (dayOfWeek == 7)
+            val isHoliday = holidayList.any { h -> dateStr >= h.startDate && dateStr <= h.endDate }
+            val dayStatus = statusList.find { it.date == dateStr }
+            val isExplicitOff = (dayStatus?.leaveCategory in listOf("college_holiday", "strike"))
+
+            if (isSunday || isHoliday || isExplicitOff) {
+                checkDate = checkDate.minusDays(1)
+                continue
+            }
+
+            val dayLogs = logList.filter { it.date == dateStr }
+            val daySlots = slotList.filter { it.dayOfWeek == dayOfWeek }
+
+            if (daySlots.isEmpty() && dayLogs.isEmpty()) {
+                checkDate = checkDate.minusDays(1)
+                continue
+            }
+
+            if (dayLogs.isEmpty()) {
+                break
+            }
+
+            val hasBunks = dayLogs.any { it.status == "bunked" } || (dayStatus?.leaveCategory == "mass_bunk")
+            val hasAttended = dayLogs.any { it.status == "attended" }
+
+            if (hasBunks) {
+                break
+            } else if (hasAttended) {
+                streak++
+                checkDate = checkDate.minusDays(1)
+            } else {
+                val allCancelled = dayLogs.all { it.status == "cancelled_by_faculty" || it.status == "college_off" }
+                if (allCancelled) {
+                    checkDate = checkDate.minusDays(1)
+                    continue
+                } else {
+                    break
+                }
+            }
+        }
+        return streak
+    }
 
     // Today's display slots with live ongoing class indicator
     val currentDaySlots: StateFlow<List<SlotDisplayItem>> = combine(
@@ -273,7 +370,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val totalMax = sessionalList.sumOf { it.maxMarks }
             if (totalMax > 0) (totalObtained / totalMax) * 20.0 else 16.0
         } else {
-            16.0 // projected default
+            16.0
         }
 
         // 3. Class tests & assignments (10 Marks)
@@ -356,6 +453,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun undoSlotAttendance(slotId: Long) {
+        viewModelScope.launch {
+            repository.deleteSlotAttendance(_selectedDate.value, slotId)
+        }
+    }
+
     fun markWholeDayPresent() {
         viewModelScope.launch {
             val items = currentDaySlots.value
@@ -369,6 +472,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val items = currentDaySlots.value
             val slotEntities = items.map { it.slot }
             repository.markMassBunkOrOff(_selectedDate.value, slotEntities, category)
+        }
+    }
+
+    fun applyHolidayToCurrentDay(title: String) {
+        viewModelScope.launch {
+            val items = currentDaySlots.value
+            val slotEntities = items.map { it.slot }
+            repository.markMassBunkOrOff(_selectedDate.value, slotEntities, "college_holiday")
         }
     }
 
@@ -429,6 +540,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateAssessmentStatus(id: Long, newStatus: String) {
+        viewModelScope.launch {
+            val current = assessments.value.find { it.id == id }
+            if (current != null) {
+                repository.updateAssessment(current.copy(status = newStatus))
+            }
+        }
+    }
+
     fun deleteAssessment(id: Long) {
         viewModelScope.launch {
             repository.deleteAssessment(id)
@@ -449,6 +569,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.deleteMedicalLeave(id)
         }
+    }
+
+    fun saveHolidayRange(range: HolidayRangeEntity) {
+        viewModelScope.launch {
+            if (range.id == 0L) {
+                repository.addHolidayRange(range)
+            } else {
+                repository.updateHolidayRange(range)
+            }
+        }
+    }
+
+    fun deleteHolidayRange(id: Long) {
+        viewModelScope.launch {
+            repository.deleteHolidayRange(id)
+        }
+    }
+
+    fun saveTask(task: AcademicTaskEntity) {
+        viewModelScope.launch {
+            if (task.id == 0L) {
+                repository.addTask(task)
+            } else {
+                repository.updateTask(task)
+            }
+        }
+    }
+
+    fun deleteTask(id: Long) {
+        viewModelScope.launch {
+            repository.deleteTask(id)
+        }
+    }
+
+    fun toggleTaskCompleted(id: Long, completed: Boolean) {
+        viewModelScope.launch {
+            repository.toggleTaskCompleted(id, completed)
+        }
+    }
+
+    suspend fun exportBackupJson(): String {
+        return repository.exportToJson()
+    }
+
+    suspend fun importBackupJson(jsonString: String): Boolean {
+        return repository.importFromJson(jsonString)
     }
 
     fun preloadDefaultData() {

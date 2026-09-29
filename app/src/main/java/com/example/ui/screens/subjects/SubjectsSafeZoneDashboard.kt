@@ -411,7 +411,86 @@ fun SubjectGlassCard(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Granular Breakdown Badges: Attended, Bunked, Faculty Cancelled, College Off
+        val bunkedCount = kotlin.math.max(0, stat.totalConducted - stat.attended)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x1A00E676))
+                    .border(0.5.dp, NeonEmerald.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${stat.attended}", color = NeonEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Attended", color = TextSecondary, fontSize = 9.sp)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x1AEF4444))
+                    .border(0.5.dp, StrictRed.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("$bunkedCount", color = StrictRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Bunked", color = TextSecondary, fontSize = 9.sp)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x1AF59E0B))
+                    .border(0.5.dp, WarningAmber.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${stat.facultyCancelled}", color = WarningAmber, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Cancelled", color = TextSecondary, fontSize = 9.sp)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1.1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x1AFFFFFF))
+                    .border(0.5.dp, GlassBorderTop, RoundedCornerShape(8.dp))
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${stat.collegeOff}", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("College Off", color = TextSecondary, fontSize = 9.sp)
+                }
+            }
+        }
+
+        val totalExcluded = stat.facultyCancelled + stat.collegeOff
+        if (totalExcluded > 0) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "ℹ️ $totalExcluded cancelled/off lectures excluded from total conducted (0% penalty on 75% rule).",
+                color = TextMuted,
+                fontSize = 10.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Row 4: Predictive Bunk / Catch-up Engine Card
         Box(
