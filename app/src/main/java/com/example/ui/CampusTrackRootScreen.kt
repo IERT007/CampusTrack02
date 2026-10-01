@@ -51,10 +51,18 @@ fun CampusTrackRootScreen(
 ) {
     val context = LocalContext.current
     var currentTab by remember { mutableStateOf(DashboardTab.TODAY) }
+    var showSettingsHub by remember { mutableStateOf(false) }
 
     // Android back button: If not on TODAY, return to TODAY
     BackHandler(enabled = currentTab != DashboardTab.TODAY) {
         currentTab = DashboardTab.TODAY
+    }
+
+    if (showSettingsHub) {
+        com.example.ui.dialogs.SettingsHubDialog(
+            viewModel = viewModel,
+            onDismissRequest = { showSettingsHub = false }
+        )
     }
 
     Scaffold(
@@ -75,7 +83,7 @@ fun CampusTrackRootScreen(
                         Brush.verticalGradient(
                             listOf(
                                 AmoledBackground,
-                                Color(0xFF090C14),
+                                Color(0xFF090D14),
                                 AmoledBackground
                             )
                         )
@@ -85,7 +93,12 @@ fun CampusTrackRootScreen(
             // Top Campus Header Bar
             Column(modifier = Modifier.fillMaxSize()) {
                 CampusHeader(
-                    currentTab = currentTab
+                    currentTab = currentTab,
+                    onOpenSettings = {
+                        com.example.audio.CaliperSoundManager.playSnap()
+                        com.example.audio.CaliperHapticManager.tick(context)
+                        showSettingsHub = true
+                    }
                 )
 
                 // 4 Dedicated Dashboard Views with smooth transitions
@@ -121,7 +134,8 @@ fun CampusTrackRootScreen(
             FloatingGlassNavBar(
                 selectedTab = currentTab,
                 onTabSelected = { tab ->
-                    triggerHapticFeedback(context, false)
+                    com.example.audio.CaliperSoundManager.playSnap()
+                    com.example.audio.CaliperHapticManager.tick(context)
                     currentTab = tab
                 },
                 modifier = Modifier
@@ -134,7 +148,8 @@ fun CampusTrackRootScreen(
 
 @Composable
 fun CampusHeader(
-    currentTab: DashboardTab
+    currentTab: DashboardTab,
+    onOpenSettings: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -150,7 +165,7 @@ fun CampusHeader(
                     .clip(RoundedCornerShape(10.dp))
                     .background(
                         Brush.linearGradient(
-                            listOf(Color(0xFF00E5FF), Color(0xFF0284C7))
+                            listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
                         )
                     )
                     .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp)),
@@ -169,7 +184,7 @@ fun CampusHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "CampusTrack",
+                        text = "Caliper",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
                         color = TextPrimary
@@ -179,30 +194,49 @@ fun CampusHeader(
                         text = "IERT",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        color = NeonCyan
+                        color = IceBlue
                     )
                 }
                 Text(
-                    text = "Prayagraj • Mechanical Engg",
+                    text = "Prayagraj • Mechanical & Tool Engg",
                     fontSize = 11.sp,
                     color = TextSecondary
                 )
             }
         }
 
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0x2200E5FF))
-                .border(0.5.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = "SEM 3 • 75% MANDATE",
-                color = NeonCyan,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0x2238BDF8))
+                    .border(0.5.dp, IceBlue.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "SEM 3 • 75% MANDATE",
+                    color = IceBlue,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x18FFFFFF))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings Hub",
+                    tint = IceBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }

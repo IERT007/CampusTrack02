@@ -235,6 +235,11 @@ class CampusRepository(
         triggerSilentAutoBackup()
     }
 
+    suspend fun deleteTimetableSlot(id: Long) = withContext(Dispatchers.IO) {
+        db.timetableSlotDao().deleteSlotById(id)
+        triggerSilentAutoBackup()
+    }
+
     suspend fun addTask(task: AcademicTaskEntity) = withContext(Dispatchers.IO) {
         db.academicTaskDao().insertTask(task)
         triggerSilentAutoBackup()
@@ -279,13 +284,13 @@ class CampusRepository(
         db.academicTaskDao().deleteAllTasks()
     }
 
-    // --- Silent Auto-Backup Engine (context.filesDir/CampusTrack_AutoVault.json) ---
+    // --- Silent Auto-Backup Engine (context.filesDir/caliper_vault_snapshot.json) ---
     suspend fun triggerSilentAutoBackup() = withContext(Dispatchers.IO) {
         val ctx = context ?: return@withContext
         try {
             val jsonStr = exportToJson()
-            val vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
-            val tempFile = File(ctx.filesDir, "CampusTrack_AutoVault.tmp")
+            val vaultFile = File(ctx.filesDir, "caliper_vault_snapshot.json")
+            val tempFile = File(ctx.filesDir, "caliper_vault_snapshot.tmp")
             tempFile.writeText(jsonStr)
             if (tempFile.exists()) {
                 tempFile.renameTo(vaultFile)
@@ -296,7 +301,10 @@ class CampusRepository(
     suspend fun restoreFromAutoVault(): Boolean = withContext(Dispatchers.IO) {
         val ctx = context ?: return@withContext false
         try {
-            val vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
+            var vaultFile = File(ctx.filesDir, "caliper_vault_snapshot.json")
+            if (!vaultFile.exists() || vaultFile.length() == 0L) {
+                vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
+            }
             if (!vaultFile.exists() || vaultFile.length() == 0L) return@withContext false
             val json = vaultFile.readText()
             importFromJson(json)
@@ -307,15 +315,16 @@ class CampusRepository(
 
     fun hasAutoVault(): Boolean {
         val ctx = context ?: return false
-        val vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
-        return vaultFile.exists() && vaultFile.length() > 0
+        val vaultFile = File(ctx.filesDir, "caliper_vault_snapshot.json")
+        val legacyVaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
+        return (vaultFile.exists() && vaultFile.length() > 0) || (legacyVaultFile.exists() && legacyVaultFile.length() > 0)
     }
 
     // --- JSON Backup & Restore Engine (Local File Storage) ---
     suspend fun exportToJson(): String = withContext(Dispatchers.IO) {
         val root = JSONObject()
-        root.put("app", "CampusTrack IERT")
-        root.put("version", 2)
+        root.put("app", "Caliper")
+        root.put("version", 3)
         root.put("timestamp", System.currentTimeMillis())
 
         // 1. Subjects

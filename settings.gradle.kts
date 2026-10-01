@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "CampusTrack IERT"
+rootProject.name = "Caliper"
 
 include(":app")

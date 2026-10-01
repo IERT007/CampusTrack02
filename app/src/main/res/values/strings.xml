@@ -1,4 +1,6 @@
 <resources>
-    <string name="app_name">CampusTrack IERT</string>
-    <string name="widget_description">CampusTrack Live Class and Attendance Tracker Widget</string>
+    <string name="app_name">Caliper</string>
+    <string name="widget_description">Caliper Tactical Live Class and Attendance Widget</string>
+    <string name="widget_todo_description">Caliper Mechanical To-Do and Submissions Widget</string>
+    <string name="widget_matrix_description">Caliper Attendance Matrix Heatmap Widget</string>
 </resources>

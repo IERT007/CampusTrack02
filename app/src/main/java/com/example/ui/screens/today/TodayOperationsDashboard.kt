@@ -56,6 +56,7 @@ fun TodayOperationsDashboard(
     var showHolidayManagerDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
     var showMarkedTray by remember { mutableStateOf(false) }
+    var editingSlot by remember { mutableStateOf<com.example.data.local.entity.TimetableSlotEntity?>(null) }
 
     val parsedDate = remember(selectedDateStr) {
         try {
@@ -805,6 +806,7 @@ fun TodayOperationsDashboard(
         items(upcomingSlots, key = { it.slot.id }) { item ->
             SlotCard(
                 item = item,
+                onEditClick = { editingSlot = item.slot },
                 onStatusChange = { status, isProxy, notes ->
                     viewModel.setSlotAttendance(
                         slotId = item.slot.id,
@@ -919,6 +921,7 @@ fun TodayOperationsDashboard(
                 items(markedSlots, key = { "marked_${it.slot.id}" }) { item ->
                     MarkedSlotCard(
                         item = item,
+                        onEditClick = { editingSlot = item.slot },
                         onUndo = {
                             triggerHapticFeedback(context, false)
                             viewModel.undoSlotAttendance(item.slot.id)
@@ -975,11 +978,28 @@ fun TodayOperationsDashboard(
             onDateSelected = { dateStr -> viewModel.setSelectedDate(dateStr) }
         )
     }
+
+    if (editingSlot != null) {
+        com.example.ui.dialogs.EditSlotDialog(
+            slot = editingSlot!!,
+            subjects = subjects,
+            onDismissRequest = { editingSlot = null },
+            onSaveSlot = { updatedSlot ->
+                viewModel.updateTimetableSlot(updatedSlot)
+                editingSlot = null
+            },
+            onDeleteSlot = { slotId ->
+                viewModel.deleteTimetableSlot(slotId)
+                editingSlot = null
+            }
+        )
+    }
 }
 
 @Composable
 fun SlotCard(
     item: SlotDisplayItem,
+    onEditClick: (() -> Unit)? = null,
     onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit
 ) {
     val context = LocalContext.current
@@ -1039,6 +1059,20 @@ fun SlotCard(
                     Spacer(modifier = Modifier.width(6.dp))
                 }
                 item.subject?.type?.let { TypeBadge(it) }
+                if (onEditClick != null) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Slot",
+                            tint = TextMuted,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -1221,6 +1255,7 @@ fun SlotCard(
 @Composable
 fun MarkedSlotCard(
     item: SlotDisplayItem,
+    onEditClick: (() -> Unit)? = null,
     onUndo: () -> Unit,
     onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit
 ) {
@@ -1278,6 +1313,15 @@ fun MarkedSlotCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onEditClick != null) {
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Slot", tint = TextMuted, modifier = Modifier.size(15.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 OutlinedButton(
                     onClick = onUndo,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = WarningAmber),

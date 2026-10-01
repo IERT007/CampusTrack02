@@ -57,6 +57,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: CampusRepository
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+    private val prefs = application.getSharedPreferences("caliper_settings", android.content.Context.MODE_PRIVATE)
 
     private val _selectedDate = MutableStateFlow(LocalDate.now().format(dateFormatter))
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
@@ -64,10 +65,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _hasAutoVault = MutableStateFlow(false)
     val hasAutoVault: StateFlow<Boolean> = _hasAutoVault.asStateFlow()
 
+    private val _isAudioEnabled = MutableStateFlow(prefs.getBoolean("audio_effects_enabled", true))
+    val isAudioEnabled: StateFlow<Boolean> = _isAudioEnabled.asStateFlow()
+
+    private val _isHapticsEnabled = MutableStateFlow(prefs.getBoolean("haptic_feedback_enabled", true))
+    val isHapticsEnabled: StateFlow<Boolean> = _isHapticsEnabled.asStateFlow()
+
+    private val _is24HourFormat = MutableStateFlow(prefs.getBoolean("time_format_24h", false))
+    val is24HourFormat: StateFlow<Boolean> = _is24HourFormat.asStateFlow()
+
+    private val _selectedTheme = MutableStateFlow(prefs.getString("selected_theme", "AMOLED Dark") ?: "AMOLED Dark")
+    val selectedTheme: StateFlow<String> = _selectedTheme.asStateFlow()
+
     init {
         val db = AppDatabase.getDatabase(application)
         repository = CampusRepository(application, db)
         _hasAutoVault.value = repository.hasAutoVault()
+        com.example.audio.CaliperSoundManager.init(application)
+        com.example.audio.CaliperSoundManager.isAudioEnabled = _isAudioEnabled.value
+        com.example.audio.CaliperHapticManager.isHapticsEnabled = _isHapticsEnabled.value
         com.example.notification.NotificationHelper.createNotificationChannels(application)
         com.example.notification.NotificationHelper.scheduleDailyMorningBriefing(application)
         viewModelScope.launch {
@@ -424,6 +440,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // User actions
     fun setSelectedDate(date: String) {
         _selectedDate.value = date
+        com.example.audio.CaliperSoundManager.playSnap()
+        com.example.audio.CaliperHapticManager.tick(getApplication())
     }
 
     fun stepDay(delta: Long) {
@@ -433,10 +451,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             LocalDate.now()
         }
         _selectedDate.value = current.plusDays(delta).format(dateFormatter)
+        com.example.audio.CaliperSoundManager.playSnap()
+        com.example.audio.CaliperHapticManager.tick(getApplication())
     }
 
     fun resetToToday() {
         _selectedDate.value = LocalDate.now().format(dateFormatter)
+        com.example.audio.CaliperSoundManager.playSnap()
+        com.example.audio.CaliperHapticManager.tick(getApplication())
     }
 
     fun setSlotAttendance(
@@ -456,13 +478,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isExtraClass = false,
                 notes = notes
             )
+            when (status) {
+                "attended" -> {
+                    com.example.audio.CaliperSoundManager.playSuccess()
+                    com.example.audio.CaliperHapticManager.successClick(getApplication())
+                }
+                "bunked" -> {
+                    com.example.audio.CaliperSoundManager.playThud()
+                    com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
+                }
+                else -> {
+                    com.example.audio.CaliperSoundManager.playAlert()
+                    com.example.audio.CaliperHapticManager.tick(getApplication())
+                }
+            }
         }
     }
 
     fun undoSlotAttendance(slotId: Long) {
         viewModelScope.launch {
             repository.deleteSlotAttendance(_selectedDate.value, slotId)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
         }
+    }
+
+    fun updateTimetableSlot(slot: TimetableSlotEntity) {
+        viewModelScope.launch {
+            repository.updateTimetableSlot(slot)
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun deleteTimetableSlot(slotId: Long) {
+        viewModelScope.launch {
+            repository.deleteTimetableSlot(slotId)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
+        }
+    }
+
+    fun setAudioEnabled(enabled: Boolean) {
+        _isAudioEnabled.value = enabled
+        com.example.audio.CaliperSoundManager.isAudioEnabled = enabled
+        prefs.edit().putBoolean("audio_effects_enabled", enabled).apply()
+        if (enabled) com.example.audio.CaliperSoundManager.playSuccess()
+    }
+
+    fun setHapticsEnabled(enabled: Boolean) {
+        _isHapticsEnabled.value = enabled
+        com.example.audio.CaliperHapticManager.isHapticsEnabled = enabled
+        prefs.edit().putBoolean("haptic_feedback_enabled", enabled).apply()
+        if (enabled) com.example.audio.CaliperHapticManager.successClick(getApplication())
+    }
+
+    fun set24HourFormat(enabled: Boolean) {
+        _is24HourFormat.value = enabled
+        prefs.edit().putBoolean("time_format_24h", enabled).apply()
+        com.example.audio.CaliperSoundManager.playSnap()
+        com.example.audio.CaliperHapticManager.tick(getApplication())
+    }
+
+    fun setSelectedTheme(theme: String) {
+        _selectedTheme.value = theme
+        prefs.edit().putString("selected_theme", theme).apply()
+        com.example.audio.CaliperSoundManager.playSnap()
+        com.example.audio.CaliperHapticManager.tick(getApplication())
     }
 
     fun markWholeDayPresent() {
@@ -619,8 +701,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return repository.exportToJson()
     }
 
+    fun exportBackupJson(onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = repository.exportToJson()
+                onResult(json)
+            } catch (_: Exception) {
+                onResult(null)
+            }
+        }
+    }
+
+    fun exportBackupToFile(context: android.content.Context, uri: android.net.Uri, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = repository.exportToJson()
+                context.contentResolver.openOutputStream(uri)?.use { os ->
+                    os.write(json.toByteArray())
+                }
+                onResult(true)
+            } catch (_: Exception) {
+                onResult(false)
+            }
+        }
+    }
+
+    fun importBackupFromFile(context: android.content.Context, uri: android.net.Uri, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    inputStream.bufferedReader().readText()
+                }
+                if (json != null) {
+                    val success = repository.importFromJson(json)
+                    onResult(success)
+                } else {
+                    onResult(false)
+                }
+            } catch (_: Exception) {
+                onResult(false)
+            }
+        }
+    }
+
     suspend fun importBackupJson(jsonString: String): Boolean {
         return repository.importFromJson(jsonString)
+    }
+
+    fun preloadDefaultIertData() {
+        preloadDefaultData()
     }
 
     fun restoreFromAutoVault(onResult: (Boolean) -> Unit) {

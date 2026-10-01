@@ -18,7 +18,7 @@ class ExampleRobolectricTest {
   fun `read string from context`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("CampusTrack IERT", appName)
+    assertEquals("Caliper", appName)
   }
 
   @Test
@@ -39,8 +39,8 @@ class ExampleRobolectricTest {
   @Test
   fun `verify json backup structure contains required keys`() {
     val json = org.json.JSONObject()
-    json.put("app", "CampusTrack IERT")
-    json.put("version", 2)
+    json.put("app", "Caliper")
+    json.put("version", 3)
     val subjects = org.json.JSONArray()
     val sub = org.json.JSONObject()
     sub.put("code", "ME-301")
@@ -48,8 +48,19 @@ class ExampleRobolectricTest {
     subjects.put(sub)
     json.put("subjects", subjects)
 
-    assertEquals("CampusTrack IERT", json.getString("app"))
-    assertEquals(2, json.getInt("version"))
+    assertEquals("Caliper", json.getString("app"))
+    assertEquals(3, json.getInt("version"))
     assertEquals("ME-301", json.getJSONArray("subjects").getJSONObject(0).getString("code"))
+  }
+
+  @Test
+  fun `verify audio and haptic engine states`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    com.example.audio.CaliperSoundManager.init(context)
+    com.example.audio.CaliperSoundManager.isAudioEnabled = true
+    assertEquals(true, com.example.audio.CaliperSoundManager.isAudioEnabled)
+
+    com.example.audio.CaliperHapticManager.isHapticsEnabled = true
+    assertEquals(true, com.example.audio.CaliperHapticManager.isHapticsEnabled)
   }
 }

@@ -184,6 +184,145 @@ fun SubjectsSafeZoneDashboard(
             }
         }
 
+        // 2.5 Mass Bunk Impact Simulator Card
+        item {
+            var simulatedBunkCount by remember { mutableFloatStateOf(0f) }
+            val bunksInt = simulatedBunkCount.toInt()
+
+            val simulatedConducted = summary.totalConducted + bunksInt
+            val simulatedAttended = summary.totalAttended
+            val simulatedPct = if (simulatedConducted > 0) {
+                (simulatedAttended.toDouble() / simulatedConducted.toDouble()) * 100.0
+            } else {
+                100.0
+            }
+
+            val maxSafeBunks = if (summary.overallPercentage >= 75.0 && summary.totalConducted > 0) {
+                val safe = kotlin.math.floor((summary.totalAttended.toDouble() - (0.75 * summary.totalConducted.toDouble())) / 0.75).toInt()
+                kotlin.math.max(0, safe)
+            } else {
+                0
+            }
+
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("mass_bunk_simulator_card"),
+                backgroundColor = Color(0x0DFFFFFF),
+                borderColors = listOf(IceBlue.copy(alpha = 0.4f), GlassBorderBottom)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LinearScale,
+                                contentDescription = null,
+                                tint = IceBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "MASS BUNK IMPACT SIMULATOR",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = IceBlue,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (simulatedPct >= 75.0) SageMint.copy(alpha = 0.18f) else SoftCoral.copy(alpha = 0.18f))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (bunksInt == 0) "Safe Buffer: $maxSafeBunks Bunks" else "Simulating +$bunksInt Bunks",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (simulatedPct >= 75.0) SageMint else SoftCoral
+                            )
+                        }
+                    }
+
+                    // Simulation Metrics Projection
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column {
+                            Text("Projected Aggregate", fontSize = 11.sp, color = TextSecondary)
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = String.format("%.1f%%", simulatedPct),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (simulatedPct >= 75.0) SageMint else SoftCoral
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                if (bunksInt > 0) {
+                                    val delta = simulatedPct - summary.overallPercentage
+                                    Text(
+                                        text = String.format("(%.1f%%)", delta),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SoftCoral
+                                    )
+                                }
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = if (simulatedPct >= 75.0) "ELIGIBLE FOR EXAMS" else "DETAINED FROM EXAMS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (simulatedPct >= 75.0) SageMint else SoftCoral
+                            )
+                            Text(
+                                text = "$simulatedAttended / $simulatedConducted Conducted",
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                        }
+                    }
+
+                    // Tactile Slider
+                    Slider(
+                        value = simulatedBunkCount,
+                        onValueChange = { newVal ->
+                            if (newVal.toInt() != bunksInt) {
+                                com.example.audio.CaliperHapticManager.tick(context)
+                            }
+                            simulatedBunkCount = newVal
+                        },
+                        valueRange = 0f..15f,
+                        steps = 14,
+                        colors = SliderDefaults.colors(
+                            thumbColor = if (simulatedPct >= 75.0) IceBlue else SoftCoral,
+                            activeTrackColor = if (simulatedPct >= 75.0) IceBlue else SoftCoral,
+                            inactiveTrackColor = Color(0x22FFFFFF)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("0 Bunks", fontSize = 10.sp, color = TextMuted)
+                        Text("+7 Mass Bunks", fontSize = 10.sp, color = TextMuted)
+                        Text("+15 Maximum", fontSize = 10.sp, color = TextMuted)
+                    }
+                }
+            }
+        }
+
         // 3. Category Filter Chips & Add Subject Action
         item {
             Row(

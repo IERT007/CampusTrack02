@@ -73,7 +73,6 @@ class CampusWidget : GlanceAppWidget() {
         val safeZonePct = if (totalCond > 0) (totalAtt.toDouble() / totalCond.toDouble()) * 100.0 else 100.0
 
         // Find active or next upcoming slot
-        val nowTime = LocalTime.now()
         val upcomingSlot = allSlots.firstOrNull { slot ->
             val log = logs.find { it.slotId == slot.id }
             log == null // Unmarked period
@@ -87,7 +86,7 @@ class CampusWidget : GlanceAppWidget() {
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .cornerRadius(18.dp)
-                    .background(Color(0xFF090C14))
+                    .background(Color(0xFF05070B))
                     .padding(14.dp)
             ) {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
@@ -98,9 +97,9 @@ class CampusWidget : GlanceAppWidget() {
                     ) {
                         Column(modifier = GlanceModifier.defaultWeight()) {
                             Text(
-                                text = "CampusTrack IERT",
+                                text = "CALIPER • IERT",
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFF00E5FF)),
+                                    color = ColorProvider(Color(0xFF38BDF8)),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -115,11 +114,11 @@ class CampusWidget : GlanceAppWidget() {
                         }
 
                         // Live Safe-Zone % badge
-                        val pctColor = if (safeZonePct >= 75.0) Color(0xFF00E676) else Color(0xFFEF4444)
+                        val pctColor = if (safeZonePct >= 75.0) Color(0xFF34D399) else Color(0xFFFB7185)
                         Box(
                             modifier = GlanceModifier
                                 .cornerRadius(8.dp)
-                                .background(Color(0x2200E5FF))
+                                .background(Color(0x1A38BDF8))
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
@@ -171,8 +170,8 @@ class CampusWidget : GlanceAppWidget() {
                                         )
                                     ),
                                     colors = ButtonDefaults.buttonColors(
-                                        backgroundColor = ColorProvider(Color(0xFF00E676)),
-                                        contentColor = ColorProvider(Color.Black)
+                                        backgroundColor = ColorProvider(Color(0xFF34D399)),
+                                        contentColor = ColorProvider(Color(0xFF05070B))
                                     ),
                                     modifier = GlanceModifier.defaultWeight().height(36.dp)
                                 )
@@ -188,7 +187,7 @@ class CampusWidget : GlanceAppWidget() {
                                         )
                                     ),
                                     colors = ButtonDefaults.buttonColors(
-                                        backgroundColor = ColorProvider(Color(0xFFEF4444)),
+                                        backgroundColor = ColorProvider(Color(0xFFFB7185)),
                                         contentColor = ColorProvider(Color.White)
                                     ),
                                     modifier = GlanceModifier.defaultWeight().height(36.dp)
@@ -198,7 +197,7 @@ class CampusWidget : GlanceAppWidget() {
                             Text(
                                 text = "✓ Period Attendance Logged",
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFF00E676)),
+                                    color = ColorProvider(Color(0xFF34D399)),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -243,12 +242,11 @@ class MarkPresentActionCallback : ActionCallback {
                 status = "attended",
                 isProxy = false,
                 isExtraClass = false,
-                notes = "Marked via Glance Widget",
+                notes = "Marked via Caliper Widget",
                 timestamp = System.currentTimeMillis()
             )
         )
 
-        // Trigger silent auto-backup
         CampusRepository(context, db).triggerSilentAutoBackup()
         CampusWidget().update(context, glanceId)
     }
@@ -274,12 +272,11 @@ class MarkBunkActionCallback : ActionCallback {
                 status = "bunked",
                 isProxy = false,
                 isExtraClass = false,
-                notes = "Bunked via Glance Widget",
+                notes = "Bunked via Caliper Widget",
                 timestamp = System.currentTimeMillis()
             )
         )
 
-        // Trigger silent auto-backup
         CampusRepository(context, db).triggerSilentAutoBackup()
         CampusWidget().update(context, glanceId)
     }

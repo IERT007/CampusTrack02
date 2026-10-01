@@ -1,6 +1,6 @@
 {
-  "name": "CampusTrack IERT",
-  "description": "Offline-first Academic & Attendance Management app for IERT students featuring real-time safe zone bunk calculator, recurring timetable, sessional assessment tracker, and audit analytics.",
+  "name": "Caliper",
+  "description": "Enterprise-grade, offline-first Academic Operating System for IERT Mechanical & Tool Engineering with tactile Vernier engine, procedural audio, mass bunk simulator, and Glance widgets.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
