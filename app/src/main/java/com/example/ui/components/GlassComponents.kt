@@ -67,35 +67,37 @@ fun triggerHapticFeedback(context: Context, isHeavy: Boolean = false) {
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp),
+    shape: Shape = RoundedCornerShape(18.dp),
     backgroundColor: Color = GlassFill,
-    borderColors: List<Color> = listOf(GlassBorderTop, GlassBorderBottom),
-    borderWidth: Dp = 1.dp,
+    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f)),
+    borderWidth: Dp = 0.5.dp,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val context = LocalContext.current
-    val clickableModifier = if (onClick != null) {
-        Modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = ripple(color = NeonCyan.copy(alpha = 0.3f)),
-            onClick = {
-                triggerHapticFeedback(context, false)
-                onClick()
-            }
-        )
+    val colors = CaliperTheme.colors
+
+    val interactiveModifier = if (onClick != null) {
+        Modifier.tactilePressEffect(context) {
+            onClick()
+        }
     } else Modifier
 
     Box(
         modifier = modifier
-            .shadow(elevation = 10.dp, shape = shape, spotColor = Color(0x33000000), ambientColor = Color(0x1F00E5FF))
+            .shadow(
+                elevation = 8.dp,
+                shape = shape,
+                spotColor = Color(0x33000000),
+                ambientColor = Color.White.copy(alpha = 0.02f)
+            )
             .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        backgroundColor.copy(alpha = 0.28f),
-                        backgroundColor.copy(alpha = 0.12f),
-                        AmoledCardSurface.copy(alpha = 0.75f)
+                        Color.White.copy(alpha = 0.045f),
+                        Color.White.copy(alpha = 0.02f),
+                        colors.containerSurface.copy(alpha = 0.85f)
                     )
                 )
             )
@@ -104,7 +106,7 @@ fun GlassCard(
                 brush = Brush.verticalGradient(colors = borderColors),
                 shape = shape
             )
-            .then(clickableModifier)
+            .then(interactiveModifier)
             .padding(16.dp)
     ) {
         Column(content = content)
@@ -114,24 +116,25 @@ fun GlassCard(
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(24.dp),
-    borderColors: List<Color> = listOf(GlassBorderTop, GlassBorderBottom),
+    shape: Shape = RoundedCornerShape(20.dp),
+    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f)),
     content: @Composable BoxScope.() -> Unit
 ) {
+    val colors = CaliperTheme.colors
     Box(
         modifier = modifier
-            .shadow(elevation = 16.dp, shape = shape, spotColor = Color(0x66000000))
+            .shadow(elevation = 12.dp, shape = shape, spotColor = Color(0x66000000))
             .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xD9121624),
-                        Color(0xF00A0D15)
+                        Color.White.copy(alpha = 0.04f),
+                        colors.containerSurface.copy(alpha = 0.90f)
                     )
                 )
             )
             .border(
-                width = 1.dp,
+                width = 0.5.dp,
                 brush = Brush.verticalGradient(borderColors),
                 shape = shape
             ),

@@ -74,7 +74,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _is24HourFormat = MutableStateFlow(prefs.getBoolean("time_format_24h", false))
     val is24HourFormat: StateFlow<Boolean> = _is24HourFormat.asStateFlow()
 
-    private val _selectedTheme = MutableStateFlow(prefs.getString("selected_theme", "AMOLED Dark") ?: "AMOLED Dark")
+    private val _isMonochromeMode = MutableStateFlow(prefs.getBoolean("is_monochrome_mode", false))
+    val isMonochromeMode: StateFlow<Boolean> = _isMonochromeMode.asStateFlow()
+
+    private val _selectedTheme = MutableStateFlow(prefs.getString("selected_theme", "Normal") ?: "Normal")
     val selectedTheme: StateFlow<String> = _selectedTheme.asStateFlow()
 
     init {
@@ -820,5 +823,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.clearAttendanceLogs()
         }
+    }
+
+    fun setMonochromeMode(enabled: Boolean) {
+        _isMonochromeMode.value = enabled
+        prefs.edit().putBoolean("is_monochrome_mode", enabled).apply()
+        _selectedTheme.value = if (enabled) "Monochrome Dark" else "Normal"
+        prefs.edit().putString("selected_theme", _selectedTheme.value).apply()
     }
 }

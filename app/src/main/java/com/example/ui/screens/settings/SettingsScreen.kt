@@ -53,6 +53,7 @@ fun SettingsScreen(
     val isAudioEnabled by viewModel.isAudioEnabled.collectAsState()
     val isHapticsEnabled by viewModel.isHapticsEnabled.collectAsState()
     val is24HourFormat by viewModel.is24HourFormat.collectAsState()
+    val isMonochromeMode by viewModel.isMonochromeMode.collectAsState()
     val hasAutoVault by viewModel.hasAutoVault.collectAsState()
 
     var showResetConfirmation by remember { mutableStateOf(false) }
@@ -311,13 +312,65 @@ fun SettingsScreen(
                     }
                 }
 
-                // SECTION 3: Display & Formatting Hub
-                SettingsSectionHeader("DISPLAY & TIME FORMATTING", Icons.Default.DisplaySettings, MutedChampagneAmber)
+                // SECTION 3: Display & Dual-Theme Engine Hub
+                SettingsSectionHeader("DISPLAY & DUAL-THEME ENGINE", Icons.Default.Palette, MutedChampagneAmber)
 
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
                     borderColors = listOf(MutedChampagneAmber.copy(alpha = 0.35f), GlassBorderBottom)
                 ) {
+                    Text(
+                        text = "THEME SYSTEM & COLOR PSYCHOLOGY",
+                        color = ArchitecturalTitanium,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SettingsToggleRow(
+                        title = "Monochrome Luxury Dark Mode",
+                        subtitle = if (isMonochromeMode) "Pure Obsidian (#000000), crisp white glass & zero color noise" else "Disabled • Using Color Psychology semantic palette",
+                        checked = isMonochromeMode,
+                        onCheckedChange = {
+                            CaliperSoundManager.playSnap()
+                            CaliperHapticManager.tick(context)
+                            viewModel.setMonochromeMode(it)
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Mode visual summary card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.03f))
+                            .border(0.5.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+                            .padding(10.dp)
+                    ) {
+                        if (isMonochromeMode) {
+                            Text(
+                                text = "Active: Monochrome Luxury Glass • High-contrast crisp white typography, silver secondary accents, and translucent frosted glass cards. Perfect for late-night review without glare.",
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                        } else {
+                            Text(
+                                text = "Active: Color Psychology Normal • Ergonomic Dark Slate surface (#0B0E14) with semantic signals: Green (Safe 75%), Blue (Lectures), Orange (Deadlines), Red (Bunk/Debar), and Gold (Streak).",
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     SettingsToggleRow(
                         title = "24-Hour Military Time Format",
                         subtitle = "Display timetable as 13:00 - 14:00 instead of 01:00 PM",

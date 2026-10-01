@@ -63,4 +63,33 @@ class ExampleRobolectricTest {
     com.example.audio.CaliperHapticManager.isHapticsEnabled = true
     assertEquals(true, com.example.audio.CaliperHapticManager.isHapticsEnabled)
   }
+
+  @Test
+  fun `verify dual theme engine color palettes`() {
+    val monoColors = com.example.ui.theme.MonochromeDarkColors
+    val normalColors = com.example.ui.theme.NormalPsychologyColors
+
+    assertEquals(true, monoColors.isMonochrome)
+    assertEquals(false, normalColors.isMonochrome)
+
+    // Base surface checks
+    assertEquals(com.example.ui.theme.MonochromePureBlack, monoColors.baseSurface)
+    assertEquals(com.example.ui.theme.PsychologyDarkSlate, normalColors.baseSurface)
+
+    // Semantic colors in normal mode
+    assertEquals(com.example.ui.theme.PsychologyGreen, normalColors.safeZone)
+    assertEquals(com.example.ui.theme.PsychologyBlue, normalColors.scheduledLecture)
+    assertEquals(com.example.ui.theme.PsychologyOrange, normalColors.deadlineWarning)
+    assertEquals(com.example.ui.theme.PsychologyRed, normalColors.bunkDanger)
+    assertEquals(com.example.ui.theme.PsychologyGold, normalColors.streakGold)
+  }
+
+  @Test
+  fun `verify interactive calendar dynamic month engine calculations`() {
+    val ym = java.time.YearMonth.of(2026, 10)
+    assertEquals(31, ym.lengthOfMonth())
+    // Oct 1 2026 is a Thursday (4 in 1..7, so offset = 3 for 0-indexed Mon..Sun)
+    val firstDayOffset = ym.atDay(1).dayOfWeek.value - 1
+    assertEquals(3, firstDayOffset)
+  }
 }

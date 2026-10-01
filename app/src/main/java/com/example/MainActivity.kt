@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.CampusTrackRootScreen
 import com.example.ui.MainViewModel
@@ -14,8 +16,9 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
-      MyApplicationTheme {
-        val viewModel: MainViewModel = viewModel()
+      val viewModel: MainViewModel = viewModel()
+      val isMonochrome by viewModel.isMonochromeMode.collectAsState()
+      MyApplicationTheme(isMonochrome = isMonochrome) {
         CampusTrackRootScreen(viewModel = viewModel)
       }
     }

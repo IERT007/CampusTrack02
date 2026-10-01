@@ -76,6 +76,8 @@ fun CampusTrackRootScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            val colors = com.example.ui.theme.CaliperTheme.colors
+
             // Background subtle ambient radial glow for liquid glassmorphism
             Box(
                 modifier = Modifier
@@ -83,18 +85,17 @@ fun CampusTrackRootScreen(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                AmoledBackground,
-                                Color(0xFF090D14),
-                                AmoledBackground
+                                colors.baseSurface,
+                                colors.containerSurface,
+                                colors.baseSurface
                             )
                         )
                     )
             )
 
-            // Top Campus Header Bar
+            // Top Campus Header Bar (Aligned Brand Title & Translucent 20px Settings Icon)
             Column(modifier = Modifier.fillMaxSize()) {
-                CampusHeader(
-                    currentTab = currentTab,
+                com.example.ui.components.MainTopBar(
                     onOpenSettings = {
                         com.example.audio.CaliperSoundManager.playSnap()
                         com.example.audio.CaliperHapticManager.tick(context)
