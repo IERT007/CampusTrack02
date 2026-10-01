@@ -19,14 +19,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.entity.AcademicTaskEntity
 import com.example.data.local.entity.AssessmentEntity
 import com.example.data.local.entity.SubjectEntity
 import com.example.ui.MainViewModel
 import com.example.ui.components.*
 import com.example.ui.dialogs.AddAssessmentDialog
 import com.example.ui.dialogs.AddDeadlineDialog
+import com.example.ui.dialogs.AddTaskDialog
 import com.example.ui.theme.*
 import java.time.Duration
 import java.time.LocalDateTime
@@ -38,12 +41,15 @@ fun AcademicsDashboard(
 ) {
     val context = LocalContext.current
     val assessments by viewModel.assessments.collectAsState()
+    val tasks by viewModel.tasks.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
     val ciaBreakdown by viewModel.ciaBreakdown.collectAsState()
 
-    var activeTab by remember { mutableStateOf("deadlines") } // "deadlines", "sessionals", "practical"
+    var activeTab by remember { mutableStateOf("deadlines") } // "deadlines", "tasks", "sessionals", "practical"
     var showAddTestDialog by remember { mutableStateOf(false) }
     var showAddDeadlineDialog by remember { mutableStateOf(false) }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
+    var taskFilter by remember { mutableStateOf("pending") } // "all", "pending", "completed"
 
     val sessionals = remember(assessments) {
         assessments.filter { it.type.startsWith("sessional") }
@@ -58,6 +64,13 @@ fun AcademicsDashboard(
     }
     val allDeadlines = remember(assessments) {
         assessments.sortedBy { it.dueDate }
+    }
+    val filteredTasks = remember(tasks, taskFilter) {
+        when (taskFilter) {
+            "pending" -> tasks.filter { !it.isCompleted }
+            "completed" -> tasks.filter { it.isCompleted }
+            else -> tasks
+        }
     }
 
     LazyColumn(
@@ -181,9 +194,10 @@ fun AcademicsDashboard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 val tabs = listOf(
-                    "deadlines" to "Deadlines (${allDeadlines.count { it.status == "pending" }})",
-                    "sessionals" to "Sessionals & CTs",
-                    "practical" to "Sheets & Jobs"
+                    "deadlines" to "Deadlines",
+                    "tasks" to "To-Do (${tasks.count { !it.isCompleted }})",
+                    "sessionals" to "Sessionals",
+                    "practical" to "Practical"
                 )
 
                 tabs.forEach { (tabId, label) ->
@@ -283,6 +297,111 @@ fun AcademicsDashboard(
                         },
                         onDelete = {
                             viewModel.deleteAssessment(item.id)
+                        }
+                    )
+                }
+            }
+
+            "tasks" -> {
+                // Academic To-Do & Task Checklist Tab
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "ACADEMIC TO-DO CHECKLIST",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "Preparation tasks, submissions & revision items",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                        }
+
+                        Button(
+                            onClick = { showAddTaskDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald.copy(alpha = 0.2f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.7f)),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("+ Task", color = NeonEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Filter Row for Tasks: Pending, Completed, All
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "pending" to "Pending (${tasks.count { !it.isCompleted }})",
+                            "completed" to "Completed (${tasks.count { it.isCompleted }})",
+                            "all" to "All (${tasks.size})"
+                        ).forEach { (fKey, label) ->
+                            val isSelected = (taskFilter == fKey)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) NeonEmerald.copy(alpha = 0.2f) else Color(0x14FFFFFF))
+                                    .border(1.dp, if (isSelected) NeonEmerald else Color.Transparent, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        triggerHapticFeedback(context, false)
+                                        taskFilter = fKey
+                                    }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(label, color = if (isSelected) NeonEmerald else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                if (filteredTasks.isEmpty()) {
+                    item {
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.TaskAlt, contentDescription = null, tint = IceSky, modifier = Modifier.size(36.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = if (taskFilter == "completed") "No completed tasks yet" else "All tasks up to date!",
+                                    color = TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text("Add checklist items for drawing drafting or viva preparations.", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+
+                items(filteredTasks, key = { it.id }) { task ->
+                    val linkedSubject = subjects.find { it.id == task.subjectId }
+                    AcademicTaskItemCard(
+                        task = task,
+                        subject = linkedSubject,
+                        onToggle = {
+                            triggerHapticFeedback(context, false)
+                            viewModel.toggleTaskCompleted(task.id, !task.isCompleted)
+                        },
+                        onDelete = {
+                            viewModel.deleteTask(task.id)
                         }
                     )
                 }
@@ -410,6 +529,109 @@ fun AcademicsDashboard(
                 viewModel.saveAssessment(entity)
             }
         )
+    }
+
+    if (showAddTaskDialog) {
+        AddTaskDialog(
+            subjects = subjects,
+            onDismiss = { showAddTaskDialog = false },
+            onSave = { task ->
+                viewModel.saveTask(task)
+            }
+        )
+    }
+}
+
+@Composable
+fun AcademicTaskItemCard(
+    task: AcademicTaskEntity,
+    subject: SubjectEntity?,
+    onToggle: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val priorityColor = when (task.priority) {
+        "High" -> StrictRed
+        "Medium" -> NeonCyan
+        else -> TextMuted
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        borderColors = listOf(
+            if (task.isCompleted) NeonEmerald.copy(alpha = 0.4f) else priorityColor.copy(alpha = 0.5f),
+            GlassBorderBottom
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = task.isCompleted,
+                    onCheckedChange = { onToggle() },
+                    colors = CheckboxDefaults.colors(checkedColor = NeonEmerald)
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(priorityColor.copy(alpha = 0.2f))
+                                .border(0.5.dp, priorityColor, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (task.priority == "High") "URGENT" else task.priority.uppercase(),
+                                color = priorityColor,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0x18FFFFFF))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(task.category, color = TextSecondary, fontSize = 9.sp)
+                        }
+
+                        if (subject != null) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(subject.code, color = IceSky, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = task.description,
+                        color = if (task.isCompleted) TextMuted else TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
+                    )
+
+                    Text(
+                        text = "Due: ${task.dueDate}",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = TextMuted, modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }
 

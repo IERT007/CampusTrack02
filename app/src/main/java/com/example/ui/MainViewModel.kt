@@ -61,9 +61,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedDate = MutableStateFlow(LocalDate.now().format(dateFormatter))
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
 
+    private val _hasAutoVault = MutableStateFlow(false)
+    val hasAutoVault: StateFlow<Boolean> = _hasAutoVault.asStateFlow()
+
     init {
         val db = AppDatabase.getDatabase(application)
-        repository = CampusRepository(db)
+        repository = CampusRepository(application, db)
+        _hasAutoVault.value = repository.hasAutoVault()
+        com.example.notification.NotificationHelper.createNotificationChannels(application)
+        com.example.notification.NotificationHelper.scheduleDailyMorningBriefing(application)
         viewModelScope.launch {
             repository.checkAndInitializeDefaultData()
         }
@@ -617,9 +623,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return repository.importFromJson(jsonString)
     }
 
+    fun restoreFromAutoVault(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = repository.restoreFromAutoVault()
+            _hasAutoVault.value = repository.hasAutoVault()
+            onResult(success)
+        }
+    }
+
+    fun scheduleAllLectureAlerts() {
+        viewModelScope.launch {
+            val allSlots = slots.value
+            val allSubjects = subjects.value
+            for (slot in allSlots) {
+                val sub = allSubjects.find { it.id == slot.subjectId }
+                com.example.notification.NotificationHelper.schedulePreLectureAlert(
+                    context = getApplication(),
+                    slotId = slot.id,
+                    subjectName = sub?.name ?: "Lecture",
+                    roomNo = slot.roomNo,
+                    startTimeStr = slot.startTime,
+                    dayOfWeek = slot.dayOfWeek
+                )
+            }
+        }
+    }
+
+    fun scheduleAllDeadlineAlerts() {
+        viewModelScope.launch {
+            val allAssessments = assessments.value
+            for (a in allAssessments) {
+                if (a.status == "pending") {
+                    com.example.notification.NotificationHelper.scheduleDeadlineReminders(
+                        context = getApplication(),
+                        assessmentId = a.id,
+                        title = a.title,
+                        dueDateStr = a.dueDate,
+                        dueTimeStr = a.dueTime
+                    )
+                }
+            }
+        }
+    }
+
     fun preloadDefaultData() {
         viewModelScope.launch {
             repository.preloadDefaultIertData()
+            scheduleAllLectureAlerts()
+            scheduleAllDeadlineAlerts()
         }
     }
 

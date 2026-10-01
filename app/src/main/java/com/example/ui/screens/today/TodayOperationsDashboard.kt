@@ -89,6 +89,28 @@ fun TodayOperationsDashboard(
     }
 
     val attendedCount = slotItems.count { it.currentLog?.status == "attended" }
+    val hasAutoVault by viewModel.hasAutoVault.collectAsState()
+
+    var showNotificationPermissionBanner by remember {
+        mutableStateOf(
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else false
+        )
+    }
+
+    val notificationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        showNotificationPermissionBanner = !isGranted
+        if (isGranted) {
+            viewModel.scheduleAllLectureAlerts()
+            viewModel.scheduleAllDeadlineAlerts()
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -97,6 +119,106 @@ fun TodayOperationsDashboard(
         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // Auto-Vault Restore Banner (Shown when DB is clean/empty but AutoVault snapshot exists)
+        if (hasAutoVault && subjects.isEmpty() && allSlots.isEmpty()) {
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = Color(0x3300E5FF),
+                    borderColors = listOf(NeonCyan, GlassBorderBottom)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonCyan.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.CloudDownload, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "AUTO-BACKUP VAULT FOUND",
+                                    color = NeonCyan,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    text = "Restore previous session timetable and records",
+                                    color = TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                triggerHapticFeedback(context, true)
+                                viewModel.restoreFromAutoVault { success ->
+                                    if (success) {
+                                        viewModel.scheduleAllLectureAlerts()
+                                        viewModel.scheduleAllDeadlineAlerts()
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("Restore", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Notification Permission Prompt Banner (Android 13+)
+        if (showNotificationPermissionBanner) {
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = Color(0x228B5CF6),
+                    borderColors = listOf(ElectricViolet.copy(alpha = 0.6f), GlassBorderBottom)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = ElectricViolet, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Enable 07:30 AM Briefing & 10m Alerts", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Get pre-lecture heads-up and deadline alerts", color = TextSecondary, fontSize = 10.sp)
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    notificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ElectricViolet),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("Enable", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
         // 0. Top Management & Action Bar
         item {
             Row(

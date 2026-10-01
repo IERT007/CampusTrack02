@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import android.content.Context
 import com.example.data.local.AppDatabase
 import com.example.data.local.entity.*
 import com.example.data.sample.IertDefaultData
@@ -9,8 +10,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
-class CampusRepository(private val db: AppDatabase) {
+class CampusRepository(
+    private val context: Context? = null,
+    private val db: AppDatabase
+) {
+
+    constructor(db: AppDatabase) : this(null, db)
 
     val allSubjects: Flow<List<SubjectEntity>> = db.subjectDao().getAllSubjects()
     val allSlots: Flow<List<TimetableSlotEntity>> = db.timetableSlotDao().getAllSlots()
@@ -52,10 +59,12 @@ class CampusRepository(private val db: AppDatabase) {
             timestamp = System.currentTimeMillis()
         )
         db.attendanceLogDao().insertLog(entity)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteSlotAttendance(date: String, slotId: Long) = withContext(Dispatchers.IO) {
         db.attendanceLogDao().deleteLogForSlot(date, slotId)
+        triggerSilentAutoBackup()
     }
 
     suspend fun markWholeDayPresent(date: String, slots: List<TimetableSlotEntity>) = withContext(Dispatchers.IO) {
@@ -63,16 +72,21 @@ class CampusRepository(private val db: AppDatabase) {
             DailyDayStatusEntity(date = date, wentToCollege = true, leaveCategory = "none", notes = "Whole day marked present")
         )
         for (slot in slots) {
-            setSlotAttendance(
-                date = date,
-                slotId = slot.id,
-                subjectId = slot.subjectId,
-                status = "attended",
-                isProxy = false,
-                isExtraClass = false,
-                notes = "Auto bulk mark"
+            db.attendanceLogDao().deleteLogForSlot(date, slot.id)
+            db.attendanceLogDao().insertLog(
+                AttendanceLogEntity(
+                    date = date,
+                    slotId = slot.id,
+                    subjectId = slot.subjectId,
+                    status = "attended",
+                    isProxy = false,
+                    isExtraClass = false,
+                    notes = "Auto bulk mark",
+                    timestamp = System.currentTimeMillis()
+                )
             )
         }
+        triggerSilentAutoBackup()
     }
 
     suspend fun markMassBunkOrOff(
@@ -90,16 +104,21 @@ class CampusRepository(private val db: AppDatabase) {
             )
         )
         for (slot in slots) {
-            setSlotAttendance(
-                date = date,
-                slotId = slot.id,
-                subjectId = slot.subjectId,
-                status = statusString,
-                isProxy = false,
-                isExtraClass = false,
-                notes = category
+            db.attendanceLogDao().deleteLogForSlot(date, slot.id)
+            db.attendanceLogDao().insertLog(
+                AttendanceLogEntity(
+                    date = date,
+                    slotId = slot.id,
+                    subjectId = slot.subjectId,
+                    status = statusString,
+                    isProxy = false,
+                    isExtraClass = false,
+                    notes = category,
+                    timestamp = System.currentTimeMillis()
+                )
             )
         }
+        triggerSilentAutoBackup()
     }
 
     suspend fun logAdHocExtraClass(
@@ -120,6 +139,7 @@ class CampusRepository(private val db: AppDatabase) {
             timestamp = System.currentTimeMillis()
         )
         db.attendanceLogDao().insertLog(entity)
+        triggerSilentAutoBackup()
     }
 
     suspend fun reconcileSubject(
@@ -132,86 +152,107 @@ class CampusRepository(private val db: AppDatabase) {
         val attendedOffset = officialAttended - currentAppAttended
         val totalOffset = officialTotal - currentAppTotal
         db.subjectDao().updateOffsets(subjectId, attendedOffset, totalOffset)
+        triggerSilentAutoBackup()
     }
 
     suspend fun addSubject(subject: SubjectEntity) = withContext(Dispatchers.IO) {
         db.subjectDao().insertSubject(subject)
+        triggerSilentAutoBackup()
     }
 
     suspend fun updateSubject(subject: SubjectEntity) = withContext(Dispatchers.IO) {
         db.subjectDao().updateSubject(subject)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteSubject(subject: SubjectEntity) = withContext(Dispatchers.IO) {
         db.subjectDao().deleteSubject(subject)
+        triggerSilentAutoBackup()
     }
 
     suspend fun addAssessment(assessment: AssessmentEntity) = withContext(Dispatchers.IO) {
         db.assessmentDao().insertAssessment(assessment)
+        triggerSilentAutoBackup()
     }
 
     suspend fun updateAssessment(assessment: AssessmentEntity) = withContext(Dispatchers.IO) {
         db.assessmentDao().updateAssessment(assessment)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteAssessment(id: Long) = withContext(Dispatchers.IO) {
         db.assessmentDao().deleteAssessmentById(id)
+        triggerSilentAutoBackup()
     }
 
     suspend fun addMedicalLeave(leave: MedicalLeaveEntity) = withContext(Dispatchers.IO) {
         db.medicalLeaveDao().insertMedicalLeave(leave)
+        triggerSilentAutoBackup()
     }
 
     suspend fun updateMedicalLeave(leave: MedicalLeaveEntity) = withContext(Dispatchers.IO) {
         db.medicalLeaveDao().updateMedicalLeave(leave)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteMedicalLeave(id: Long) = withContext(Dispatchers.IO) {
         db.medicalLeaveDao().deleteMedicalLeaveById(id)
+        triggerSilentAutoBackup()
     }
 
     suspend fun addTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
         db.timetableSlotDao().insertSlot(slot)
+        triggerSilentAutoBackup()
     }
 
     suspend fun updateTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
         db.timetableSlotDao().updateSlot(slot)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteTimetableSlot(slot: TimetableSlotEntity) = withContext(Dispatchers.IO) {
         db.timetableSlotDao().deleteSlot(slot)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteTimetableSlotById(id: Long) = withContext(Dispatchers.IO) {
         db.timetableSlotDao().deleteSlotById(id)
+        triggerSilentAutoBackup()
     }
 
     suspend fun addHolidayRange(range: HolidayRangeEntity) = withContext(Dispatchers.IO) {
         db.holidayRangeDao().insertHolidayRange(range)
+        triggerSilentAutoBackup()
     }
 
     suspend fun updateHolidayRange(range: HolidayRangeEntity) = withContext(Dispatchers.IO) {
         db.holidayRangeDao().updateHolidayRange(range)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteHolidayRange(id: Long) = withContext(Dispatchers.IO) {
         db.holidayRangeDao().deleteHolidayRangeById(id)
+        triggerSilentAutoBackup()
     }
 
     suspend fun addTask(task: AcademicTaskEntity) = withContext(Dispatchers.IO) {
         db.academicTaskDao().insertTask(task)
+        triggerSilentAutoBackup()
     }
 
     suspend fun updateTask(task: AcademicTaskEntity) = withContext(Dispatchers.IO) {
         db.academicTaskDao().updateTask(task)
+        triggerSilentAutoBackup()
     }
 
     suspend fun deleteTask(id: Long) = withContext(Dispatchers.IO) {
         db.academicTaskDao().deleteTaskById(id)
+        triggerSilentAutoBackup()
     }
 
     suspend fun toggleTaskCompleted(id: Long, completed: Boolean) = withContext(Dispatchers.IO) {
         db.academicTaskDao().updateTaskCompletion(id, completed)
+        triggerSilentAutoBackup()
     }
 
     suspend fun checkAndInitializeDefaultData() = withContext(Dispatchers.IO) {
@@ -224,7 +265,7 @@ class CampusRepository(private val db: AppDatabase) {
         db.subjectDao().insertSubjects(IertDefaultData.defaultSubjects)
         db.timetableSlotDao().insertSlots(IertDefaultData.createDefaultSlots())
         db.assessmentDao().insertAssessments(IertDefaultData.createDefaultAssessments())
-        // Clean start: 0 logs, 0 attendance records, 0 days status
+        triggerSilentAutoBackup()
     }
 
     suspend fun clearAllData() = withContext(Dispatchers.IO) {
@@ -236,6 +277,38 @@ class CampusRepository(private val db: AppDatabase) {
         db.medicalLeaveDao().deleteAllMedicalLeaves()
         db.holidayRangeDao().deleteAllHolidayRanges()
         db.academicTaskDao().deleteAllTasks()
+    }
+
+    // --- Silent Auto-Backup Engine (context.filesDir/CampusTrack_AutoVault.json) ---
+    suspend fun triggerSilentAutoBackup() = withContext(Dispatchers.IO) {
+        val ctx = context ?: return@withContext
+        try {
+            val jsonStr = exportToJson()
+            val vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
+            val tempFile = File(ctx.filesDir, "CampusTrack_AutoVault.tmp")
+            tempFile.writeText(jsonStr)
+            if (tempFile.exists()) {
+                tempFile.renameTo(vaultFile)
+            }
+        } catch (_: Exception) {}
+    }
+
+    suspend fun restoreFromAutoVault(): Boolean = withContext(Dispatchers.IO) {
+        val ctx = context ?: return@withContext false
+        try {
+            val vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
+            if (!vaultFile.exists() || vaultFile.length() == 0L) return@withContext false
+            val json = vaultFile.readText()
+            importFromJson(json)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun hasAutoVault(): Boolean {
+        val ctx = context ?: return false
+        val vaultFile = File(ctx.filesDir, "CampusTrack_AutoVault.json")
+        return vaultFile.exists() && vaultFile.length() > 0
     }
 
     // --- JSON Backup & Restore Engine (Local File Storage) ---
@@ -563,6 +636,7 @@ class CampusRepository(private val db: AppDatabase) {
                 if (list.isNotEmpty()) db.academicTaskDao().insertTasks(list)
             }
 
+            triggerSilentAutoBackup()
             true
         } catch (_: Exception) {
             false

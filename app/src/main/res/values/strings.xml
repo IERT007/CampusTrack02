@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CampusTrack IERT</string>
+    <string name="widget_description">CampusTrack Live Class and Attendance Tracker Widget</string>
 </resources>

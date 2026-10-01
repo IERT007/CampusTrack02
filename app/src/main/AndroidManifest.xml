@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -13,6 +17,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -24,6 +29,32 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Alarm & Notification Receiver -->
+        <receiver
+            android:name=".notification.AlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.example.campustrack.ACTION_MORNING_BRIEFING" />
+                <action android:name="com.example.campustrack.ACTION_PRE_LECTURE" />
+                <action android:name="com.example.campustrack.ACTION_DEADLINE_ALERT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Glance Home-Screen AppWidget Receiver -->
+        <receiver
+            android:name=".widget.CampusWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_description">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/campus_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

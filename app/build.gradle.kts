@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.campustrack.iert"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 2
+    versionName = "1.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -31,7 +31,9 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
+      val rootDebugKeystore = file("${rootDir}/debug.keystore")
+      val userDebugKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+      storeFile = if (rootDebugKeystore.exists()) rootDebugKeystore else userDebugKeystore
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"
@@ -107,6 +109,9 @@ dependencies {
   // implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.glance.appwidget)
+  implementation(libs.androidx.glance.material3)
+  implementation(libs.androidx.work.runtime.ktx)
   // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
