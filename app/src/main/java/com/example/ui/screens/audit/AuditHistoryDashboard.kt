@@ -48,6 +48,7 @@ fun AuditHistoryDashboard(
     val medicalLeaves by viewModel.medicalLeaves.collectAsState()
     val summary by viewModel.globalSummary.collectAsState()
     val holidayRanges by viewModel.holidayRanges.collectAsState()
+    val streak by viewModel.collegeStreak.collectAsState()
 
     var showMedicalDialog by remember { mutableStateOf(false) }
     var showHolidayDialog by remember { mutableStateOf(false) }
@@ -129,6 +130,25 @@ fun AuditHistoryDashboard(
                     }
                 }
             }
+        }
+
+        // 0A. Academic Milestones & Gamified Consistency Badges
+        item {
+            AcademicMilestoneBadges(
+                streakDays = streak,
+                overallPercentage = summary.overallPercentage,
+                isWorkshopVeteran = true,
+                isDrawingPrecision = true
+            )
+        }
+
+        // 0B. Attendance Trajectory Quadratic Bezier Wave Chart
+        item {
+            AttendanceTrajectoryWaveChart(
+                logs = logs,
+                overallPercentage = summary.overallPercentage,
+                height = 135.dp
+            )
         }
 
         // 1. Visual Monthly Heatmap Calendar Card

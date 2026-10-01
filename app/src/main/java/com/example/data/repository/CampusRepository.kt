@@ -651,4 +651,10 @@ class CampusRepository(
             false
         }
     }
+
+    suspend fun clearAttendanceLogs() = withContext(Dispatchers.IO) {
+        db.attendanceLogDao().deleteAllLogs()
+        db.dailyDayStatusDao().deleteAllDayStatuses()
+        triggerSilentAutoBackup()
+    }
 }

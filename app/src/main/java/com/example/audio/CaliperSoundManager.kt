@@ -78,6 +78,10 @@ object CaliperSoundManager {
         playTrack(trackAlert)
     }
 
+    fun playPip() {
+        playAlert()
+    }
+
     private fun playTrack(track: AudioTrack?) {
         if (!isAudioEnabled || track == null) return
         try {

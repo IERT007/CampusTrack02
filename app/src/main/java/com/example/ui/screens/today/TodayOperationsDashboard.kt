@@ -608,7 +608,8 @@ fun TodayOperationsDashboard(
                 ) {
                     Button(
                         onClick = {
-                            triggerHapticFeedback(context, true)
+                            com.example.audio.CaliperSoundManager.playSuccess()
+                            com.example.audio.CaliperHapticManager.successClick(context)
                             viewModel.markWholeDayPresent()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald.copy(alpha = 0.2f)),
@@ -623,7 +624,8 @@ fun TodayOperationsDashboard(
 
                     Button(
                         onClick = {
-                            triggerHapticFeedback(context, true)
+                            com.example.audio.CaliperSoundManager.playThud()
+                            com.example.audio.CaliperHapticManager.bunkDoubleTap(context)
                             viewModel.markMassBunkOrOff("mass_bunk")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = StrictRed.copy(alpha = 0.2f)),
@@ -638,7 +640,8 @@ fun TodayOperationsDashboard(
 
                     Button(
                         onClick = {
-                            triggerHapticFeedback(context, true)
+                            com.example.audio.CaliperSoundManager.playSnap()
+                            com.example.audio.CaliperHapticManager.tick(context)
                             viewModel.markMassBunkOrOff("strike")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
@@ -1109,7 +1112,8 @@ fun SlotCard(
             val isAttended = (currentStatus == "attended")
             Button(
                 onClick = {
-                    triggerHapticFeedback(context, false)
+                    com.example.audio.CaliperSoundManager.playSuccess()
+                    com.example.audio.CaliperHapticManager.successClick(context)
                     onStatusChange("attended", isProxy, currentLog?.notes)
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -1135,7 +1139,8 @@ fun SlotCard(
             val isBunked = (currentStatus == "bunked")
             Button(
                 onClick = {
-                    triggerHapticFeedback(context, false)
+                    com.example.audio.CaliperSoundManager.playThud()
+                    com.example.audio.CaliperHapticManager.bunkDoubleTap(context)
                     onStatusChange("bunked", false, currentLog?.notes)
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -1161,7 +1166,8 @@ fun SlotCard(
             val isCancelled = (currentStatus == "cancelled_by_faculty")
             Button(
                 onClick = {
-                    triggerHapticFeedback(context, false)
+                    com.example.audio.CaliperSoundManager.playPip()
+                    com.example.audio.CaliperHapticManager.tick(context)
                     onStatusChange("cancelled_by_faculty", false, "Faculty absent")
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -1187,7 +1193,8 @@ fun SlotCard(
             val isOff = (currentStatus == "college_off")
             Button(
                 onClick = {
-                    triggerHapticFeedback(context, false)
+                    com.example.audio.CaliperSoundManager.playSnap()
+                    com.example.audio.CaliperHapticManager.tick(context)
                     onStatusChange("college_off", false, "College closure")
                 },
                 colors = ButtonDefaults.buttonColors(

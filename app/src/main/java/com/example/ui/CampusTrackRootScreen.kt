@@ -51,18 +51,19 @@ fun CampusTrackRootScreen(
 ) {
     val context = LocalContext.current
     var currentTab by remember { mutableStateOf(DashboardTab.TODAY) }
-    var showSettingsHub by remember { mutableStateOf(false) }
+    var showSettingsScreen by remember { mutableStateOf(false) }
+
+    if (showSettingsScreen) {
+        com.example.ui.screens.settings.SettingsScreen(
+            viewModel = viewModel,
+            onNavigateBack = { showSettingsScreen = false }
+        )
+        return
+    }
 
     // Android back button: If not on TODAY, return to TODAY
     BackHandler(enabled = currentTab != DashboardTab.TODAY) {
         currentTab = DashboardTab.TODAY
-    }
-
-    if (showSettingsHub) {
-        com.example.ui.dialogs.SettingsHubDialog(
-            viewModel = viewModel,
-            onDismissRequest = { showSettingsHub = false }
-        )
     }
 
     Scaffold(
@@ -97,7 +98,7 @@ fun CampusTrackRootScreen(
                     onOpenSettings = {
                         com.example.audio.CaliperSoundManager.playSnap()
                         com.example.audio.CaliperHapticManager.tick(context)
-                        showSettingsHub = true
+                        showSettingsScreen = true
                     }
                 )
 

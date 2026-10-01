@@ -22,6 +22,13 @@ val MutedAmber = Color(0xFFFBBF24)    // Muted Warning Amber
 val SoftCoral = Color(0xFFFB7185)     // Soft Coral Bunk/Danger
 val SlateAccent = Color(0xFF94A3B8)   // Engineering Vernier Slate
 
+// Caliper OS Luxury Visual System Palette
+val VelvetSageEmerald = Color(0xFF34D399)
+val MutedChampagneAmber = Color(0xFFFBBF24)
+val SoftCoralRose = Color(0xFFFB7185)
+val SlateTeal = Color(0xFF2DD4BF)
+val ArchitecturalTitanium = Color(0xFF64748B)
+
 // Backwards compatibility mappings for smooth UI compilation
 val NeonCyan = IceBlue
 val NeonEmerald = SageMint

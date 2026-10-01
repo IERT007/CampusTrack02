@@ -808,4 +808,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.clearAllData()
         }
     }
+
+    fun triggerAutoBackup() {
+        viewModelScope.launch {
+            repository.triggerSilentAutoBackup()
+            _hasAutoVault.value = repository.hasAutoVault()
+        }
+    }
+
+    fun clearAttendanceLogs() {
+        viewModelScope.launch {
+            repository.clearAttendanceLogs()
+        }
+    }
 }

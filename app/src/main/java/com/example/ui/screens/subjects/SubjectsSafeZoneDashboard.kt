@@ -60,75 +60,77 @@ fun SubjectsSafeZoneDashboard(
         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Global Metric Glass Ring Card
+        // 1. Global Metric Telemetry Dial Card
         item {
             GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("global_metric_ring_card"),
-                borderColors = listOf(Color(0x6600E5FF), GlassBorderBottom)
+                borderColors = listOf(IceBlue.copy(alpha = 0.5f), GlassBorderBottom)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = NeonCyan,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "SAFE-ZONE AGGREGATE",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonCyan,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = null,
+                            tint = IceBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Semester Eligibility",
-                            fontSize = 20.sp,
+                            text = "SAFE-ZONE TELEMETRY GAUGE",
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = IceBlue,
+                            letterSpacing = 1.sp
                         )
-                        Text(
-                            text = "IERT Prayagraj 75% Rule",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Mini metrics tally
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Column {
-                                Text("${summary.totalAttended} / ${summary.totalConducted}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                Text("Attended", fontSize = 10.sp, color = TextMuted)
-                            }
-                            Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0x33FFFFFF)))
-                            Column {
-                                Text("${summary.totalProxy}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = IceSky)
-                                Text("Proxies", fontSize = 10.sp, color = TextMuted)
-                            }
-                            Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0x33FFFFFF)))
-                            Column {
-                                Text("${summary.totalFacultyCancelled}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = WarningAmber)
-                                Text("Cancelled", fontSize = 10.sp, color = TextMuted)
-                            }
-                        }
                     }
-
-                    MetricRadialRing(
-                        percentage = summary.overallPercentage,
-                        size = 120.dp,
-                        strokeWidth = 10.dp
+                    Text(
+                        text = "IERT 75% Rule",
+                        fontSize = 11.sp,
+                        color = ArchitecturalTitanium
                     )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                PrecisionDialSpeedometer(
+                    percentage = summary.overallPercentage,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 150.dp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Mini metrics telemetry bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.03f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${summary.totalAttended} / ${summary.totalConducted}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Attended", fontSize = 10.sp, color = ArchitecturalTitanium)
+                    }
+                    Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.1f)))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${summary.totalProxy}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IceBlue)
+                        Text("Proxies", fontSize = 10.sp, color = ArchitecturalTitanium)
+                    }
+                    Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.1f)))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${summary.totalFacultyCancelled}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MutedChampagneAmber)
+                        Text("Cancelled", fontSize = 10.sp, color = ArchitecturalTitanium)
+                    }
                 }
             }
         }
