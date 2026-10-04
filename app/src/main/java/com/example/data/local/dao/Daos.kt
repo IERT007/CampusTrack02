@@ -39,6 +39,9 @@ interface TimetableSlotDao {
     @Query("SELECT * FROM timetable_slots WHERE dayOfWeek = :dayOfWeek ORDER BY startTime ASC")
     fun getSlotsByDay(dayOfWeek: Int): Flow<List<TimetableSlotEntity>>
 
+    @Query("SELECT * FROM timetable_slots WHERE dayOfWeek = :dayOfWeek ORDER BY startTime ASC")
+    suspend fun getSlotsForDayDirect(dayOfWeek: Int): List<TimetableSlotEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSlots(slots: List<TimetableSlotEntity>)
 
@@ -152,6 +155,9 @@ interface MedicalLeaveDao {
 interface HolidayRangeDao {
     @Query("SELECT * FROM holiday_ranges ORDER BY startDate ASC")
     fun getAllHolidayRanges(): Flow<List<HolidayRangeEntity>>
+
+    @Query("SELECT * FROM holiday_ranges WHERE :dateStr >= startDate AND :dateStr <= endDate LIMIT 1")
+    suspend fun getHolidayForDate(dateStr: String): HolidayRangeEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHolidayRange(range: HolidayRangeEntity): Long

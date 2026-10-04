@@ -76,7 +76,7 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_BRIEFING)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("☀️ CampusTrack: Today's Schedule Briefing")
+            .setContentTitle("Caliper: Today's Schedule Briefing")
             .setContentText(bodyText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -87,6 +87,14 @@ object NotificationHelper {
         try {
             NotificationManagerCompat.from(context).notify(1001, notification)
         } catch (_: SecurityException) {}
+    }
+
+    fun postQuietNotice(context: Context, title: String, message: String) {
+        showMorningBriefing(context, "$title • $message")
+    }
+
+    fun dispatchMorningBriefing(context: Context, title: String, body: String) {
+        showMorningBriefing(context, "$title: $body")
     }
 
     fun showPreLectureAlert(context: Context, subjectName: String, roomNo: String, time: String) {

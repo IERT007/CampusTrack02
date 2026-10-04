@@ -30,7 +30,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Alarm & Notification Receiver -->
+        <!-- Alarm & Notification Receivers -->
         <receiver
             android:name=".notification.AlarmReceiver"
             android:exported="false">
@@ -41,6 +41,10 @@
                 <action android:name="com.example.campustrack.ACTION_DEADLINE_ALERT" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".notification.ScheduleAlarmReceiver"
+            android:exported="false" />
 
         <!-- Glance Home-Screen AppWidget Receiver: Next Class -->
         <receiver

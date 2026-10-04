@@ -29,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dailyDayStatusDao(): DailyDayStatusDao
     abstract fun medicalLeaveDao(): MedicalLeaveDao
     abstract fun holidayRangeDao(): HolidayRangeDao
+    fun holidayDao(): HolidayRangeDao = holidayRangeDao()
     abstract fun academicTaskDao(): AcademicTaskDao
 
     companion object {
@@ -46,5 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
                 instance
             }
         }
+
+        fun getInstance(context: Context): AppDatabase = getDatabase(context)
     }
 }

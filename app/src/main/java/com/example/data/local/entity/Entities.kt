@@ -26,7 +26,10 @@ data class TimetableSlotEntity(
     val endTime: String, // "09:00"
     val roomNo: String, // "LT-4", "Workshop A", "CAD Lab"
     val subjectId: Long
-)
+) {
+    val slotId: Long get() = id
+    val subjectName: String get() = "Lecture"
+}
 
 @Entity(tableName = "attendance_logs")
 data class AttendanceLogEntity(

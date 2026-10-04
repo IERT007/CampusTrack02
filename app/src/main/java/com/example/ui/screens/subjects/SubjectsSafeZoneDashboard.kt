@@ -98,10 +98,9 @@ fun SubjectsSafeZoneDashboard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                PrecisionDialSpeedometer(
-                    percentage = summary.overallPercentage,
-                    modifier = Modifier.fillMaxWidth(),
-                    height = 150.dp
+                TelemetrySafeZoneGauge(
+                    percentage = summary.overallPercentage.toFloat(),
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
