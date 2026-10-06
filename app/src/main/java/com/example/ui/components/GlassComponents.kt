@@ -71,6 +71,7 @@ fun GlassCard(
     backgroundColor: Color = GlassFill,
     borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f)),
     borderWidth: Dp = 0.5.dp,
+    innerPadding: Dp = 16.dp,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -107,7 +108,7 @@ fun GlassCard(
                 shape = shape
             )
             .then(interactiveModifier)
-            .padding(16.dp)
+            .padding(innerPadding)
     ) {
         Column(content = content)
     }

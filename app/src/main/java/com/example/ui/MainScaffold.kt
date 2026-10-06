@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.audio.CaliperHapticManager
 import com.example.audio.CaliperSoundManager
+import com.example.ui.components.CaliperRoboCompanion
 import com.example.ui.components.GlassSurface
 import com.example.ui.components.MainTopBar
 import com.example.ui.dialogs.AiAssistantDialog
@@ -157,6 +158,9 @@ fun MainScaffold(
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             )
+
+            // Interactive 3D Floating Robo Copilot with drag & mood physics
+            CaliperRoboCompanion(viewModel = viewModel)
 
             // AI Assistant Copilot Modal Dialog
             if (showAiAssistantDialog) {

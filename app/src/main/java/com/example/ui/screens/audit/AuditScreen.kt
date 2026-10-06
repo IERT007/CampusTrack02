@@ -63,7 +63,6 @@ fun AuditScreen(
     val medicalLeaves by viewModel.medicalLeaves.collectAsState()
     val summary by viewModel.globalSummary.collectAsState()
     val holidayRanges by viewModel.holidayRanges.collectAsState()
-    val streak by viewModel.collegeStreak.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
 
     var showMedicalDialog by remember { mutableStateOf(false) }
@@ -161,17 +160,7 @@ fun AuditScreen(
             }
         }
 
-        // 1. Engineering Consistency Milestone Badges
-        item {
-            AcademicMilestoneBadges(
-                streakDays = streak,
-                overallPercentage = summary.overallPercentage,
-                isWorkshopVeteran = true,
-                isDrawingPrecision = true
-            )
-        }
-
-        // 2. Attendance Trajectory Quadratic Bezier Wave Chart
+        // 1. Attendance Trajectory Quadratic Bezier Wave Chart
         item {
             AttendanceTrajectoryWaveChart(
                 logs = logs,

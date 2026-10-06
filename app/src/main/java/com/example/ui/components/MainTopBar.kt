@@ -64,8 +64,8 @@ fun MainTopBar(
     val subjects by viewModel.subjects.collectAsState()
     val statsList by viewModel.subjectStats.collectAsState()
     val allSlots by viewModel.slots.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
-    var searchQuery by remember { mutableStateOf("") }
     var selectedSubjectForTelemetry by remember { mutableStateOf<SubjectEntity?>(null) }
 
     // Real-time matched subjects and room slots
@@ -149,7 +149,7 @@ fun MainTopBar(
 
                         BasicTextField(
                             value = searchQuery,
-                            onValueChange = { searchQuery = it },
+                            onValueChange = { viewModel.setSearchQuery(it) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle = TextStyle(
@@ -176,7 +176,7 @@ fun MainTopBar(
                         // Clear Button or AI Sparkle Button
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
-                                onClick = { searchQuery = "" },
+                                onClick = { viewModel.setSearchQuery("") },
                                 modifier = Modifier.size(20.dp)
                             ) {
                                 Icon(
@@ -281,7 +281,7 @@ fun MainTopBar(
                                             CaliperSoundManager.playSnap()
                                             CaliperHapticManager.tick(context)
                                             selectedSubjectForTelemetry = sub
-                                            searchQuery = ""
+                                            viewModel.setSearchQuery("")
                                         }
                                         .padding(horizontal = 10.dp, vertical = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,

@@ -1066,7 +1066,8 @@ fun SlotCard(
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         borderColors = listOf(borderColor, GlassBorderBottom),
-        borderWidth = if (item.isOngoing) 1.5.dp else 1.dp
+        borderWidth = if (item.isOngoing) 1.5.dp else 1.dp,
+        innerPadding = 11.dp
     ) {
         // Slot Top Row: Time, Room, and Live Indicator
         Row(
@@ -1077,18 +1078,18 @@ fun SlotCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "${item.slot.startTime} - ${item.slot.endTime}",
-                    color = if (item.isOngoing) NeonCyan else TextPrimary,
-                    fontSize = 13.sp,
+                    color = if (item.isOngoing) NeonCyan else Color(0xFF94A3B8),
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(Color(0x22FFFFFF))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(item.slot.roomNo, color = TextSecondary, fontSize = 10.sp)
+                    Text(item.slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
                 }
             }
 
@@ -1096,40 +1097,40 @@ fun SlotCard(
                 if (item.isOngoing) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(NeonCyan.copy(alpha = 0.2f))
-                            .border(0.5.dp, NeonCyan, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .border(0.5.dp, NeonCyan, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
                     ) {
-                        Text("LIVE NOW", color = NeonCyan, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("LIVE NOW", color = NeonCyan, fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
                 item.subject?.type?.let { TypeBadge(it) }
                 if (onEditClick != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     IconButton(
                         onClick = onEditClick,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit Slot",
                             tint = TextMuted,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Subject Title & Faculty
         Text(
             text = item.subject?.name ?: "Unknown Subject",
             color = TextPrimary,
-            fontSize = 16.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold
         )
         Row(
@@ -1139,18 +1140,18 @@ fun SlotCard(
         ) {
             Text(
                 text = "${item.subject?.code} • ${item.subject?.facultyName}",
-                color = TextSecondary,
-                fontSize = 12.sp
+                color = Color(0xFF94A3B8),
+                fontSize = 11.5.sp
             )
             item.subject?.strictness?.let { StrictnessBadge(it) }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // 4-State Quick Action Bar: Attended, Bunked, Cancelled, Off
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             // 1. Attended
             val isAttended = (currentStatus == "attended")
@@ -1163,18 +1164,18 @@ fun SlotCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isAttended) NeonEmerald else Color(0x1A00E676)
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     if (isAttended) NeonEmerald else Color(0x3300E676)
                 ),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "Present",
                     color = if (isAttended) Color.Black else NeonEmerald,
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1190,18 +1191,18 @@ fun SlotCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isBunked) StrictRed else Color(0x1AEF4444)
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     if (isBunked) StrictRed else Color(0x33EF4444)
                 ),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "Bunked",
                     color = if (isBunked) Color.White else StrictRed,
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1217,18 +1218,18 @@ fun SlotCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isCancelled) WarningAmber else Color(0x1AF59E0B)
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     if (isCancelled) WarningAmber else Color(0x33F59E0B)
                 ),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "Cancelled",
                     color = if (isCancelled) Color.Black else WarningAmber,
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1244,18 +1245,18 @@ fun SlotCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isOff) TextSecondary else Color(0x1AFFFFFF)
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     if (isOff) TextSecondary else GlassBorderTop
                 ),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "Off",
                     color = if (isOff) Color.Black else TextSecondary,
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold
                 )
             }

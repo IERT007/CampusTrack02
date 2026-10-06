@@ -102,8 +102,8 @@ fun ActiveSlotCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .claymorphicSurface(elevation = 6.dp, shape = RoundedCornerShape(16.dp))
-            .padding(16.dp)
+            .claymorphicSurface(elevation = 6.dp, shape = RoundedCornerShape(14.dp))
+            .padding(11.dp)
     ) {
         Column {
             Row(
@@ -114,41 +114,41 @@ fun ActiveSlotCard(
                 Text(
                     text = "${slot.startTime} - ${slot.endTime}",
                     color = colors.primaryAccent,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(Color.White.copy(alpha = 0.08f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(slot.roomNo, color = Color(0xFF94A3B8), fontSize = 10.sp)
+                    Text(slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = slot.subjectName,
                 color = Color.White,
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
             if (slot.subjectCode.isNotEmpty()) {
                 Text(
                     text = slot.subjectCode,
                     color = Color(0xFF94A3B8),
-                    fontSize = 11.sp
+                    fontSize = 11.5.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 4-state action bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Button(
                     onClick = {
@@ -159,10 +159,10 @@ fun ActiveSlotCard(
                     colors = ButtonDefaults.buttonColors(containerColor = colors.safeZone.copy(alpha = 0.2f)),
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.safeZone),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Present", color = colors.safeZone, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Present", color = colors.safeZone, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
@@ -174,10 +174,10 @@ fun ActiveSlotCard(
                     colors = ButtonDefaults.buttonColors(containerColor = colors.bunkDanger.copy(alpha = 0.2f)),
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.bunkDanger),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Bunk", color = colors.bunkDanger, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Bunk", color = colors.bunkDanger, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
@@ -189,10 +189,10 @@ fun ActiveSlotCard(
                     colors = ButtonDefaults.buttonColors(containerColor = colors.deadlineWarning.copy(alpha = 0.2f)),
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.deadlineWarning),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Cancel", color = colors.deadlineWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Cancel", color = colors.deadlineWarning, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Button(
@@ -204,10 +204,10 @@ fun ActiveSlotCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f)),
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Off", color = Color(0xFF94A3B8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Off", color = Color(0xFF94A3B8), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

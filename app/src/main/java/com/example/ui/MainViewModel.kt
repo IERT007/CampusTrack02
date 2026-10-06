@@ -63,6 +63,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedDate = MutableStateFlow(LocalDate.now().format(dateFormatter))
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
     private val _hasAutoVault = MutableStateFlow(false)
     val hasAutoVault: StateFlow<Boolean> = _hasAutoVault.asStateFlow()
 
@@ -877,5 +884,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putBoolean("is_monochrome_mode", enabled).apply()
         _selectedTheme.value = if (enabled) "Monochrome Dark" else "Normal"
         prefs.edit().putString("selected_theme", _selectedTheme.value).apply()
+    }
+
+    /**
+     * Builds exhaustive system state for Caliper AI Context Engine
+     */
+    fun getFullSystemContext(): com.example.ai.CaliperAiEngine.FullAcademicContext {
+        val currentSubjects = subjects.value
+        val currentSlots = slots.value
+        val timetableByDay = (1..6).associateWith { day ->
+            currentSlots.filter { it.dayOfWeek == day }.sortedBy { it.startTime }.map { slot ->
+                SlotDisplayItem(
+                    slot = slot,
+                    subject = currentSubjects.find { it.id == slot.subjectId },
+                    currentLog = null,
+                    isOngoing = false
+                )
+            }
+        }
+
+        return com.example.ai.CaliperAiEngine.FullAcademicContext(
+            timetableByDay = timetableByDay,
+            subjectStatsList = subjectStats.value,
+            assessments = assessments.value,
+            tasks = tasks.value,
+            holidays = holidayRanges.value,
+            summary = globalSummary.value,
+            notes = notes.value
+        )
     }
 }
