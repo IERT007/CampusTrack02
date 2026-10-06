@@ -108,3 +108,15 @@ data class MedicalLeaveEntity(
     val notes: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "quick_notes")
+data class QuickNoteEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val title: String,
+    val content: String,
+    val category: String = "General", // "Lecture", "Lab", "Drawing Sheet", "Viva", "Important", "General"
+    val subjectCode: String? = null,
+    val isPinned: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+)

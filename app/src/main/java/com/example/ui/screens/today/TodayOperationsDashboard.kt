@@ -41,6 +41,7 @@ fun TodayOperationsDashboard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val colors = com.example.ui.theme.CaliperTheme.colors
     val selectedDateStr by viewModel.selectedDate.collectAsState()
     val allSlots by viewModel.slots.collectAsState()
     val slotItems by viewModel.currentDaySlots.collectAsState()
@@ -50,13 +51,21 @@ fun TodayOperationsDashboard(
     val streak by viewModel.collegeStreak.collectAsState()
     val currentHoliday by viewModel.currentHoliday.collectAsState()
     val holidayRanges by viewModel.holidayRanges.collectAsState()
+    val statsList by viewModel.subjectStats.collectAsState()
+    val assessments by viewModel.assessments.collectAsState()
+    val tasks by viewModel.tasks.collectAsState()
 
     var showExtraClassDialog by remember { mutableStateOf(false) }
     var showWeeklyTimetableDialog by remember { mutableStateOf(false) }
     var showHolidayManagerDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
     var showMarkedTray by remember { mutableStateOf(false) }
+    var showAiAssistantDialog by remember { mutableStateOf(false) }
     var editingSlot by remember { mutableStateOf<com.example.data.local.entity.TimetableSlotEntity?>(null) }
+
+    val aiStrategy = remember(statsList, slotItems, assessments, tasks) {
+        com.example.ai.CaliperAiEngine.analyzeDailyStrategy(statsList, slotItems, assessments, tasks)
+    }
 
     val parsedDate = remember(selectedDateStr) {
         try {
@@ -437,6 +446,90 @@ fun TodayOperationsDashboard(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        // Caliper AI Tactical Bunk & Tasks Briefing Card
+        item {
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        com.example.audio.CaliperSoundManager.playSnap()
+                        com.example.audio.CaliperHapticManager.tick(context)
+                        showAiAssistantDialog = true
+                    },
+                borderColors = listOf(
+                    if (aiStrategy.canBunkToday) com.example.ui.theme.NeonCyan.copy(alpha = 0.5f)
+                    else com.example.ui.theme.WarningAmber.copy(alpha = 0.5f),
+                    GlassBorderBottom
+                )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(com.example.ui.theme.NeonCyan.copy(alpha = 0.16f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = com.example.ui.theme.NeonCyan,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "CALIPER AI STRATEGY",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = com.example.ui.theme.NeonCyan
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (aiStrategy.overallStatusBadge.contains("RISK")) colors.bunkDanger.copy(alpha = 0.2f)
+                                    else colors.safeZone.copy(alpha = 0.15f)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = aiStrategy.overallStatusBadge,
+                                color = if (aiStrategy.overallStatusBadge.contains("RISK")) colors.bunkDanger else colors.safeZone,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = aiStrategy.headline,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "${aiStrategy.pendingTasksSummary} • Tap for interactive AI Copilot",
+                        fontSize = 11.sp,
+                        color = com.example.ui.theme.TextSecondary
+                    )
                 }
             }
         }
@@ -995,6 +1088,13 @@ fun TodayOperationsDashboard(
                 viewModel.deleteTimetableSlot(slotId)
                 editingSlot = null
             }
+        )
+    }
+
+    if (showAiAssistantDialog) {
+        com.example.ui.dialogs.AiAssistantDialog(
+            viewModel = viewModel,
+            onDismissRequest = { showAiAssistantDialog = false }
         )
     }
 }

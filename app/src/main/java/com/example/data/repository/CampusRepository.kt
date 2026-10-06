@@ -27,6 +27,11 @@ class CampusRepository(
     val allMedicalLeaves: Flow<List<MedicalLeaveEntity>> = db.medicalLeaveDao().getAllMedicalLeaves()
     val allHolidayRanges: Flow<List<HolidayRangeEntity>> = db.holidayRangeDao().getAllHolidayRanges()
     val allTasks: Flow<List<AcademicTaskEntity>> = db.academicTaskDao().getAllTasks()
+    val allNotes: Flow<List<QuickNoteEntity>> = db.quickNoteDao().getAllNotes()
+
+    fun searchSubjects(query: String): Flow<List<SubjectEntity>> {
+        return db.subjectDao().searchSubjects("%$query%")
+    }
 
     fun getLogsForDate(date: String): Flow<List<AttendanceLogEntity>> {
         return db.attendanceLogDao().getLogsForDate(date)
@@ -257,6 +262,26 @@ class CampusRepository(
 
     suspend fun toggleTaskCompleted(id: Long, completed: Boolean) = withContext(Dispatchers.IO) {
         db.academicTaskDao().updateTaskCompletion(id, completed)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun addNote(note: QuickNoteEntity) = withContext(Dispatchers.IO) {
+        db.quickNoteDao().insertNote(note)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun updateNote(note: QuickNoteEntity) = withContext(Dispatchers.IO) {
+        db.quickNoteDao().updateNote(note)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun deleteNote(id: Long) = withContext(Dispatchers.IO) {
+        db.quickNoteDao().deleteNoteById(id)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun toggleNotePin(id: Long, pinned: Boolean) = withContext(Dispatchers.IO) {
+        db.quickNoteDao().togglePin(id, pinned)
         triggerSilentAutoBackup()
     }
 

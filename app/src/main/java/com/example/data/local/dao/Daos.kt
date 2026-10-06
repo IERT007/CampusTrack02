@@ -12,6 +12,12 @@ interface SubjectDao {
     @Query("SELECT * FROM subjects WHERE id = :id LIMIT 1")
     fun getSubjectById(id: Long): Flow<SubjectEntity?>
 
+    @Query("SELECT * FROM subjects WHERE name LIKE :query OR code LIKE :query OR facultyName LIKE :query ORDER BY code ASC")
+    fun searchSubjects(query: String): Flow<List<SubjectEntity>>
+
+    @Query("SELECT * FROM subjects WHERE name LIKE :query OR code LIKE :query OR facultyName LIKE :query ORDER BY code ASC")
+    suspend fun searchSubjectsDirect(query: String): List<SubjectEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSubject(subject: SubjectEntity): Long
 
@@ -197,5 +203,32 @@ interface AcademicTaskDao {
 
     @Query("DELETE FROM academic_tasks")
     suspend fun deleteAllTasks()
+}
+
+@Dao
+interface QuickNoteDao {
+    @Query("SELECT * FROM quick_notes ORDER BY isPinned DESC, timestamp DESC")
+    fun getAllNotes(): Flow<List<QuickNoteEntity>>
+
+    @Query("SELECT * FROM quick_notes WHERE title LIKE :query OR content LIKE :query ORDER BY isPinned DESC, timestamp DESC")
+    fun searchNotes(query: String): Flow<List<QuickNoteEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNote(note: QuickNoteEntity): Long
+
+    @Update
+    suspend fun updateNote(note: QuickNoteEntity)
+
+    @Delete
+    suspend fun deleteNote(note: QuickNoteEntity)
+
+    @Query("DELETE FROM quick_notes WHERE id = :id")
+    suspend fun deleteNoteById(id: Long)
+
+    @Query("UPDATE quick_notes SET isPinned = :pinned WHERE id = :id")
+    suspend fun togglePin(id: Long, pinned: Boolean)
+
+    @Query("DELETE FROM quick_notes")
+    suspend fun deleteAllNotes()
 }
 

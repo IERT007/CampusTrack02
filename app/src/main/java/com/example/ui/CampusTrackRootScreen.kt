@@ -42,6 +42,7 @@ enum class DashboardTab(
     TODAY("Today", Icons.Default.Today, Icons.Default.CalendarToday, "nav_tab_today"),
     SAFE_ZONE("Safe-Zone", Icons.Default.Shield, Icons.Default.Security, "nav_tab_safe_zone"),
     ACADEMICS("Academics", Icons.Default.School, Icons.Default.School, "nav_tab_academics"),
+    NOTES("Notes", Icons.Default.NoteAlt, Icons.Default.Notes, "nav_tab_notes"),
     AUDIT("Audit", Icons.Default.Analytics, Icons.Default.Insights, "nav_tab_audit")
 }
 
@@ -49,103 +50,7 @@ enum class DashboardTab(
 fun CampusTrackRootScreen(
     viewModel: MainViewModel
 ) {
-    val context = LocalContext.current
-    var currentTab by remember { mutableStateOf(DashboardTab.TODAY) }
-    var showSettingsScreen by remember { mutableStateOf(false) }
-
-    if (showSettingsScreen) {
-        com.example.ui.screens.settings.SettingsScreen(
-            viewModel = viewModel,
-            onNavigateBack = { showSettingsScreen = false }
-        )
-        return
-    }
-
-    // Android back button: If not on TODAY, return to TODAY
-    BackHandler(enabled = currentTab != DashboardTab.TODAY) {
-        currentTab = DashboardTab.TODAY
-    }
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = AmoledBackground,
-        contentWindowInsets = WindowInsets.statusBars
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            val colors = com.example.ui.theme.CaliperTheme.colors
-
-            // Background subtle ambient radial glow for liquid glassmorphism
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                colors.baseSurface,
-                                colors.containerSurface,
-                                colors.baseSurface
-                            )
-                        )
-                    )
-            )
-
-            // Top Campus Header Bar (Aligned Brand Title & Translucent 20px Settings Icon)
-            Column(modifier = Modifier.fillMaxSize()) {
-                com.example.ui.components.MainTopBar(
-                    onOpenSettings = {
-                        com.example.audio.CaliperSoundManager.playSnap()
-                        com.example.audio.CaliperHapticManager.tick(context)
-                        showSettingsScreen = true
-                    }
-                )
-
-                // 4 Dedicated Dashboard Views with smooth transitions
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    when (currentTab) {
-                        DashboardTab.TODAY -> {
-                            TodayOperationsDashboard(viewModel = viewModel)
-                        }
-                        DashboardTab.SAFE_ZONE -> {
-                            SubjectsSafeZoneDashboard(viewModel = viewModel)
-                        }
-                        DashboardTab.ACADEMICS -> {
-                            AcademicsDashboard(viewModel = viewModel)
-                        }
-                        DashboardTab.AUDIT -> {
-                            AuditHistoryDashboard(
-                                viewModel = viewModel,
-                                onNavigateToDate = { dateStr ->
-                                    viewModel.setSelectedDate(dateStr)
-                                    currentTab = DashboardTab.TODAY
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Floating Frosted Glass Bottom Navigation Bar
-            FloatingGlassNavBar(
-                selectedTab = currentTab,
-                onTabSelected = { tab ->
-                    com.example.audio.CaliperSoundManager.playSnap()
-                    com.example.audio.CaliperHapticManager.tick(context)
-                    currentTab = tab
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 20.dp, vertical = 18.dp)
-            )
-        }
-    }
+    MainScaffold(viewModel = viewModel)
 }
 
 @Composable

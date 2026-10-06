@@ -24,7 +24,8 @@ data class SubjectAttendanceStats(
     val proxyCount: Int,
     val percentage: Double,
     val bunksAvailable: Int,
-    val classesNeeded: Int
+    val classesNeeded: Int,
+    val bunked: Int = max(0, totalConducted - attended)
 )
 
 data class GlobalAttendanceSummary(
@@ -116,6 +117,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val tasks: StateFlow<List<AcademicTaskEntity>> = repository.allTasks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val notes: StateFlow<List<QuickNoteEntity>> = repository.allNotes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Current holiday if selected date falls into a declared holiday / institutional off range
@@ -352,6 +356,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val todaySlots: StateFlow<List<SlotDisplayItem>> get() = currentDaySlots
 
     // Ad-hoc / extra classes for the selected date
     val currentDayExtraClasses: StateFlow<List<Pair<AttendanceLogEntity, SubjectEntity?>>> = combine(
@@ -678,6 +684,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun addTask(task: AcademicTaskEntity) = saveTask(task)
+
     fun saveTask(task: AcademicTaskEntity) {
         viewModelScope.launch {
             if (task.id == 0L) {
@@ -822,6 +830,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAttendanceLogs() {
         viewModelScope.launch {
             repository.clearAttendanceLogs()
+        }
+    }
+
+    fun addNote(title: String, content: String, category: String = "General", subjectCode: String? = null) {
+        viewModelScope.launch {
+            repository.addNote(
+                QuickNoteEntity(
+                    title = title.trim(),
+                    content = content.trim(),
+                    category = category,
+                    subjectCode = subjectCode?.ifBlank { null }
+                )
+            )
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun updateNote(note: QuickNoteEntity) {
+        viewModelScope.launch {
+            repository.updateNote(note)
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun deleteNote(id: Long) {
+        viewModelScope.launch {
+            repository.deleteNote(id)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
+        }
+    }
+
+    fun toggleNotePin(id: Long, currentPinned: Boolean) {
+        viewModelScope.launch {
+            repository.toggleNotePin(id, !currentPinned)
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
         }
     }
 
