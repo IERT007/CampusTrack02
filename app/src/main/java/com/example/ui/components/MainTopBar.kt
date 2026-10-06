@@ -87,7 +87,7 @@ fun MainTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Unified Top Bar Row

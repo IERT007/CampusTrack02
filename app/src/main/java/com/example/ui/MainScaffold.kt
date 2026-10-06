@@ -29,11 +29,11 @@ import com.example.ui.components.GlassSurface
 import com.example.ui.components.MainTopBar
 import com.example.ui.dialogs.AiAssistantDialog
 import com.example.ui.screens.academics.AcademicsDashboard
-import com.example.ui.screens.audit.AuditHistoryDashboard
+import com.example.ui.screens.audit.AuditScreen
 import com.example.ui.screens.notes.QuickNotesScreen
 import com.example.ui.screens.settings.SettingsScreen
-import com.example.ui.screens.subjects.SubjectsSafeZoneDashboard
-import com.example.ui.screens.today.TodayOperationsDashboard
+import com.example.ui.screens.subjects.SafeZoneScreen
+import com.example.ui.screens.today.TodayScreen
 import com.example.ui.theme.AmoledBackground
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.GlassBorderBottom
@@ -76,12 +76,12 @@ fun MainScaffold(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = AmoledBackground,
-        contentWindowInsets = WindowInsets.statusBars
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // Ambient radial background glow
             Box(
@@ -122,10 +122,10 @@ fun MainScaffold(
                 ) {
                     when (currentTab) {
                         DashboardTab.TODAY -> {
-                            TodayOperationsDashboard(viewModel = viewModel)
+                            TodayScreen(viewModel = viewModel)
                         }
                         DashboardTab.SAFE_ZONE -> {
-                            SubjectsSafeZoneDashboard(viewModel = viewModel)
+                            SafeZoneScreen(viewModel = viewModel)
                         }
                         DashboardTab.ACADEMICS -> {
                             AcademicsDashboard(viewModel = viewModel)
@@ -134,7 +134,7 @@ fun MainScaffold(
                             QuickNotesScreen(viewModel = viewModel)
                         }
                         DashboardTab.AUDIT -> {
-                            AuditHistoryDashboard(
+                            AuditScreen(
                                 viewModel = viewModel,
                                 onNavigateToDate = { dateStr ->
                                     viewModel.setSelectedDate(dateStr)
