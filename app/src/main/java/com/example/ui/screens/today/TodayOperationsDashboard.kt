@@ -122,11 +122,31 @@ fun TodayOperationsDashboard(
         }
     }
 
+    val dateStripList = remember(today) {
+        (-14..14).map { offset ->
+            val date = today.plusDays(offset.toLong())
+            val dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val dayLabel = date.format(DateTimeFormatter.ofPattern("EEE"))
+            val dayNum = date.dayOfMonth
+            Triple(date, dateStr, Pair(dayLabel, dayNum))
+        }
+    }
+    val dateStripLazyState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Auto-scroll weekly strip to center the selected date
+    LaunchedEffect(selectedDateStr) {
+        val selectedIndex = dateStripList.indexOfFirst { it.second == selectedDateStr }
+        if (selectedIndex >= 0) {
+            val targetIndex = (selectedIndex - 2).coerceAtLeast(0)
+            dateStripLazyState.animateScrollToItem(targetIndex)
+        }
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Auto-Vault Restore Banner (Shown when DB is clean/empty but AutoVault snapshot exists)
@@ -229,86 +249,6 @@ fun TodayOperationsDashboard(
                 }
             }
         }
-        // 0. Top Management & Action Bar
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        triggerHapticFeedback(context, false)
-                        showWeeklyTimetableDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.18f)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
-                    modifier = Modifier
-                        .weight(1.2f)
-                        .testTag("manage_weekly_timetable_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.EditCalendar,
-                        contentDescription = null,
-                        tint = NeonCyan,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Timetable",
-                        color = NeonCyan,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Button(
-                    onClick = {
-                        triggerHapticFeedback(context, false)
-                        showHolidayManagerDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber.copy(alpha = 0.18f)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber.copy(alpha = 0.6f)),
-                    modifier = Modifier.weight(1.1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.BeachAccess,
-                        contentDescription = null,
-                        tint = WarningAmber,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Holidays",
-                        color = WarningAmber,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Button(
-                    onClick = {
-                        triggerHapticFeedback(context, false)
-                        showDatePickerDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderTop),
-                    modifier = Modifier.testTag("open_calendar_picker_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = "Calendar",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Date", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
         // 1. Date Switcher Header
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -333,7 +273,10 @@ fun TodayOperationsDashboard(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .clickable { showDatePickerDialog = true }
+                            .clickable {
+                                triggerHapticFeedback(context, false)
+                                showDatePickerDialog = true
+                            }
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -369,42 +312,43 @@ fun TodayOperationsDashboard(
                     }
                 }
 
-                // Horizontal Past / Current Days Strip for quick 1-tap retroactive jumping
-                Row(
+                // Horizontal Interactive Weekly Date Strip with dynamic cursor & auto-scroll
+                androidx.compose.foundation.lazy.LazyRow(
+                    state = dateStripLazyState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0x12FFFFFF))
-                        .padding(vertical = 4.dp, horizontal = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    for (offset in -4..2) {
-                        val stripDate = today.plusDays(offset.toLong())
-                        val stripDateStr = stripDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    items(dateStripList, key = { it.second }) { item ->
+                        val (stripDate, stripDateStr, dayPair) = item
+                        val (dayLabel, dayNum) = dayPair
                         val isSelected = (stripDateStr == selectedDateStr)
                         val isDayToday = (stripDate.isEqual(today))
                         val isDayPast = (stripDate.isBefore(today))
-                        val dayLabel = stripDate.format(DateTimeFormatter.ofPattern("EEE"))
-                        val dayNum = stripDate.dayOfMonth
+
+                        val animatedAlpha by androidx.compose.animation.core.animateFloatAsState(
+                            targetValue = if (isSelected) 0.32f else if (isDayToday) 0.12f else 0.0f,
+                            label = "stripAlpha"
+                        )
+                        val animatedBorderColor by androidx.compose.animation.animateColorAsState(
+                            targetValue = if (isSelected) NeonCyan else if (isDayToday) NeonCyan.copy(alpha = 0.5f) else Color.Transparent,
+                            label = "stripBorder"
+                        )
 
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 2.dp)
+                                .width(46.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isSelected) NeonCyan.copy(alpha = 0.25f) else Color.Transparent
-                                )
-                                .border(
-                                    1.dp,
-                                    if (isSelected) NeonCyan else (if (isDayToday) NeonCyan.copy(alpha = 0.5f) else Color.Transparent),
-                                    RoundedCornerShape(8.dp)
-                                )
+                                .background(NeonCyan.copy(alpha = animatedAlpha))
+                                .border(1.dp, animatedBorderColor, RoundedCornerShape(8.dp))
                                 .clickable {
                                     triggerHapticFeedback(context, false)
                                     viewModel.setSelectedDate(stripDateStr)
                                 }
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {

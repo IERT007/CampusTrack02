@@ -23,10 +23,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.SubjectEntity
+import com.example.data.local.entity.TimetableSlotEntity
 import com.example.ui.MainViewModel
 import com.example.ui.SubjectAttendanceStats
 import com.example.ui.components.*
 import com.example.ui.dialogs.AddEditSubjectDialog
+import com.example.ui.dialogs.EditSlotDialog
 import com.example.ui.dialogs.ReconciliationDialog
 import com.example.ui.theme.*
 
@@ -38,11 +40,29 @@ fun SubjectsSafeZoneDashboard(
     val context = LocalContext.current
     val statsList by viewModel.subjectStats.collectAsState()
     val summary by viewModel.globalSummary.collectAsState()
+    val allSlots by viewModel.slots.collectAsState()
+    val subjects by viewModel.subjects.collectAsState()
 
     var filterMode by remember { mutableStateOf("all") } // "all", "risk", "theory", "practical"
     var reconcilingSubject by remember { mutableStateOf<SubjectAttendanceStats?>(null) }
     var editingSubject by remember { mutableStateOf<SubjectEntity?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
+
+    // Timetable slot editor state inside SafeZone
+    var selectedTimetableDay by remember { mutableStateOf(1) } // 1=Mon..6=Sat
+    var showAddSlotBottomSheet by remember { mutableStateOf(false) }
+    var editingSlotEntity by remember { mutableStateOf<TimetableSlotEntity?>(null) }
+
+    // Add slot form fields
+    var newSlotSubjectId by remember(subjects) { mutableStateOf(subjects.firstOrNull()?.id ?: 0L) }
+    var newSlotStartTime by remember { mutableStateOf("09:00") }
+    var newSlotEndTime by remember { mutableStateOf("10:00") }
+    var newSlotRoomNo by remember { mutableStateOf("LT-4") }
+
+    val activeDaySlots = remember(allSlots, selectedTimetableDay) {
+        allSlots.filter { it.dayOfWeek == selectedTimetableDay }
+            .sortedBy { it.startTime }
+    }
 
     val filteredList = remember(statsList, filterMode) {
         when (filterMode) {
@@ -129,6 +149,229 @@ fun SubjectsSafeZoneDashboard(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("${summary.totalFacultyCancelled}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MutedChampagneAmber)
                         Text("Cancelled", fontSize = 10.sp, color = ArchitecturalTitanium)
+                    }
+                }
+            }
+        }
+
+        // 1.5 Dedicated Weekly Academic Timetable & Slot Editor Card
+        item {
+            val days = listOf(
+                1 to "Mon",
+                2 to "Tue",
+                3 to "Wed",
+                4 to "Thu",
+                5 to "Fri",
+                6 to "Sat"
+            )
+
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("weekly_timetable_editor_card"),
+                borderColors = listOf(NeonCyan.copy(alpha = 0.5f), GlassBorderBottom)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Header & Action Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(NeonCyan.copy(alpha = 0.2f))
+                                    .border(1.dp, NeonCyan, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EditCalendar,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Weekly Academic Timetable & Slot Editor",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Manage recurring lectures, labs & rooms",
+                                    fontSize = 10.sp,
+                                    color = ArchitecturalTitanium
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (subjects.isNotEmpty() && newSlotSubjectId == 0L) {
+                                    newSlotSubjectId = subjects.first().id
+                                }
+                                showAddSlotBottomSheet = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.22f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.testTag("add_new_slot_btn")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("+ Add Slot", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // 1. Day Selector Chips (Mon - Sat)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.04f))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        days.forEach { (dayInt, label) ->
+                            val isSelected = (selectedTimetableDay == dayInt)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) NeonCyan.copy(alpha = 0.25f) else Color.Transparent)
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) NeonCyan else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        triggerHapticFeedback(context, false)
+                                        selectedTimetableDay = dayInt
+                                    }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) NeonCyan else ArchitecturalTitanium,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+
+                    // 2. Active Slots for the Selected Day
+                    if (activeDaySlots.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(alpha = 0.02f))
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No lecture slots scheduled for ${days.find { it.first == selectedTimetableDay }?.second}. Tap '+ Add Slot'.",
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            activeDaySlots.forEach { slot ->
+                                val sub = subjects.find { it.id == slot.subjectId }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color.White.copy(alpha = 0.04f))
+                                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                        .padding(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { editingSlotEntity = slot }
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(NeonCyan.copy(alpha = 0.2f))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "${slot.startTime} - ${slot.endTime}",
+                                                        color = NeonCyan,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "Room ${slot.roomNo}",
+                                                    color = IceBlue,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(3.dp))
+                                            Text(
+                                                text = sub?.name ?: "Unknown Subject",
+                                                color = Color.White,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${sub?.code ?: "CODE"} • ${sub?.facultyName ?: "Faculty"}",
+                                                color = ArchitecturalTitanium,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = { editingSlotEntity = slot },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Edit Slot",
+                                                    tint = ArchitecturalTitanium,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    triggerHapticFeedback(context, true)
+                                                    viewModel.deleteSlot(slot.id)
+                                                },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteOutline,
+                                                    contentDescription = "Delete Slot",
+                                                    tint = StrictRed.copy(alpha = 0.8f),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -417,6 +660,154 @@ fun SubjectsSafeZoneDashboard(
             },
             onSave = { subject ->
                 viewModel.saveSubject(subject)
+            }
+        )
+    }
+
+    // Timetable Slot Bottom Sheet / Dialog for adding new slots
+    if (showAddSlotBottomSheet) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showAddSlotBottomSheet = false }
+        ) {
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                backgroundColor = Color(0xF20C0E14),
+                borderColors = listOf(NeonCyan.copy(alpha = 0.6f), GlassBorderBottom)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Add Slot: ${listOf(1 to "Mon", 2 to "Tue", 3 to "Wed", 4 to "Thu", 5 to "Fri", 6 to "Sat").find { it.first == selectedTimetableDay }?.second}",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonCyan
+                        )
+                        IconButton(onClick = { showAddSlotBottomSheet = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = ArchitecturalTitanium)
+                        }
+                    }
+
+                    // Subject dropdown / chips
+                    Text("Subject", fontSize = 11.sp, color = ArchitecturalTitanium)
+                    if (subjects.isEmpty()) {
+                        Text("No subjects found. Create a subject first.", color = SoftCoral, fontSize = 12.sp)
+                    } else {
+                        var expandedSubDropdown by remember { mutableStateOf(false) }
+                        val curSelectedSub = subjects.find { it.id == newSlotSubjectId } ?: subjects.first()
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { expandedSubDropdown = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = "${curSelectedSub.code} - ${curSelectedSub.name}",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = NeonCyan)
+                            }
+
+                            DropdownMenu(
+                                expanded = expandedSubDropdown,
+                                onDismissRequest = { expandedSubDropdown = false },
+                                modifier = Modifier.background(Color(0xFF141923))
+                            ) {
+                                subjects.forEach { sub ->
+                                    DropdownMenuItem(
+                                        text = { Text("${sub.code} - ${sub.name}", color = Color.White, fontSize = 12.sp) },
+                                        onClick = {
+                                            newSlotSubjectId = sub.id
+                                            expandedSubDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Start & End Time TextFields
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = newSlotStartTime,
+                            onValueChange = { newSlotStartTime = it },
+                            label = { Text("Start (e.g. 10:00)", fontSize = 10.sp) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = newSlotEndTime,
+                            onValueChange = { newSlotEndTime = it },
+                            label = { Text("End (e.g. 11:00)", fontSize = 10.sp) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Room No TextField
+                    OutlinedTextField(
+                        value = newSlotRoomNo,
+                        onValueChange = { newSlotRoomNo = it },
+                        label = { Text("Room No / Venue (e.g. LT-4, Workshop)", fontSize = 11.sp) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Button(
+                        onClick = {
+                            if (newSlotSubjectId > 0 && newSlotStartTime.isNotBlank() && newSlotEndTime.isNotBlank()) {
+                                val slot = TimetableSlotEntity(
+                                    dayOfWeek = selectedTimetableDay,
+                                    startTime = newSlotStartTime.trim(),
+                                    endTime = newSlotEndTime.trim(),
+                                    roomNo = newSlotRoomNo.trim().ifEmpty { "LT-1" },
+                                    subjectId = newSlotSubjectId
+                                )
+                                viewModel.saveSlot(slot)
+                                triggerHapticFeedback(context, false)
+                                showAddSlotBottomSheet = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Save Slot to Timetable", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    // Edit Slot Dialog
+    editingSlotEntity?.let { slot ->
+        EditSlotDialog(
+            slot = slot,
+            subjects = subjects,
+            onDismissRequest = { editingSlotEntity = null },
+            onSaveSlot = { updatedSlot ->
+                viewModel.saveSlot(updatedSlot)
+                editingSlotEntity = null
+            },
+            onDeleteSlot = { slotId ->
+                viewModel.deleteSlot(slotId)
+                editingSlotEntity = null
             }
         )
     }
