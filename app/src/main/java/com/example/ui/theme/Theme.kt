@@ -24,8 +24,8 @@ import com.example.audio.CaliperHapticManager
 /**
  * Caliper Dual-Theme Color System
  * Provides semantic color mapping for:
- * 1. Monochrome Dark Mode (Pure White & Black Luxury Glass)
- * 2. Normal Mode (Color Psychology Semantic Palette)
+ * 1. Monochrome Dark Mode (True Black #000000, crisp white typography, soft silver labels & neutral glass borders)
+ * 2. Normal Mode (True Black #000000 canvas, translucent obsidian #0E121B cards, semantic green & blue badges)
  */
 @Immutable
 data class CaliperColors(
@@ -51,34 +51,34 @@ data class CaliperColors(
 
 val MonochromeDarkColors = CaliperColors(
     isMonochrome = true,
-    baseSurface = MonochromePureBlack,
-    containerSurface = MonochromeObsidian,
-    cardFill = Color.White.copy(alpha = 0.04f),
-    cardBorderTop = Color.White.copy(alpha = 0.08f),
-    cardBorderBottom = Color.White.copy(alpha = 0.04f),
-    textPrimary = MonochromePureWhite,
-    textSecondary = MonochromeSilverGray,
-    textMuted = MonochromeMutedGray,
-    primaryAccent = MonochromePureWhite,
-    safeZone = MonochromePureWhite,
+    baseSurface = Color(0xFF000000), // True Black
+    containerSurface = Color(0xFF060709),
+    cardFill = Color(0xFF0E121B).copy(alpha = 0.8f),
+    cardBorderTop = Color.White.copy(alpha = 0.10f), // Neutral glass borders
+    cardBorderBottom = Color.White.copy(alpha = 0.10f),
+    textPrimary = Color(0xFFFFFFFF), // Pure Crisp White
+    textSecondary = Color(0xFFCBD5E1), // Soft silver
+    textMuted = Color(0xFF94A3B8),
+    primaryAccent = Color(0xFFFFFFFF),
+    safeZone = Color(0xFFFFFFFF),
     safeZoneContainer = Color.White.copy(alpha = 0.08f),
     scheduledLecture = Color(0xFFE2E8F0),
     deadlineWarning = Color(0xFFCBD5E1),
-    bunkDanger = MonochromeSilverGray,
-    streakGold = MonochromePureWhite,
-    divider = Color.White.copy(alpha = 0.06f)
+    bunkDanger = Color(0xFF94A3B8),
+    streakGold = Color(0xFFFFFFFF),
+    divider = Color.White.copy(alpha = 0.08f)
 )
 
 val NormalPsychologyColors = CaliperColors(
     isMonochrome = false,
-    baseSurface = PsychologyDarkSlate,
-    containerSurface = PsychologySurface,
-    cardFill = Color.White.copy(alpha = 0.04f),
-    cardBorderTop = Color(0x2EFFFFFF),
-    cardBorderBottom = Color(0x0AFFFFFF),
-    textPrimary = Color(0xFFF8FAFC),
-    textSecondary = Color(0xFF94A3B8),
-    textMuted = Color(0xFF64748B),
+    baseSurface = Color(0xFF000000), // True Pitch Black canvas background
+    containerSurface = Color(0xFF07090E),
+    cardFill = Color(0xFF0E121B).copy(alpha = 0.8f), // Subtle translucent obsidian
+    cardBorderTop = Color.White.copy(alpha = 0.15f),
+    cardBorderBottom = Color.White.copy(alpha = 0.04f),
+    textPrimary = Color(0xFFFFFFFF),
+    textSecondary = Color(0xFFCBD5E1),
+    textMuted = Color(0xFF94A3B8),
     primaryAccent = PsychologyBlue,
     safeZone = PsychologyGreen,
     safeZoneContainer = PsychologyGreen.copy(alpha = 0.15f),

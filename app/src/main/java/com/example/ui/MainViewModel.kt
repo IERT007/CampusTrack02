@@ -59,6 +59,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: CampusRepository
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val prefs = application.getSharedPreferences("caliper_settings", android.content.Context.MODE_PRIVATE)
+    private val dataStoreManager = com.example.data.DataStoreManager(application)
 
     private val _selectedDate = MutableStateFlow(LocalDate.now().format(dateFormatter))
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
@@ -99,6 +100,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.example.notification.NotificationHelper.scheduleDailyMorningBriefing(application)
         viewModelScope.launch {
             repository.checkAndInitializeDefaultData()
+        }
+        viewModelScope.launch {
+            dataStoreManager.semesterStartDateFlow.collect { startDate ->
+                if (_semesterStartDate.value != startDate) {
+                    _semesterStartDate.value = startDate
+                }
+            }
+        }
+        viewModelScope.launch {
+            dataStoreManager.semesterEndDateFlow.collect { endDate ->
+                if (_semesterEndDate.value != endDate) {
+                    _semesterEndDate.value = endDate
+                }
+            }
         }
     }
 
@@ -142,6 +157,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .putString("semester_start_date", startDate)
             .putString("semester_end_date", endDate)
             .apply()
+        viewModelScope.launch {
+            dataStoreManager.setSemesterDates(startDate, endDate)
+        }
     }
 
     val testRecords: StateFlow<List<TestRecordEntity>> = repository.allTestRecords
@@ -945,7 +963,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         title: String,
         startTime: String,
         endTime: String = "",
-        location: String = ""
+        location: String = "",
+        countsTowardsAttendance: Boolean = false
     ) {
         viewModelScope.launch {
             val act = CustomActivityEntity(
@@ -954,7 +973,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 startTime = startTime,
                 endTime = endTime,
                 location = location,
-                status = "attended"
+                status = "attended",
+                countsTowardsAttendance = countsTowardsAttendance
             )
             repository.saveCustomActivity(act)
             com.example.audio.CaliperSoundManager.playSuccess()

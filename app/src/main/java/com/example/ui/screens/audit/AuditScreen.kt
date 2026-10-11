@@ -48,6 +48,7 @@ import java.time.format.DateTimeFormatter
  * interactive day cells with attendance indicators, smooth day detail transitions,
  * Bezier trajectory wave, and engineering milestone shields.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditScreen(
     viewModel: MainViewModel,
@@ -59,6 +60,7 @@ fun AuditScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val logs by viewModel.logs.collectAsState()
+    val slots by viewModel.slots.collectAsState()
     val dayStatuses by viewModel.dayStatuses.collectAsState()
     val medicalLeaves by viewModel.medicalLeaves.collectAsState()
     val summary by viewModel.globalSummary.collectAsState()
@@ -69,6 +71,8 @@ fun AuditScreen(
     var showMedicalDialog by remember { mutableStateOf(false) }
     var showHolidayDialog by remember { mutableStateOf(false) }
     var showMonthPicker by remember { mutableStateOf(false) }
+    var showCancelledClassesSheet by remember { mutableStateOf(false) }
+    var showCollegeOffSheet by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
     // Interactive Google Calendar Month State
@@ -770,8 +774,22 @@ fun AuditScreen(
                 ) {
                     AuditMetricBox("Attended", "${summary.totalAttended}", colors.safeZone, Modifier.weight(1f))
                     AuditMetricBox("Conducted", "${summary.totalConducted}", colors.scheduledLecture, Modifier.weight(1f))
-                    AuditMetricBox("Cancelled", "${summary.totalFacultyCancelled}", colors.deadlineWarning, Modifier.weight(1f))
-                    AuditMetricBox("College Off", "${summary.totalCollegeOff}", colors.textSecondary, Modifier.weight(1f))
+                    AuditMetricBox(
+                        title = "Cancelled",
+                        value = "${summary.totalFacultyCancelled}",
+                        color = colors.deadlineWarning,
+                        modifier = Modifier.weight(1f),
+                        isClickable = true,
+                        onClick = { showCancelledClassesSheet = true }
+                    )
+                    AuditMetricBox(
+                        title = "College Off",
+                        value = "${summary.totalCollegeOff}",
+                        color = colors.textSecondary,
+                        modifier = Modifier.weight(1f),
+                        isClickable = true,
+                        onClick = { showCollegeOffSheet = true }
+                    )
                 }
             }
         }
@@ -995,6 +1013,305 @@ fun AuditScreen(
             onDeleteHoliday = { id -> viewModel.deleteHolidayRange(id) }
         )
     }
+
+    // Historical Faculty Cancellations Drill-Down Bottom Sheet
+    if (showCancelledClassesSheet) {
+        val cancelledLogs = remember(logs) {
+            logs.filter { it.status == "cancelled_by_faculty" }.sortedByDescending { it.date }
+        }
+        ModalBottomSheet(
+            onDismissRequest = { showCancelledClassesSheet = false },
+            containerColor = Color(0xFF0F141C),
+            scrimColor = Color.Black.copy(alpha = 0.75f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.deadlineWarning.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Cancel, contentDescription = null, tint = colors.deadlineWarning, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Faculty Cancelled Classes",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${cancelledLogs.size} Historical Cancellations by Faculty",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    IconButton(onClick = { showCancelledClassesSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (cancelledLogs.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.03f))
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No faculty cancellations recorded in academic history.",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 420.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(cancelledLogs, key = { it.id }) { log ->
+                            val sub = subjects.find { it.id == log.subjectId }
+                            val slot = slots.find { it.id == log.slotId }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF141A26))
+                                    .border(0.5.dp, colors.deadlineWarning.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "${sub?.code ?: "SUB"} — ${sub?.name ?: "Curriculum Lecture"}",
+                                            color = Color.White,
+                                            fontSize = 13.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Faculty: ${sub?.facultyName ?: "Instructor"} • Slot: ${slot?.startTime ?: "Period"} (${slot?.roomNo ?: "LT-TBD"})",
+                                            color = Color(0xFF94A3B8),
+                                            fontSize = 11.sp
+                                        )
+                                        if (!log.notes.isNullOrBlank()) {
+                                            Text(
+                                                text = "Note: ${log.notes}",
+                                                color = colors.deadlineWarning,
+                                                fontSize = 10.5.sp
+                                            )
+                                        }
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(colors.deadlineWarning.copy(alpha = 0.15f))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(log.date, color = colors.deadlineWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Recorded Holidays and College Off Days Drill-Down Bottom Sheet
+    if (showCollegeOffSheet) {
+        val offDayStatuses = remember(dayStatuses) {
+            dayStatuses.filter { it.leaveCategory != "none" || !it.wentToCollege }
+        }
+        val collegeOffLogs = remember(logs) {
+            logs.filter { it.status == "college_off" }
+        }
+
+        ModalBottomSheet(
+            onDismissRequest = { showCollegeOffSheet = false },
+            containerColor = Color(0xFF0F141C),
+            scrimColor = Color.Black.copy(alpha = 0.75f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.textSecondary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.BeachAccess, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Recorded Holidays & College Off Days",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${holidayRanges.size} Declared Ranges • ${offDayStatuses.size + collegeOffLogs.size} Event Logs",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    IconButton(onClick = { showCollegeOffSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (holidayRanges.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "INSTITUTIONAL HOLIDAY RANGES",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                        items(holidayRanges, key = { "range_${it.id}" }) { range ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF141A26))
+                                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(range.title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                                        Text("Period: ${range.startDate} to ${range.endDate}", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                        if (!range.notes.isNullOrBlank()) {
+                                            Text(range.notes, color = Color(0xFFCBD5E1), fontSize = 10.sp)
+                                        }
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color.White.copy(alpha = 0.08f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(range.type.uppercase(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (offDayStatuses.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "LOGGED DAILY OFF EVENTS",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                        items(offDayStatuses, key = { "status_${it.date}" }) { status ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF141A26))
+                                    .border(0.5.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = if (status.leaveCategory == "mass_bunk") "Mass Bunk Declared"
+                                                   else if (status.leaveCategory == "college_holiday") "College Holiday"
+                                                   else "College Off",
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        if (!status.notes.isNullOrBlank()) {
+                                            Text(status.notes, color = Color(0xFF94A3B8), fontSize = 10.5.sp)
+                                        }
+                                    }
+                                    Text(status.date, color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    if (holidayRanges.isEmpty() && offDayStatuses.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.03f))
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No holidays or institutional off days recorded.", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1012,18 +1329,51 @@ private fun CalendarLegendDot(label: String, color: Color) {
 }
 
 @Composable
-private fun AuditMetricBox(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
+private fun AuditMetricBox(
+    title: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    isClickable: Boolean = false,
+    onClick: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.02f))
-            .border(0.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .background(if (isClickable) color.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.02f))
+            .border(
+                if (isClickable) 1.dp else 0.5.dp,
+                color.copy(alpha = if (isClickable) 0.6f else 0.35f),
+                RoundedCornerShape(10.dp)
+            )
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable {
+                        CaliperSoundManager.playSnap()
+                        CaliperHapticManager.tick(context)
+                        onClick()
+                    }
+                } else Modifier
+            )
             .padding(vertical = 8.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = color)
-            Text(title, fontSize = 9.sp, color = CaliperTheme.colors.textMuted, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    fontSize = 9.sp,
+                    color = if (isClickable) color else CaliperTheme.colors.textMuted,
+                    maxLines = 1,
+                    fontWeight = if (isClickable) FontWeight.Bold else FontWeight.Normal
+                )
+                if (isClickable) {
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("▾", fontSize = 8.sp, color = color)
+                }
+            }
         }
     }
 }

@@ -140,60 +140,10 @@ fun FloatingGlassNavBar(
     onTabSelected: (DashboardTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassSurface(
+    CompactFloatingGlassNavBar(
+        selectedTab = selectedTab,
+        onTabSelected = onTabSelected,
         modifier = modifier
-            .fillMaxWidth()
-            .height(68.dp)
-            .testTag("floating_glass_nav_bar"),
-        shape = RoundedCornerShape(28.dp),
-        borderColors = listOf(Color(0x5500E5FF), GlassBorderBottom)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            DashboardTab.values().forEach { tab ->
-                val isSelected = (selectedTab == tab)
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (isSelected) NeonCyan.copy(alpha = 0.16f) else Color.Transparent
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(color = NeonCyan),
-                            onClick = { onTabSelected(tab) }
-                        )
-                        .padding(vertical = 8.dp)
-                        .testTag(tab.testTag),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
-                            contentDescription = tab.title,
-                            tint = if (isSelected) NeonCyan else TextMuted,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = tab.title,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = if (isSelected) NeonCyan else TextMuted
-                        )
-                    }
-                }
-            }
-        }
-    }
+    )
 }
+

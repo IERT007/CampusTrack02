@@ -9,6 +9,9 @@ interface SubjectDao {
     @Query("SELECT * FROM subjects ORDER BY code ASC")
     fun getAllSubjects(): Flow<List<SubjectEntity>>
 
+    @Query("SELECT * FROM subjects ORDER BY code ASC")
+    suspend fun getAllSubjectsList(): List<SubjectEntity>
+
     @Query("SELECT * FROM subjects WHERE id = :id LIMIT 1")
     fun getSubjectById(id: Long): Flow<SubjectEntity?>
 

@@ -144,5 +144,7 @@ data class CustomActivityEntity(
     val endTime: String = "",
     val location: String = "",
     val status: String = "attended", // "attended", "missed"
+    val countsTowardsAttendance: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )
+

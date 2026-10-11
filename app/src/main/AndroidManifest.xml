@@ -48,6 +48,10 @@
             android:name=".notification.ScheduleAlarmReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".notification.PreLectureReceiver"
+            android:exported="false" />
+
         <!-- Glance Home-Screen AppWidget Receiver: Next Class -->
         <receiver
             android:name=".widget.CampusWidgetReceiver"

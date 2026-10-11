@@ -23,10 +23,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 // Check Institutional Closures and Holidays
                 val holiday = db.holidayDao().getHolidayForDate(today.toString())
                 if (holiday != null || dayOfWeek == 7) {
-                    NotificationHelper.postQuietNotice(
+                    NotificationHelper.showMorningBriefing(
                         context = appContext,
-                        title = "Campus Closed",
-                        message = holiday?.title ?: "Sunday - No academic periods scheduled."
+                        bodyText = "Campus Closed • ${holiday?.title ?: "Sunday — No academic periods scheduled."}"
                     )
                     return@launch
                 }
@@ -34,22 +33,46 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 // Query Active Scheduled Classes
                 val activeSlots = db.timetableSlotDao().getSlotsForDayDirect(dayOfWeek)
                 if (activeSlots.isEmpty()) {
-                    NotificationHelper.postQuietNotice(
+                    NotificationHelper.showMorningBriefing(
                         context = appContext,
-                        title = "Free Day",
-                        message = "No timetable lectures mapped for today."
+                        bodyText = "Caliper Schedule • Today (0 Classes)\nNo timetable lectures scheduled for today."
                     )
                     return@launch
                 }
 
-                val firstClass = activeSlots.minByOrNull { it.startTime }
-                val summary = "${activeSlots.size} classes scheduled. First: ${firstClass?.subjectName} at ${firstClass?.startTime} (${firstClass?.roomNo})"
+                val subjects = db.subjectDao().getAllSubjectsList()
+                val sortedSlots = activeSlots.sortedBy { it.startTime }
 
-                NotificationHelper.dispatchMorningBriefing(
+                val lines = sortedSlots.mapIndexed { index, slot ->
+                    val sub = subjects.find { it.id == slot.subjectId }
+                    val subjectName = sub?.name ?: sub?.code ?: "Lecture"
+                    "${index + 1}. [${slot.startTime}] — [$subjectName] (Room [${slot.roomNo}])"
+                }
+
+                val briefingTitle = "Caliper Schedule • Today (${sortedSlots.size} Classes)"
+                val briefingBody = "$briefingTitle\n" + lines.joinToString("\n")
+
+                NotificationHelper.showMorningBriefing(
                     context = appContext,
-                    title = "Today's Schedule",
-                    body = summary
+                    bodyText = briefingBody
                 )
+
+                // Schedule exact 10-Minute Pre-Lecture Heads-Up alerts for each slot today
+                sortedSlots.forEach { slot ->
+                    val sub = subjects.find { it.id == slot.subjectId }
+                    val subjectName = sub?.name ?: sub?.code ?: "Lecture"
+                    NotificationHelper.schedulePreLectureAlert(
+                        context = appContext,
+                        slotId = slot.id,
+                        subjectName = subjectName,
+                        roomNo = slot.roomNo,
+                        startTimeStr = slot.startTime,
+                        dayOfWeek = dayOfWeek
+                    )
+                }
+
+                // Reschedule for next day
+                NotificationHelper.scheduleDailyMorningBriefing(appContext)
             } finally {
                 asyncPendingResult.finish()
             }

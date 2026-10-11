@@ -8,18 +8,18 @@ import androidx.compose.ui.graphics.Color
 
 // --- Mode A: Monochrome Dark Mode (Pure White & Black Luxury Glass) ---
 val MonochromePureBlack = Color(0xFF000000)
-val MonochromeObsidian = Color(0xFF060709)
-val MonochromeSurface = Color(0xFF0C0E12)
-val MonochromeCardFill = Color(0x0AFFFFFF)      // Color.White.copy(alpha = 0.04f)
-val MonochromeCardBorder = Color(0x14FFFFFF)    // Color.White.copy(alpha = 0.08f)
+val MonochromeObsidian = Color(0xFF05070A)
+val MonochromeSurface = Color(0xFF080B10)
+val MonochromeCardFill = Color(0xFF0E121B).copy(alpha = 0.8f)
+val MonochromeCardBorder = Color.White.copy(alpha = 0.10f)
 val MonochromePureWhite = Color(0xFFFFFFFF)
-val MonochromeSilverGray = Color(0xFF94A3B8)
-val MonochromeMutedGray = Color(0xFF64748B)
+val MonochromeSilverGray = Color(0xFFCBD5E1) // Soft silver secondary labels
+val MonochromeMutedGray = Color(0xFF94A3B8)
 
 // --- Mode B: Normal Mode (Color Psychology Semantic Palette) ---
-val PsychologyDarkSlate = Color(0xFF0B0E14)
-val PsychologySurface = Color(0xFF10141D)
-val PsychologyCardSurface = Color(0xFF151B26)
+val PsychologyDarkSlate = Color(0xFF000000) // True Pitch Black canvas background
+val PsychologySurface = Color(0xFF07090E)
+val PsychologyCardSurface = Color(0xFF0E121B).copy(alpha = 0.8f) // Subtle translucent obsidian
 val PsychologyGreen = Color(0xFF22C55E)          // Safe-Zone status (Calm & Balanced)
 val PsychologyGreenDark = Color(0xFF16A34A)
 val PsychologyBlue = Color(0xFF0EA5E9)           // Scheduled lecture cards & Timetable (Reliable & Focus)
@@ -32,17 +32,17 @@ val PsychologyGold = Color(0xFFEAB308)           // Daily Attendance Streak badg
 // ============================================================================
 // 2. FOUNDATION SURFACE & GLASS TOKENS
 // ============================================================================
-val AmoledBackground = Color(0xFF05070B)
-val AmoledSurface = Color(0xFF0C0E14)
-val AmoledCardSurface = Color(0xFF10141D)
-val AmoledCardSurfaceElevated = Color(0xFF161B26)
+val AmoledBackground = Color(0xFF000000) // True Pitch Black
+val AmoledSurface = Color(0xFF05070A)
+val AmoledCardSurface = Color(0xFF0E121B).copy(alpha = 0.8f)
+val AmoledCardSurfaceElevated = Color(0xFF141924).copy(alpha = 0.85f)
 
-// Frosted Glass Containers (alpha = 0.04f to 0.08f)
-val GlassBorderTop = Color(0x2EFFFFFF)
-val GlassBorderBottom = Color(0x0AFFFFFF)
-val GlassFill = Color(0x0AFFFFFF)               // 0.04f white fill
-val GlassFillStrong = Color(0x14FFFFFF)
-val GlassFillLight = Color(0x08FFFFFF)
+// Frosted Glass Containers
+val GlassBorderTop = Color.White.copy(alpha = 0.15f)
+val GlassBorderBottom = Color.White.copy(alpha = 0.04f)
+val GlassFill = Color(0xFF0E121B).copy(alpha = 0.8f)
+val GlassFillStrong = Color(0xFF141A26).copy(alpha = 0.85f)
+val GlassFillLight = Color.White.copy(alpha = 0.03f)
 
 // Core Caliper Luxury Palette Aliases
 val VelvetSageEmerald = PsychologyGreen
@@ -66,9 +66,9 @@ val DangerRed = PsychologyRed
 val ChillGreen = PsychologyGreen
 
 // Text Colors
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextMuted = Color(0xFF64748B)
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFCBD5E1)
+val TextMuted = Color(0xFF94A3B8)
 
 // Strictness Colors
 val StrictRed = PsychologyRed

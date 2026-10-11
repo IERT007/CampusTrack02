@@ -48,17 +48,8 @@ object NotificationHelper {
                 enableVibration(true)
             }
 
-            val deadlineChannel = NotificationChannel(
-                CHANNEL_DEADLINES,
-                "Submission & Deadline Countdown",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Alerts 24 hours and 2 hours before file or drawing sheet submission deadlines"
-                enableVibration(true)
-            }
-
             notificationManager.createNotificationChannels(
-                listOf(briefingChannel, lectureChannel, deadlineChannel)
+                listOf(briefingChannel, lectureChannel)
             )
         }
     }
@@ -241,16 +232,16 @@ object NotificationHelper {
 
             val triggerMillis = targetDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-            val intent = Intent(context, AlarmReceiver::class.java).apply {
-                action = ACTION_PRE_LECTURE
+            val intent = Intent(context, PreLectureReceiver::class.java).apply {
                 putExtra("subjectName", subjectName)
                 putExtra("roomNo", roomNo)
+                putExtra("startTime", startTimeStr)
                 putExtra("time", startTimeStr)
             }
 
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
-                slotId.toInt(),
+                (slotId and 0x7FFFFFFF).toInt(),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -258,7 +249,7 @@ object NotificationHelper {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
             } else {
-                alarmManager.set(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
             }
         } catch (_: Exception) {}
     }

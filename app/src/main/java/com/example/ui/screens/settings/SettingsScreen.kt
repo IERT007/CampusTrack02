@@ -31,15 +31,18 @@ import com.example.notification.NotificationHelper
 import com.example.ui.MainViewModel
 import com.example.ui.components.GlassCard
 import com.example.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
  * Dedicated Full-Page Slide-In Settings Screen
- * Features 5 modular card sections:
+ * Features 6 modular card sections:
  * 1. Audio & Vernier Haptics Hub
- * 2. Notifications & System Alarms Hub
- * 3. Display & Time Formatting Hub
- * 4. Data Auto-Vault & SAF Backup Hub
- * 5. Curriculum & Timetable Presets Hub
+ * 2. Academic Semester Timeline Hub
+ * 3. Notifications & System Alarms Hub
+ * 4. Display & Time Formatting Hub
+ * 5. Data Auto-Vault & SAF Backup Hub
+ * 6. Curriculum & Timetable Presets Hub
  */
 @Composable
 fun SettingsScreen(
@@ -55,6 +58,8 @@ fun SettingsScreen(
     val is24HourFormat by viewModel.is24HourFormat.collectAsState()
     val isMonochromeMode by viewModel.isMonochromeMode.collectAsState()
     val hasAutoVault by viewModel.hasAutoVault.collectAsState()
+    val semesterStartDate by viewModel.semesterStartDate.collectAsState()
+    val semesterEndDate by viewModel.semesterEndDate.collectAsState()
 
     var showResetConfirmation by remember { mutableStateOf(false) }
     var showWipeConfirmation by remember { mutableStateOf(false) }
@@ -254,7 +259,46 @@ fun SettingsScreen(
                     }
                 }
 
-                // SECTION 2: System Notifications & Background Alarms Hub
+                // SECTION 2: Academic Semester Timeline
+                SettingsSectionHeader("ACADEMIC SEMESTER TIMELINE", Icons.Default.DateRange, IceBlue)
+
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColors = listOf(IceBlue.copy(alpha = 0.35f), GlassBorderBottom)
+                ) {
+                    Text(
+                        text = "TERM COMMENCEMENT & CONCLUSION",
+                        color = ArchitecturalTitanium,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SemesterDatePickerRow(
+                        title = "Semester Start Date",
+                        subtitle = "Curriculum begins on this date",
+                        isoDate = semesterStartDate,
+                        onDateSelected = { newStart ->
+                            viewModel.setSemesterDates(newStart, semesterEndDate)
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SemesterDatePickerRow(
+                        title = "Semester End Date",
+                        subtitle = "Term ends; triggers preparation leave state",
+                        isoDate = semesterEndDate,
+                        onDateSelected = { newEnd ->
+                            viewModel.setSemesterDates(semesterStartDate, newEnd)
+                        }
+                    )
+                }
+
+                // SECTION 3: System Notifications & Background Alarms Hub
                 SettingsSectionHeader("NOTIFICATIONS & ALARM ENGINE", Icons.Default.NotificationsActive, VelvetSageEmerald)
 
                 GlassCard(
@@ -264,7 +308,7 @@ fun SettingsScreen(
                     NotificationSettingItem(
                         icon = Icons.Default.WbSunny,
                         title = "07:30 AM Morning Briefing",
-                        description = "Summary of today's IERT periods & scheduled lab sessions",
+                        description = "Formatted numbered summary of today's classes & room numbers",
                         active = true
                     )
                     Spacer(modifier = Modifier.height(10.dp))
@@ -274,17 +318,7 @@ fun SettingsScreen(
                     NotificationSettingItem(
                         icon = Icons.Default.Timer,
                         title = "10-Minute Pre-Lecture Heads-Up",
-                        description = "Notification ping with classroom & room number before slot starts",
-                        active = true
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    NotificationSettingItem(
-                        icon = Icons.Default.AssignmentLate,
-                        title = "24h & 2h Sheet & Lab Deadlines",
-                        description = "Urgent alerts for Machine Drawing (ED-301) and Workshop jobs",
+                        description = "Exact alarm heads-up with subject name and classroom before slot starts",
                         active = true
                     )
 
@@ -293,13 +327,13 @@ fun SettingsScreen(
                         onClick = {
                             CaliperSoundManager.playPip()
                             CaliperHapticManager.tick(context)
-                            NotificationHelper.sendNotification(
+                            NotificationHelper.showPreLectureAlert(
                                 context,
-                                id = 9999,
-                                title = "Caliper OS • Pre-Lecture Heads-Up",
-                                message = "Thermal Engg (ME-302) starts in 10 mins • Room 204"
+                                subjectName = "Thermal Engg (ME-302)",
+                                roomNo = "204",
+                                time = "in 10 mins"
                             )
-                            Toast.makeText(context, "Test notification dispatched!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Pre-lecture notification ping dispatched!", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = VelvetSageEmerald.copy(alpha = 0.15f)),
                         border = androidx.compose.foundation.BorderStroke(0.5.dp, VelvetSageEmerald),
@@ -308,7 +342,7 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Default.Send, contentDescription = null, tint = VelvetSageEmerald, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Send Test Notification Ping", color = VelvetSageEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Send Test Pre-Lecture Ping", color = VelvetSageEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -693,3 +727,71 @@ private fun NotificationSettingItem(
         Text("Active", color = VelvetSageEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
+
+@Composable
+private fun SemesterDatePickerRow(
+    title: String,
+    subtitle: String,
+    isoDate: String,
+    onDateSelected: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val parsedDate = remember(isoDate) {
+        try {
+            LocalDate.parse(isoDate, DateTimeFormatter.ISO_LOCAL_DATE)
+        } catch (_: Exception) {
+            LocalDate.now()
+        }
+    }
+    val formattedDisplay = remember(parsedDate) {
+        parsedDate.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy"))
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable {
+                CaliperSoundManager.playSnap()
+                CaliperHapticManager.tick(context)
+                android.app.DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        val selected = LocalDate.of(year, month + 1, dayOfMonth)
+                            .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        onDateSelected(selected)
+                        CaliperSoundManager.playSuccess()
+                        CaliperHapticManager.successClick(context)
+                        Toast.makeText(context, "$title updated: $selected", Toast.LENGTH_SHORT).show()
+                    },
+                    parsedDate.year,
+                    parsedDate.monthValue - 1,
+                    parsedDate.dayOfMonth
+                ).show()
+            }
+            .background(Color.White.copy(alpha = 0.02f))
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
+        }
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(IceBlue.copy(alpha = 0.15f))
+                .border(0.5.dp, IceBlue.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = IceBlue, modifier = Modifier.size(13.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(formattedDisplay, color = IceBlue, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+

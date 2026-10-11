@@ -2,14 +2,26 @@ package com.example.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.audio.CaliperHapticManager
 import com.example.audio.CaliperSoundManager
 import com.example.ui.components.MainTopBar
@@ -23,7 +35,7 @@ import com.example.ui.theme.CaliperTheme
 
 /**
  * MainScaffold — CALIPER OS 3-Tab Container
- * Exactly 3 primary navigation tabs:
+ * Ultra-slim, ergonomic navigation container:
  * 1. Today — Daily schedule, in-slot logging, class test entry, 1-day custom activities.
  * 2. Safe-Zone — Attendance telemetry, bunk simulator, subject management & cascading delete.
  * 3. Audit — Interactive monthly calendar, progression wave, academic test performance ledger.
@@ -114,8 +126,8 @@ fun MainScaffold(
                 }
             }
 
-            // Floating Frosted Glass Bottom Navigation Bar (Exactly 3 Tabs)
-            FloatingGlassNavBar(
+            // Compact 54.dp Frosted Glass Bottom Navigation Bar (Ultra-Slim)
+            CompactFloatingGlassNavBar(
                 selectedTab = currentTab,
                 onTabSelected = { tab ->
                     CaliperSoundManager.playSnap()
@@ -124,8 +136,83 @@ fun MainScaffold(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             )
+        }
+    }
+}
+
+/**
+ * Compact 54.dp 3-Tab Bottom Navigation Bar
+ * - Container height: 54.dp
+ * - Internal padding: icon-to-label spacing 2.dp, icon size 20.dp
+ * - Tab labels: 11.sp Medium typography
+ * - Selected indicator: subtle translucent pill (Color.White.copy(alpha = 0.08f))
+ * - Styling: Translucent frosted obsidian (Color(0xFF0A0D14).copy(alpha = 0.85f)) with 0.5.dp border
+ */
+@Composable
+fun CompactFloatingGlassNavBar(
+    selectedTab: AppTab,
+    onTabSelected: (AppTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color(0xFF0A0D14).copy(alpha = 0.85f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .testTag("floating_glass_nav_bar"),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AppTab.values().forEach { tab ->
+                val isSelected = (selectedTab == tab)
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = ripple(color = Color.White.copy(alpha = 0.2f)),
+                            onClick = { onTabSelected(tab) }
+                        )
+                        .testTag(tab.testTag),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                            contentDescription = tab.title,
+                            tint = if (isSelected) Color.White else Color(0xFF94A3B8),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = tab.title,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                        )
+                    }
+                }
+            }
         }
     }
 }

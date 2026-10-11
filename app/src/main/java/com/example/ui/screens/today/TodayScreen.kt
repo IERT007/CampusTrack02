@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -992,8 +993,8 @@ fun TodayScreen(
                 viewModel.logExtraClass(subId, status, isProxy, notes ?: "")
                 showExtraClassDialog = false
             },
-            onConfirmCustomActivity = { title, time, loc ->
-                viewModel.saveCustomActivity(selectedDateStr, title, time, "", loc)
+            onConfirmCustomActivity = { title, startTime, endTime, loc, countAttendance ->
+                viewModel.saveCustomActivity(selectedDateStr, title, startTime, endTime, loc, countAttendance)
                 showExtraClassDialog = false
             }
         )
@@ -1058,7 +1059,11 @@ fun TodayScreen(
 
 /**
  * 1-Day Single-Day Custom Activity Card
- * Renders ONLY on that specific calendar date with a direct delete icon.
+ * Claymorphic Matching Card Design:
+ * - Background: Color(0xFF111622).copy(alpha = 0.75f)
+ * - Border: 0.5.dp subtle vertical gradient (Color.White.copy(alpha = 0.15f) to Transparent)
+ * - Corner radius: 16.dp
+ * - Displays Event Title, Time Range, Location, Attendance tag (if enabled), and 1-tap delete trash icon
  */
 @Composable
 fun CustomActivityCard(
@@ -1066,11 +1071,28 @@ fun CustomActivityCard(
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
+    val timeRangeText = if (activity.endTime.isNotBlank()) {
+        "${activity.startTime} — ${activity.endTime}"
+    } else {
+        activity.startTime
+    }
 
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        borderColors = listOf(Color(0xFF818CF8).copy(alpha = 0.5f), GlassBorderBottom),
-        innerPadding = 11.dp
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF111622).copy(alpha = 0.75f))
+            .border(
+                0.5.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.15f),
+                        Color.Transparent
+                    )
+                ),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1081,44 +1103,73 @@ fun CustomActivityCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF818CF8).copy(alpha = 0.2f))
-                            .border(0.5.dp, Color(0xFF818CF8), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF818CF8).copy(alpha = 0.18f))
+                            .border(0.5.dp, Color(0xFF818CF8).copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("1-DAY ACTIVITY", color = Color(0xFF818CF8), fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("1-DAY ACTIVITY", color = Color(0xFF818CF8), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
+
+                    if (activity.countsTowardsAttendance) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NeonEmerald.copy(alpha = 0.18f))
+                                .border(0.5.dp, NeonEmerald.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("COUNTS FOR ATTENDANCE", color = NeonEmerald, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = activity.startTime,
-                        color = Color(0xFF94A3B8),
+                        text = timeRangeText,
+                        color = Color(0xFFCBD5E1),
                         fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = activity.title,
-                    color = TextPrimary,
-                    fontSize = 14.5.sp,
+                    color = Color.White,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
+
                 if (activity.location.isNotBlank()) {
-                    Text(
-                        text = "Location: ${activity.location}",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 11.sp
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Place,
+                            contentDescription = null,
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = activity.location,
+                            color = Color(0xFF94A3B8),
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
 
             IconButton(
                 onClick = {
-                    CaliperHardwareEngine.pulseHaptic(context, true)
+                    CaliperSoundManager.playThud()
+                    CaliperHapticManager.tick(context)
                     onDelete()
                 },
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(StrictRed.copy(alpha = 0.12f))
             ) {
                 Icon(
                     imageVector = Icons.Default.DeleteOutline,
@@ -1604,7 +1655,7 @@ fun AddExtraEventDialog(
     selectedDate: String,
     onDismiss: () -> Unit,
     onConfirmSubjectExtra: (subjectId: Long, status: String, isProxy: Boolean, notes: String?) -> Unit,
-    onConfirmCustomActivity: (title: String, startTime: String, location: String) -> Unit
+    onConfirmCustomActivity: (title: String, startTime: String, endTime: String, location: String, countAttendance: Boolean) -> Unit
 ) {
     var selectedPath by remember { mutableIntStateOf(0) } // 0 = Curriculum Subject, 1 = Single-Day Activity
 
@@ -1615,8 +1666,10 @@ fun AddExtraEventDialog(
 
     // Path 1 state
     var activityTitle by remember { mutableStateOf("") }
-    var activityTime by remember { mutableStateOf("10:00 AM") }
+    var activityStartTime by remember { mutableStateOf("02:00 PM") }
+    var activityEndTime by remember { mutableStateOf("04:30 PM") }
     var activityLocation by remember { mutableStateOf("") }
+    var countTowardsAttendance by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1727,28 +1780,76 @@ fun AddExtraEventDialog(
                     OutlinedTextField(
                         value = activityTitle,
                         onValueChange = { activityTitle = it },
-                        label = { Text("Activity Title (e.g., Seminar, Sports, Drill)") },
+                        label = { Text("Activity Title (e.g., Seminar, Sports, Training)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = activityTime,
-                        onValueChange = { activityTime = it },
-                        label = { Text("Start Time (e.g., 10:00 AM)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = activityStartTime,
+                            onValueChange = { activityStartTime = it },
+                            label = { Text("Start Time") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        OutlinedTextField(
+                            value = activityEndTime,
+                            onValueChange = { activityEndTime = it },
+                            label = { Text("End Time") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = activityLocation,
                         onValueChange = { activityLocation = it },
-                        label = { Text("Location (e.g., Auditorium, Ground)") },
+                        label = { Text("Location (e.g., Main Auditorium, Lab 3)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.04f))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Count towards overall attendance?",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Flags this event as valid academic attendance credit",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 10.sp
+                            )
+                        }
+                        Switch(
+                            checked = countTowardsAttendance,
+                            onCheckedChange = { countTowardsAttendance = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = NeonEmerald,
+                                uncheckedThumbColor = Color(0xFF94A3B8),
+                                uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                            )
+                        )
+                    }
                 }
             }
         },
@@ -1759,7 +1860,13 @@ fun AddExtraEventDialog(
                         onConfirmSubjectExtra(selectedSubjectId, selectedStatus, false, extraNotes)
                     } else {
                         if (activityTitle.isNotBlank()) {
-                            onConfirmCustomActivity(activityTitle, activityTime, activityLocation)
+                            onConfirmCustomActivity(
+                                activityTitle,
+                                activityStartTime,
+                                activityEndTime,
+                                activityLocation,
+                                countTowardsAttendance
+                            )
                         }
                     }
                 },
