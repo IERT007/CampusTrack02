@@ -64,6 +64,7 @@ fun AuditScreen(
     val summary by viewModel.globalSummary.collectAsState()
     val holidayRanges by viewModel.holidayRanges.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
+    val testRecords by viewModel.testRecords.collectAsState()
 
     var showMedicalDialog by remember { mutableStateOf(false) }
     var showHolidayDialog by remember { mutableStateOf(false) }
@@ -401,6 +402,177 @@ fun AuditScreen(
                     CalendarLegendDot("Partial", colors.deadlineWarning)
                     CalendarLegendDot("Bunked", colors.bunkDanger)
                     CalendarLegendDot("Off/Holiday", colors.textSecondary)
+                }
+            }
+        }
+
+        // 3B. Academic Test Performance Ledger Card
+        item {
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("academic_test_performance_card"),
+                borderColors = listOf(colors.primaryAccent.copy(alpha = 0.5f), colors.cardBorderBottom),
+                innerPadding = 14.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("📝", fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "ACADEMIC TEST PERFORMANCE",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.primaryAccent,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(colors.primaryAccent.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "${testRecords.size} Tests Logged",
+                                color = colors.primaryAccent,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (testRecords.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.03f))
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No class tests recorded yet. Mark tests directly on lecture slot cards in Today's schedule.",
+                                color = colors.textMuted,
+                                fontSize = 11.5.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    } else {
+                        // Group tests by subject
+                        val testsBySubject = testRecords.groupBy { it.subjectId }
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            testsBySubject.forEach { (subId, records) ->
+                                val sub = subjects.find { it.id == subId }
+                                val avgPct = records.map {
+                                    if (it.maxMarks > 0) (it.marksObtained / it.maxMarks) * 100.0 else 0.0
+                                }.average()
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF0F172A))
+                                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                        .padding(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "${sub?.code ?: "SUB"} — ${sub?.name ?: "Subject"}",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "${records.size} Evaluation${if (records.size == 1) "" else "s"}",
+                                                fontSize = 10.5.sp,
+                                                color = colors.textMuted
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(
+                                                    if (avgPct >= 75.0) colors.safeZone.copy(alpha = 0.2f)
+                                                    else if (avgPct >= 50.0) colors.deadlineWarning.copy(alpha = 0.2f)
+                                                    else colors.bunkDanger.copy(alpha = 0.2f)
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "Avg: ${String.format("%.1f", avgPct)}%",
+                                                color = if (avgPct >= 75.0) colors.safeZone else if (avgPct >= 50.0) colors.deadlineWarning else colors.bunkDanger,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    records.forEach { record ->
+                                        val testPct = if (record.maxMarks > 0) (record.marksObtained / record.maxMarks) * 100.0 else 0.0
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 3.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "• ${record.testName}",
+                                                    fontSize = 11.5.sp,
+                                                    color = Color(0xFFE2E8F0)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "(${record.date})",
+                                                    fontSize = 10.sp,
+                                                    color = colors.textMuted
+                                                )
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "${record.marksObtained} / ${record.maxMarks} (${String.format("%.1f", testPct)}%)",
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (testPct >= 75.0) colors.safeZone else colors.bunkDanger
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                IconButton(
+                                                    onClick = { viewModel.deleteTestRecord(record.id) },
+                                                    modifier = Modifier.size(20.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Delete",
+                                                        tint = colors.textMuted,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

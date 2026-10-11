@@ -27,24 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.GlassSurface
 import com.example.ui.components.triggerHapticFeedback
-import com.example.ui.screens.academics.AcademicsDashboard
-import com.example.ui.screens.audit.AuditHistoryDashboard
-import com.example.ui.screens.subjects.SubjectsSafeZoneDashboard
-import com.example.ui.screens.today.TodayOperationsDashboard
+import com.example.ui.navigation.AppTab
 import com.example.ui.theme.*
 
-enum class DashboardTab(
-    val title: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
-    val testTag: String
-) {
-    TODAY("Today", Icons.Default.Today, Icons.Default.CalendarToday, "nav_tab_today"),
-    SAFE_ZONE("Safe-Zone", Icons.Default.Shield, Icons.Default.Security, "nav_tab_safe_zone"),
-    ACADEMICS("Academics", Icons.Default.School, Icons.Default.School, "nav_tab_academics"),
-    NOTES("Notes", Icons.Default.NoteAlt, Icons.Default.Notes, "nav_tab_notes"),
-    AUDIT("Audit", Icons.Default.Analytics, Icons.Default.Insights, "nav_tab_audit")
-}
+typealias DashboardTab = AppTab
 
 @Composable
 fun CampusTrackRootScreen(

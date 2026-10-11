@@ -30,17 +30,17 @@ import com.example.ui.SubjectAttendanceStats
 import com.example.ui.components.*
 import com.example.ui.dialogs.AddEditSubjectDialog
 import com.example.ui.dialogs.EditSlotDialog
-import com.example.ui.dialogs.ReconciliationDialog
 import com.example.ui.theme.*
 import kotlin.math.floor
 import kotlin.math.max
 
 /**
  * SafeZoneScreen — Academic Safe-Zone & Telemetry Dashboard
- * - Slim Vernier Precision Bar (Replaces bulky 180° circular speedometer)
- * - Slim Bunk Buffer Slider (Compact 4.dp track, minimal vertical padding)
- * - Frosted 📅 Calendar/Timetable Action Logo Button in Header (opens slot editor modal bottom sheet)
- * - Real-time statutory 75% cutoff calculation with zero lag
+ * 3 Clear Vertical Sections:
+ * 1. Overall Telemetry Header: Total Classes Attended/Conducted and Total Safe Bunks Available.
+ * 2. Bunk Simulator: Minimal slider calculating aggregate projection.
+ * 3. Curriculum Subject List: Each card clearly displays Attended, Total Conducted, and Safe Bunk Buffer,
+ *    plus a 3-dots menu providing Edit Subject details and Cascading Subject Deletion.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,8 +55,8 @@ fun SafeZoneScreen(
     val subjects by viewModel.subjects.collectAsState()
 
     var filterMode by remember { mutableStateOf("all") } // "all", "risk", "theory", "practical"
-    var reconcilingStats by remember { mutableStateOf<SubjectAttendanceStats?>(null) }
     var editingSubject by remember { mutableStateOf<SubjectEntity?>(null) }
+    var subjectToDelete by remember { mutableStateOf<SubjectEntity?>(null) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
 
     // Slot Editor Bottom Sheet State
@@ -64,6 +64,11 @@ fun SafeZoneScreen(
     var selectedWeekDay by remember { mutableIntStateOf(1) } // 1 (Mon) .. 6 (Sat)
     var editingSlotItem by remember { mutableStateOf<TimetableSlotEntity?>(null) }
     var showCreateSlotDialog by remember { mutableStateOf(false) }
+
+    // Calculate total aggregate safe bunks available
+    val totalSafeBunks = remember(statsList) {
+        statsList.sumOf { it.bunksAvailable }
+    }
 
     val filteredStats = remember(statsList, filterMode) {
         when (filterMode) {
@@ -77,16 +82,18 @@ fun SafeZoneScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 14.dp),
+        contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 1. Global Metric Telemetry Vernier Precision Bar Card
+        // ==========================================
+        // SECTION 1: OVERALL TELEMETRY HEADER
+        // ==========================================
         item {
             GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("global_metric_ring_card"),
+                    .testTag("overall_telemetry_header_card"),
                 innerPadding = 12.dp,
                 borderColors = listOf(IceBlue.copy(alpha = 0.5f), GlassBorderBottom)
             ) {
@@ -105,7 +112,7 @@ fun SafeZoneScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "SAFE-ZONE TELEMETRY",
+                            text = "OVERALL TELEMETRY",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = IceBlue,
@@ -113,12 +120,12 @@ fun SafeZoneScreen(
                         )
                     }
 
-                    // Frosted 📅 Calendar/Timetable Action Logo Button
+                    // Frosted 📅 Calendar/Slots Button
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(NeonCyan.copy(alpha = 0.16f))
-                            .border(0.5.dp, NeonCyan.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                            .border(0.5.dp, NeonCyan.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                             .clickable {
                                 CaliperHardwareEngine.playSound(CaliperHardwareEngine.SNAP)
                                 CaliperHardwareEngine.pulseHaptic(context)
@@ -128,7 +135,7 @@ fun SafeZoneScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📅", fontSize = 12.sp)
+                            Text("📅", fontSize = 11.sp)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Slots",
@@ -142,7 +149,7 @@ fun SafeZoneScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Slim Vernier Precision Bar (Replaces bulky 180° circular dial)
+                // Slim Vernier Precision Bar with 75% tick mark
                 SlimVernierPrecisionBar(
                     percentage = summary.overallPercentage.toFloat(),
                     modifier = Modifier.fillMaxWidth()
@@ -150,7 +157,7 @@ fun SafeZoneScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Mini metrics telemetry bar
+                // Telemetry Metrics Row: Attended/Conducted & Total Safe Bunks Available
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,79 +165,45 @@ fun SafeZoneScreen(
                         .background(Color.White.copy(alpha = 0.03f))
                         .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${summary.totalAttended} / ${summary.totalConducted}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Attended", fontSize = 9.sp, color = ArchitecturalTitanium)
+                    Column {
+                        Text("Classes Attended", fontSize = 9.sp, color = TextMuted)
+                        Text(
+                            text = "${summary.totalAttended} / ${summary.totalConducted}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
-                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.White.copy(alpha = 0.1f)))
+
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${summary.totalProxy}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IceBlue)
-                        Text("Proxies", fontSize = 9.sp, color = ArchitecturalTitanium)
+                        Text("Safe Bunk Margin", fontSize = 9.sp, color = TextMuted)
+                        Text(
+                            text = if (totalSafeBunks > 0) "+$totalSafeBunks Safe Bunks" else "0 Bunks Remaining",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (totalSafeBunks > 0) SageMint else SoftCoral
+                        )
                     }
-                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.White.copy(alpha = 0.1f)))
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${summary.totalFacultyCancelled}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MutedChampagneAmber)
-                        Text("Cancelled", fontSize = 9.sp, color = ArchitecturalTitanium)
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Aggregate Status", fontSize = 9.sp, color = TextMuted)
+                        Text(
+                            text = if (summary.overallPercentage >= 75.0) "SAFE ZONE" else "DEBAR RISK",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (summary.overallPercentage >= 75.0) SageMint else SoftCoral
+                        )
                     }
                 }
             }
         }
 
-        // 2. Detained / Admit Card Risk Alert Banner
-        if (summary.atRiskSubjectCount > 0 || summary.criticalSubjectCount > 0) {
-            item {
-                val atRiskNames = statsList.filter { it.percentage < 75.0 }.joinToString { it.subject.code }
-                GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("detained_risk_alert_banner"),
-                    backgroundColor = if (summary.criticalSubjectCount > 0) DangerRed else WarningAmber,
-                    borderColors = listOf(StrictRed, GlassBorderBottom)
-                ) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(StrictRed.copy(alpha = 0.25f))
-                                .border(1.dp, StrictRed, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = StrictRed,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Text(
-                                text = if (summary.criticalSubjectCount > 0) "ADMIT CARD DETENTION RISK!" else "ATTENDANCE SAFE-ZONE WARNING",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (summary.criticalSubjectCount > 0) StrictRed else WarningAmber,
-                                letterSpacing = 0.5.sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${summary.atRiskSubjectCount + summary.criticalSubjectCount} subjects ($atRiskNames) are under the mandatory 75% cutoff.",
-                                fontSize = 11.5.sp,
-                                color = TextPrimary,
-                                lineHeight = 15.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3. Slim Bunk Buffer Slider (Mass Bunk Simulator)
+        // ==========================================
+        // SECTION 2: BUNK SIMULATOR
+        // ==========================================
         item {
             var simulatedBunkCount by remember { mutableFloatStateOf(0f) }
             val bunksInt = simulatedBunkCount.toInt()
@@ -239,44 +212,29 @@ fun SafeZoneScreen(
             val simulatedAttended = summary.totalAttended
             val simulatedPct = if (simulatedConducted > 0) {
                 (simulatedAttended.toDouble() / simulatedConducted.toDouble()) * 100.0
-            } else {
-                100.0
-            }
-
-            val maxSafeBunks = if (summary.overallPercentage >= 75.0 && summary.totalConducted > 0) {
-                val safe = floor((summary.totalAttended.toDouble() - (0.75 * summary.totalConducted.toDouble())) / 0.75).toInt()
-                max(0, safe)
-            } else {
-                0
-            }
+            } else 100.0
 
             GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("mass_bunk_simulator_card"),
-                innerPadding = 10.dp,
-                backgroundColor = Color(0x0DFFFFFF),
-                borderColors = listOf(IceBlue.copy(alpha = 0.4f), GlassBorderBottom)
+                    .testTag("bunk_simulator_card"),
+                innerPadding = 12.dp,
+                borderColors = listOf(NeonCyan.copy(alpha = 0.35f), GlassBorderBottom)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.LinearScale,
-                                contentDescription = null,
-                                tint = IceBlue,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("🧮", fontSize = 13.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "MASS BUNK SIMULATOR",
-                                fontSize = 10.5.sp,
+                                text = "BUNK SIMULATOR",
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = IceBlue,
+                                color = IceSky,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -284,30 +242,31 @@ fun SafeZoneScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (simulatedPct >= 75.0) SageMint.copy(alpha = 0.18f) else SoftCoral.copy(alpha = 0.18f))
+                                .background(Color.White.copy(alpha = 0.08f))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (bunksInt == 0) "Buffer: $maxSafeBunks Bunks" else "+$bunksInt Bunks",
-                                fontSize = 10.sp,
+                                text = "+$bunksInt Bunk${if (bunksInt == 1) "" else "s"} Projected",
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (simulatedPct >= 75.0) SageMint else SoftCoral
+                                color = IceBlue
                             )
                         }
                     }
 
-                    // Simulation Metrics Projection
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Column {
-                            Text("Projected Aggregate", fontSize = 9.5.sp, color = TextSecondary)
+                            Text("Projected Aggregate", fontSize = 9.sp, color = TextSecondary)
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     text = String.format("%.1f%%", simulatedPct),
-                                    fontSize = 18.sp,
+                                    fontSize = 17.sp,
                                     fontWeight = FontWeight.Black,
                                     color = if (simulatedPct >= 75.0) SageMint else SoftCoral
                                 )
@@ -326,20 +285,20 @@ fun SafeZoneScreen(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = if (simulatedPct >= 75.0) "ELIGIBLE" else "DETAINED",
-                                fontSize = 10.sp,
+                                text = if (simulatedPct >= 75.0) "ELIGIBLE (≥ 75%)" else "DEBARRED (< 75%)",
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (simulatedPct >= 75.0) SageMint else SoftCoral
                             )
                             Text(
-                                text = "$simulatedAttended / $simulatedConducted",
-                                fontSize = 9.sp,
+                                text = "$simulatedAttended / $simulatedConducted total",
+                                fontSize = 9.5.sp,
                                 color = TextMuted
                             )
                         }
                     }
 
-                    // Slim Tactile Slider (Compact 4.dp track)
+                    // Minimal slider track
                     Slider(
                         value = simulatedBunkCount,
                         onValueChange = { newVal ->
@@ -365,14 +324,16 @@ fun SafeZoneScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("0 Bunks", fontSize = 8.5.sp, color = TextMuted)
-                        Text("+7 Mass Bunks", fontSize = 8.5.sp, color = TextMuted)
-                        Text("+15 Maximum", fontSize = 8.5.sp, color = TextMuted)
+                        Text("+7 Buffer", fontSize = 8.5.sp, color = TextMuted)
+                        Text("+15 Max", fontSize = 8.5.sp, color = TextMuted)
                     }
                 }
             }
         }
 
-        // 4. Category Filter Chips & Add Subject Action
+        // ==========================================
+        // SECTION 3: CURRICULUM SUBJECT LIST
+        // ==========================================
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -418,7 +379,7 @@ fun SafeZoneScreen(
                 IconButton(
                     onClick = { showAddSubjectDialog = true },
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(30.dp)
                         .clip(CircleShape)
                         .background(NeonCyan.copy(alpha = 0.2f))
                 ) {
@@ -426,52 +387,38 @@ fun SafeZoneScreen(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Subject",
                         tint = NeonCyan,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
         }
 
-        // 5. Individual Subject Attendance Cards
+        // Individual Subject Cards with 3-Dots Menu & Cascade Deletion
         items(filteredStats, key = { it.subject.id }) { stat ->
-            SubjectSafeZoneCard(
+            SubjectCardWithMenu(
                 stat = stat,
-                onReconcileClick = { reconcilingStats = stat },
-                onEditClick = { editingSubject = stat.subject },
-                onQuickAdjust = { deltaAtt, deltaTot ->
-                    viewModel.reconcileSubject(
-                        stat.subject.id,
-                        stat.attended + deltaAtt,
-                        stat.totalConducted + deltaTot
-                    )
-                }
+                onEdit = { editingSubject = stat.subject },
+                onDelete = { subjectToDelete = stat.subject }
             )
         }
     }
 
-    // Modal Bottom Sheet: Weekly Academic Timetable & Slot Editor
+    // Weekday Slot Editor Bottom Sheet
     if (showSlotEditorBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSlotEditorBottomSheet = false },
-            containerColor = Color(0xF2060A12),
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 10.dp)
-                        .width(40.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.25f))
-                )
-            }
+            containerColor = Color(0xFF0A0F18),
+            scrimColor = Color.Black.copy(alpha = 0.7f),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF475569)) }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.85f)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp)
+                    .heightIn(min = 360.dp, max = 560.dp)
             ) {
-                // Header Row
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -479,14 +426,13 @@ fun SafeZoneScreen(
                 ) {
                     Column {
                         Text(
-                            text = "WEEKLY ACADEMIC TIMETABLE",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            letterSpacing = 0.5.sp
+                            text = "Timetable Slot Editor",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                         Text(
-                            text = "Manage recurring lectures, labs & room numbers",
+                            text = "Manage weekly slots and room mappings",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -494,14 +440,13 @@ fun SafeZoneScreen(
 
                     Button(
                         onClick = { showCreateSlotDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("+ Add Slot", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("+ Add Slot", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -645,7 +590,7 @@ fun SafeZoneScreen(
         }
     }
 
-    // Dialogs
+    // Add Subject Dialog
     if (showAddSubjectDialog) {
         AddEditSubjectDialog(
             initialSubject = null,
@@ -657,6 +602,7 @@ fun SafeZoneScreen(
         )
     }
 
+    // Edit Subject Dialog
     if (editingSubject != null) {
         AddEditSubjectDialog(
             initialSubject = editingSubject,
@@ -668,13 +614,40 @@ fun SafeZoneScreen(
         )
     }
 
-    if (reconcilingStats != null) {
-        ReconciliationDialog(
-            stats = reconcilingStats!!,
-            onDismiss = { reconcilingStats = null },
-            onConfirm = { officialAtt, officialTot ->
-                viewModel.reconcileSubject(reconcilingStats!!.subject.id, officialAtt, officialTot)
-                reconcilingStats = null
+    // Confirmation Dialog for Cascading Subject Deletion
+    if (subjectToDelete != null) {
+        val sub = subjectToDelete!!
+        AlertDialog(
+            onDismissRequest = { subjectToDelete = null },
+            title = {
+                Text(
+                    text = "Delete ${sub.code}?",
+                    fontWeight = FontWeight.Bold,
+                    color = StrictRed
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete ${sub.name}?\n\nWarning: This will permanently remove all associated timetable slots, attendance records, and test marks for this subject. This action cannot be undone.",
+                    fontSize = 13.sp,
+                    color = Color.White
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSubjectCascade(sub)
+                        subjectToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = StrictRed)
+                ) {
+                    Text("Delete Subject", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subjectToDelete = null }) {
+                    Text("Cancel", color = Color.White)
+                }
             }
         )
     }
@@ -723,25 +696,25 @@ fun SafeZoneScreen(
 }
 
 /**
- * Compact, Breathing Individual Subject Card with Statutory Safe Zone Indicators
+ * Subject Card with 3-Dots Menu & Cascading Deletion
+ * Clearly displays: Attended, Total Conducted, and Safe Bunk Buffer.
  */
 @Composable
-fun SubjectSafeZoneCard(
+fun SubjectCardWithMenu(
     stat: SubjectAttendanceStats,
-    onReconcileClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onQuickAdjust: (deltaAttended: Int, deltaConducted: Int) -> Unit
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    val context = LocalContext.current
     val isSafe = stat.percentage >= 75.0
     val statusColor = if (isSafe) NeonEmerald else StrictRed
+    var menuExpanded by remember { mutableStateOf(false) }
 
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         innerPadding = 11.dp,
         borderColors = listOf(statusColor.copy(alpha = 0.5f), GlassBorderBottom)
     ) {
-        // Top Row: Code, Name, Faculty, and Edit action
+        // Header Row: Code, Name, Percentage, and 3-Dots Menu
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -764,7 +737,7 @@ fun SubjectSafeZoneCard(
                     ) {
                         Text(
                             text = stat.subject.type.uppercase(),
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             color = Color(0xFF94A3B8)
                         )
                     }
@@ -783,156 +756,93 @@ fun SubjectSafeZoneCard(
                 )
             }
 
-            Column(horizontalAlignment = Alignment.End) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = String.format("%.1f%%", stat.percentage),
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
                     color = statusColor
                 )
-                IconButton(
-                    onClick = onEditClick,
-                    modifier = Modifier.size(22.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Subject",
-                        tint = Color(0xFF64748B),
-                        modifier = Modifier.size(14.dp)
-                    )
+
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Subject Options",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        containerColor = Color(0xFF0F172A)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit Details", color = Color.White, fontSize = 12.sp) },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp)) },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete Subject", color = StrictRed, fontSize = 12.sp) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = StrictRed, modifier = Modifier.size(16.dp)) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
+                        )
+                    }
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Mini metrics row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0x1100E676))
-                    .padding(vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "${stat.attended} Present",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = NeonEmerald
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0x11EF4444))
-                    .padding(vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "${stat.bunked} Bunked",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = StrictRed
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0x11F59E0B))
-                    .padding(vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "${stat.facultyCancelled} Off",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = WarningAmber
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Buffer Prediction Strip
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (isSafe) Color(0x1400E676) else Color(0x1DEF4444))
-                .border(0.5.dp, if (isSafe) NeonEmerald.copy(alpha = 0.35f) else StrictRed.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = if (isSafe) Icons.Default.Shield else Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = statusColor,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (isSafe) {
-                        "Safe Buffer: ${stat.bunksAvailable} classes safe to miss (≥75% margin)"
-                    } else {
-                        "Detention Risk! Attend next ${stat.classesNeeded} classes to restore 75%"
-                    },
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = statusColor
-                )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Actions: Reconcile & Quick 1-tap increments
+        // 3 Key Metrics: Attended, Total Conducted, and Safe Bunk Buffer
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White.copy(alpha = 0.04f))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(
-                onClick = onReconcileClick,
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Icon(Icons.Default.Tune, contentDescription = null, tint = IceSky, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Sync Register", color = IceSky, fontSize = 11.sp)
+            Column {
+                Text("Attended", fontSize = 9.sp, color = TextMuted)
+                Text(
+                    text = "${stat.attended} Classes",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NeonEmerald
+                )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(
-                    onClick = {
-                        CaliperHardwareEngine.playSound(CaliperHardwareEngine.SUCCESS)
-                        CaliperHardwareEngine.pulseHaptic(context)
-                        onQuickAdjust(1, 1)
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonEmerald)
-                ) {
-                    Text("+1 Present", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Total Conducted", fontSize = 9.sp, color = TextMuted)
+                Text(
+                    text = "${stat.totalConducted} Classes",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
 
-                OutlinedButton(
-                    onClick = {
-                        CaliperHardwareEngine.playSound(CaliperHardwareEngine.THUD)
-                        CaliperHardwareEngine.pulseHaptic(context, true)
-                        onQuickAdjust(0, 1)
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StrictRed)
-                ) {
-                    Text("+1 Bunk", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Safe Buffer", fontSize = 9.sp, color = TextMuted)
+                Text(
+                    text = if (stat.bunksAvailable > 0) "+${stat.bunksAvailable} Bunks Safe" else "Need ${stat.classesNeeded} Classes",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (stat.bunksAvailable > 0) SageMint else SoftCoral
+                )
             }
         }
     }

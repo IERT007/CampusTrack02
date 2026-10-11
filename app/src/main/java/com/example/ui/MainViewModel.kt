@@ -129,6 +129,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val notes: StateFlow<List<QuickNoteEntity>> = repository.allNotes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _semesterStartDate = MutableStateFlow(prefs.getString("semester_start_date", "2026-07-15") ?: "2026-07-15")
+    val semesterStartDate: StateFlow<String> = _semesterStartDate.asStateFlow()
+
+    private val _semesterEndDate = MutableStateFlow(prefs.getString("semester_end_date", "2026-12-15") ?: "2026-12-15")
+    val semesterEndDate: StateFlow<String> = _semesterEndDate.asStateFlow()
+
+    fun setSemesterDates(startDate: String, endDate: String) {
+        _semesterStartDate.value = startDate
+        _semesterEndDate.value = endDate
+        prefs.edit()
+            .putString("semester_start_date", startDate)
+            .putString("semester_end_date", endDate)
+            .apply()
+    }
+
+    val testRecords: StateFlow<List<TestRecordEntity>> = repository.allTestRecords
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val currentDayActivities: StateFlow<List<CustomActivityEntity>> = selectedDate.flatMapLatest { dateStr ->
+        repository.getActivitiesForDate(dateStr)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Current holiday if selected date falls into a declared holiday / institutional off range
     val currentHoliday: StateFlow<HolidayRangeEntity?> = combine(
         selectedDate,
@@ -886,31 +909,72 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("selected_theme", _selectedTheme.value).apply()
     }
 
-    /**
-     * Builds exhaustive system state for Caliper AI Context Engine
-     */
-    fun getFullSystemContext(): com.example.ai.CaliperAiEngine.FullAcademicContext {
-        val currentSubjects = subjects.value
-        val currentSlots = slots.value
-        val timetableByDay = (1..6).associateWith { day ->
-            currentSlots.filter { it.dayOfWeek == day }.sortedBy { it.startTime }.map { slot ->
-                SlotDisplayItem(
-                    slot = slot,
-                    subject = currentSubjects.find { it.id == slot.subjectId },
-                    currentLog = null,
-                    isOngoing = false
-                )
-            }
+    fun saveSlotTestRecord(
+        subjectId: Long,
+        date: String,
+        slotId: Long?,
+        testName: String,
+        marksObtained: Double,
+        maxMarks: Double
+    ) {
+        viewModelScope.launch {
+            val record = TestRecordEntity(
+                subjectId = subjectId,
+                date = date,
+                slotId = slotId,
+                testName = testName,
+                marksObtained = marksObtained,
+                maxMarks = maxMarks
+            )
+            repository.saveTestRecord(record)
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
         }
+    }
 
-        return com.example.ai.CaliperAiEngine.FullAcademicContext(
-            timetableByDay = timetableByDay,
-            subjectStatsList = subjectStats.value,
-            assessments = assessments.value,
-            tasks = tasks.value,
-            holidays = holidayRanges.value,
-            summary = globalSummary.value,
-            notes = notes.value
-        )
+    fun deleteTestRecord(id: Long) {
+        viewModelScope.launch {
+            repository.deleteTestRecord(id)
+            com.example.audio.CaliperSoundManager.playPip()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun saveCustomActivity(
+        date: String,
+        title: String,
+        startTime: String,
+        endTime: String = "",
+        location: String = ""
+    ) {
+        viewModelScope.launch {
+            val act = CustomActivityEntity(
+                date = date,
+                title = title,
+                startTime = startTime,
+                endTime = endTime,
+                location = location,
+                status = "attended"
+            )
+            repository.saveCustomActivity(act)
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun deleteCustomActivity(id: Long) {
+        viewModelScope.launch {
+            repository.deleteCustomActivity(id)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun deleteSubjectCascade(subject: SubjectEntity) {
+        viewModelScope.launch {
+            repository.deleteSubjectCascade(subject)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
     }
 }

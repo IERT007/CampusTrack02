@@ -120,3 +120,29 @@ data class QuickNoteEntity(
     val isPinned: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "test_records")
+data class TestRecordEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val subjectId: Long,
+    val date: String, // "YYYY-MM-DD"
+    val slotId: Long? = null,
+    val testName: String = "Class Test",
+    val marksObtained: Double,
+    val maxMarks: Double,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "custom_activities")
+data class CustomActivityEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val date: String, // "YYYY-MM-DD"
+    val title: String, // e.g. "Seminar", "Sports", "Special Workshop"
+    val startTime: String, // "10:00"
+    val endTime: String = "",
+    val location: String = "",
+    val status: String = "attended", // "attended", "missed"
+    val timestamp: Long = System.currentTimeMillis()
+)

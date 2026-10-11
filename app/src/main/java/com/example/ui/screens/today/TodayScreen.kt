@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -28,11 +29,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.audio.CaliperHardwareEngine
 import com.example.audio.CaliperHapticManager
 import com.example.audio.CaliperSoundManager
+import com.example.data.local.entity.CustomActivityEntity
+import com.example.data.local.entity.TestRecordEntity
 import com.example.data.local.entity.TimetableSlotEntity
 import com.example.ui.MainViewModel
 import com.example.ui.SlotDisplayItem
@@ -43,11 +48,12 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * TodayScreen — Ultra-Compact Dynamic Daily Operations Console
- * - Zero top void (tight alignment beneath TopBar)
- * - Old static AI card deleted (3D Floating Robo Copilot is sole AI entity)
- * - Streamlined single-row "Live Day Operations" container with 34.dp bulk buttons
- * - Compact card system (8.dp to 10.dp padding, 8.dp vertical arrangement)
+ * TodayScreen — CALIPER OS Daily Operations Console
+ * Features:
+ * 1. Semester Timeline Boundary (Pre-Semester & Post-Semester detection).
+ * 2. In-Slot Class Test System (Mark test, persist marksObtained/maxMarks, view test scores).
+ * 3. 1-Day Custom Activity Creation (e.g. Seminars, Training, Sports) with direct delete icon.
+ * 4. Ultra-compact, dense card system without extra bloat or static AI cards.
  */
 @Composable
 fun TodayScreen(
@@ -64,11 +70,17 @@ fun TodayScreen(
     val hasAutoVault by viewModel.hasAutoVault.collectAsState()
     val allSlots by viewModel.slots.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
+    val testRecords by viewModel.testRecords.collectAsState()
+    val customActivities by viewModel.currentDayActivities.collectAsState()
+
+    val semesterStartDate by viewModel.semesterStartDate.collectAsState()
+    val semesterEndDate by viewModel.semesterEndDate.collectAsState()
 
     var showExtraClassDialog by remember { mutableStateOf(false) }
     var showWeeklyTimetableDialog by remember { mutableStateOf(false) }
     var showHolidayManagerDialog by remember { mutableStateOf(false) }
     var showDatePickerDialog by remember { mutableStateOf(false) }
+    var showSemesterDatesDialog by remember { mutableStateOf(false) }
     var editingSlot by remember { mutableStateOf<TimetableSlotEntity?>(null) }
     var showMarkedTray by remember { mutableStateOf(false) }
 
@@ -104,6 +116,10 @@ fun TodayScreen(
         }
     }
     val isPastDate = parsedSelectedDate.isBefore(today)
+
+    // Semester Timeline Boundary check
+    val isPreSemester = selectedDateStr < semesterStartDate
+    val isPostSemester = selectedDateStr > semesterEndDate
 
     val dayName = remember(parsedSelectedDate) {
         parsedSelectedDate.format(DateTimeFormatter.ofPattern("EEEE"))
@@ -200,8 +216,8 @@ fun TodayScreen(
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
                     innerPadding = 10.dp,
-                    backgroundColor = Color(0x228B5CF6),
-                    borderColors = listOf(ElectricViolet.copy(alpha = 0.6f), GlassBorderBottom)
+                    backgroundColor = WarningAmber.copy(alpha = 0.15f),
+                    borderColors = listOf(WarningAmber.copy(alpha = 0.6f), GlassBorderBottom)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -209,101 +225,115 @@ fun TodayScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = ElectricViolet, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text("Enable 07:30 AM Briefing Alerts", color = TextPrimary, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-                                Text("Pre-lecture heads-up & attendance alerts", color = TextSecondary, fontSize = 9.5.sp)
+                                Text("PRE-CLASS ALERTS DISABLED", color = WarningAmber, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("Enable reminders 5m prior to lab / lecture", color = TextPrimary, fontSize = 11.5.sp)
                             }
                         }
 
                         Button(
                             onClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    notificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                                }
+                                CaliperHardwareEngine.pulseHaptic(context)
+                                notificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = ElectricViolet),
+                            colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text("Enable", color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                            Text("Allow", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
 
-        // 1. Date Switcher Header
+        // 1. Date Navigation & Interactive Horizontal Week Strip
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Header Date Switcher Row
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x1A1F293D))
-                        .border(1.dp, GlassBorderTop, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = { viewModel.stepDay(-1) },
-                        modifier = Modifier.size(32.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable {
+                            CaliperHardwareEngine.pulseHaptic(context)
+                            showDatePickerDialog = true
+                        }
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Previous Day",
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = "Pick Date",
                             tint = NeonCyan,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = formattedDate,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = NeonCyan,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clickable {
+                    // Jump Chevrons (< Today >)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
                                 CaliperHardwareEngine.playSound(CaliperHardwareEngine.SNAP)
                                 CaliperHardwareEngine.pulseHaptic(context)
-                                showDatePickerDialog = true
-                            }
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = if (isToday) "Today • $formattedDate" else formattedDate,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isToday) NeonCyan else (if (isPastDate) WarningAmber else TextPrimary)
+                                viewModel.setSelectedDate(parsedSelectedDate.minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE))
+                            },
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Previous Day",
+                                tint = NeonCyan,
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Pick Date", tint = NeonCyan, modifier = Modifier.size(15.dp))
                         }
-                        Text(
-                            text = "IERT Prayagraj • Mechanical (Tool)",
-                            fontSize = 9.5.sp,
-                            color = TextMuted
-                        )
-                    }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
                         if (!isToday) {
                             TextButton(
-                                onClick = { viewModel.resetToToday() },
+                                onClick = {
+                                    CaliperHardwareEngine.playSound(CaliperHardwareEngine.SNAP)
+                                    CaliperHardwareEngine.pulseHaptic(context)
+                                    viewModel.setSelectedDate(todayStr)
+                                },
                                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text("Today", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
+
                         IconButton(
-                            onClick = { viewModel.stepDay(1) },
-                            modifier = Modifier.size(32.dp)
+                            onClick = {
+                                CaliperHardwareEngine.playSound(CaliperHardwareEngine.SNAP)
+                                CaliperHardwareEngine.pulseHaptic(context)
+                                viewModel.setSelectedDate(parsedSelectedDate.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE))
+                            },
+                            modifier = Modifier.size(30.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = "Next Day",
                                 tint = NeonCyan,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -391,137 +421,224 @@ fun TodayScreen(
             }
         }
 
-        // 2. Ultra-Compact "Live Day Operations" Card (Streamlined Single-Row Header + 34.dp Bulk Buttons)
-        item {
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("today_hero_card"),
-                innerPadding = 10.dp,
-                borderColors = listOf(Color(0x4400E5FF), GlassBorderBottom)
-            ) {
-                // Streamlined Single Header Row: Day Title (Left) + Marked Progress Badge (Right)
-                Row(
+        // SEMESTER TIMELINE BOUNDARY BANNERS
+        if (isPreSemester) {
+            item {
+                GlassCard(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    innerPadding = 12.dp,
+                    backgroundColor = Color(0x2238BDF8),
+                    borderColors = listOf(Color(0xFF38BDF8), GlassBorderBottom)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Pre-Semester / Session Not Started",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Curriculum begins on $semesterStartDate. Regular slots will activate then.",
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { showSemesterDatesDialog = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.EditCalendar, contentDescription = "Edit Dates", tint = Color(0xFF38BDF8), modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isPostSemester) {
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    innerPadding = 12.dp,
+                    backgroundColor = Color(0x22A855F7),
+                    borderColors = listOf(Color(0xFFA855F7), GlassBorderBottom)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Celebration, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Semester Concluded / Preparation Leave",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Official semester ended on $semesterEndDate. Best wishes for term exams!",
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { showSemesterDatesDialog = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.EditCalendar, contentDescription = "Edit Dates", tint = Color(0xFFA855F7), modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Ultra-Compact "Live Day Operations" Card
+        if (!isPreSemester && !isPostSemester) {
+            item {
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("today_hero_card"),
+                    innerPadding = 10.dp,
+                    borderColors = listOf(Color(0x4400E5FF), GlassBorderBottom)
+                ) {
+                    // Streamlined Single Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isToday) NeonEmerald else WarningAmber)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "$dayName • ${slotItems.size} Classes",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+
+                        // Compact Status Badge
                         Box(
                             modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(if (isToday) NeonEmerald else WarningAmber)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "$dayName • ${slotItems.size} Classes",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0x1F38BDF8))
+                                .border(0.5.dp, Color(0xFF38BDF8).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "$attendedCount/${slotItems.size} Marked",
+                                color = Color(0xFF38BDF8),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
-                    // Compact Status Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0x1F38BDF8))
-                            .border(0.5.dp, Color(0xFF38BDF8).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Slim Down 1-Tap Bulk Action Buttons (Height = 34.dp, 11.sp text, 14.dp icons)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "$attendedCount/${slotItems.size} Marked",
-                            color = Color(0xFF38BDF8),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Button(
+                            onClick = {
+                                CaliperSoundManager.playSuccess()
+                                CaliperHapticManager.successClick(context)
+                                viewModel.markWholeDayPresent()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald.copy(alpha = 0.18f)),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.6f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(34.dp)
+                                .testTag("bulk_present_btn")
+                        ) {
+                            Icon(Icons.Default.DoneAll, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("All Present", color = NeonEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                CaliperSoundManager.playThud()
+                                CaliperHapticManager.bunkDoubleTap(context)
+                                viewModel.markMassBunkOrOff("mass_bunk")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = StrictRed.copy(alpha = 0.18f)),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, StrictRed.copy(alpha = 0.5f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(34.dp)
+                                .testTag("bulk_bunk_btn")
+                        ) {
+                            Icon(Icons.Default.GroupOff, contentDescription = null, tint = StrictRed, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Mass Bunk", color = StrictRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                CaliperSoundManager.playSnap()
+                                CaliperHapticManager.tick(context)
+                                viewModel.markMassBunkOrOff("strike")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x18FFFFFF)),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderTop),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(34.dp)
+                                .testTag("bulk_off_btn")
+                        ) {
+                            Icon(Icons.Default.Block, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("College Off", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Slim Down 1-Tap Bulk Action Buttons (Height = 34.dp, 11.sp text, 14.dp icons)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playSuccess()
-                            CaliperHapticManager.successClick(context)
-                            viewModel.markWholeDayPresent()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald.copy(alpha = 0.18f)),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.6f)),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .testTag("bulk_present_btn")
-                    ) {
-                        Icon(Icons.Default.DoneAll, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("All Present", color = NeonEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playThud()
-                            CaliperHapticManager.bunkDoubleTap(context)
-                            viewModel.markMassBunkOrOff("mass_bunk")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = StrictRed.copy(alpha = 0.18f)),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, StrictRed.copy(alpha = 0.5f)),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .testTag("bulk_bunk_btn")
-                    ) {
-                        Icon(Icons.Default.GroupOff, contentDescription = null, tint = StrictRed, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Mass Bunk", color = StrictRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            viewModel.markMassBunkOrOff("strike")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x18FFFFFF)),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderTop),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .testTag("bulk_off_btn")
-                    ) {
-                        Icon(Icons.Default.Block, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("College Off", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (dayStatus != null && dayStatus?.leaveCategory != "none") {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0x22F59E0B))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Status: ${dayStatus?.notes ?: dayStatus?.leaveCategory}",
-                            color = WarningAmber,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                    if (dayStatus != null && dayStatus?.leaveCategory != "none") {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0x22F59E0B))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Status: ${dayStatus?.notes ?: dayStatus?.leaveCategory}",
+                                color = WarningAmber,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
@@ -566,7 +683,7 @@ fun TodayScreen(
             }
         }
 
-        // 3. Dynamic Slot Timeline Header with Extra Class Action
+        // 3. Dynamic Slot Timeline Header with Upgraded Extra Class / Activity Action
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -575,7 +692,7 @@ fun TodayScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "UPCOMING PERIODS",
+                        text = "SCHEDULE & ACTIVITIES",
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextMuted,
@@ -588,7 +705,8 @@ fun TodayScreen(
                             .background(Color(0x2200E5FF))
                             .padding(horizontal = 5.dp, vertical = 1.dp)
                     ) {
-                        Text("${upcomingSlots.size} remaining", color = NeonCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        val totalRemaining = upcomingSlots.size + customActivities.size
+                        Text("$totalRemaining items", color = NeonCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -604,13 +722,62 @@ fun TodayScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(13.dp))
                     Spacer(modifier = Modifier.width(3.dp))
-                    Text("+ Extra Class", color = NeonCyan, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                    Text("+ Extra Event", color = NeonCyan, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // Empty state if Sunday / no classes
-        if (slotItems.isEmpty()) {
+        // 1-Day Custom Activities (Specific to this date)
+        if (customActivities.isNotEmpty()) {
+            items(customActivities, key = { "custom_act_${it.id}" }) { activity ->
+                CustomActivityCard(
+                    activity = activity,
+                    onDelete = {
+                        viewModel.deleteCustomActivity(activity.id)
+                    }
+                )
+            }
+        }
+
+        // Slot Rendering (Only when within semester boundary)
+        if (isPreSemester || isPostSemester) {
+            item {
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    innerPadding = 16.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = if (isPreSemester) Icons.Default.HourglassEmpty else Icons.Default.Celebration,
+                            contentDescription = null,
+                            tint = NeonCyan,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (isPreSemester) "Session Not Yet Active" else "Term Completed",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = if (isPreSemester)
+                                "Standard timetable begins on $semesterStartDate."
+                            else
+                                "Semester concluded on $semesterEndDate.",
+                            fontSize = 11.5.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        } else if (slotItems.isEmpty() && customActivities.isEmpty()) {
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth(), innerPadding = 16.dp) {
                     Column(
@@ -640,7 +807,7 @@ fun TodayScreen(
                             },
                             fontSize = 11.5.sp,
                             color = TextSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Button(
@@ -660,7 +827,7 @@ fun TodayScreen(
                     }
                 }
             }
-        } else if (upcomingSlots.isEmpty()) {
+        } else if (upcomingSlots.isEmpty() && customActivities.isEmpty()) {
             item {
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -699,25 +866,43 @@ fun TodayScreen(
             }
         }
 
-        // 4. Primary Upcoming Slots (Compact height ~35% reduction)
-        items(upcomingSlots, key = { it.slot.id }) { item ->
-            SlotCard(
-                item = item,
-                onEditClick = { editingSlot = item.slot },
-                onStatusChange = { status, isProxy, notes ->
-                    viewModel.setSlotAttendance(
-                        slotId = item.slot.id,
-                        subjectId = item.slot.subjectId,
-                        status = status,
-                        isProxy = isProxy,
-                        notes = notes
-                    )
-                }
-            )
+        // 4. Primary Upcoming Slots with In-Slot Test Marking
+        if (!isPreSemester && !isPostSemester) {
+            items(upcomingSlots, key = { it.slot.id }) { item ->
+                val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
+                SlotCard(
+                    item = item,
+                    testRecord = slotTest,
+                    selectedDate = selectedDateStr,
+                    onEditClick = { editingSlot = item.slot },
+                    onStatusChange = { status, isProxy, notes ->
+                        viewModel.setSlotAttendance(
+                            slotId = item.slot.id,
+                            subjectId = item.slot.subjectId,
+                            status = status,
+                            isProxy = isProxy,
+                            notes = notes
+                        )
+                    },
+                    onSaveTest = { name, obtained, max ->
+                        viewModel.saveSlotTestRecord(
+                            subjectId = item.slot.subjectId,
+                            date = selectedDateStr,
+                            slotId = item.slot.id,
+                            testName = name,
+                            marksObtained = obtained,
+                            maxMarks = max
+                        )
+                    },
+                    onDeleteTest = { testId ->
+                        viewModel.deleteTestRecord(testId)
+                    }
+                )
+            }
         }
 
         // 5. Completed / Marked Slots Expandable Tray
-        if (markedSlots.isNotEmpty()) {
+        if (!isPreSemester && !isPostSemester && markedSlots.isNotEmpty()) {
             item {
                 Box(
                     modifier = Modifier
@@ -759,8 +944,11 @@ fun TodayScreen(
 
             if (showMarkedTray) {
                 items(markedSlots, key = { "marked_${it.slot.id}" }) { item ->
+                    val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
                     MarkedSlotCard(
                         item = item,
+                        testRecord = slotTest,
+                        selectedDate = selectedDateStr,
                         onEditClick = { editingSlot = item.slot },
                         onUndo = {
                             CaliperHardwareEngine.pulseHaptic(context)
@@ -774,6 +962,19 @@ fun TodayScreen(
                                 isProxy = isProxy,
                                 notes = notes
                             )
+                        },
+                        onSaveTest = { name, obtained, max ->
+                            viewModel.saveSlotTestRecord(
+                                subjectId = item.slot.subjectId,
+                                date = selectedDateStr,
+                                slotId = item.slot.id,
+                                testName = name,
+                                marksObtained = obtained,
+                                maxMarks = max
+                            )
+                        },
+                        onDeleteTest = { testId ->
+                            viewModel.deleteTestRecord(testId)
                         }
                     )
                 }
@@ -781,13 +982,19 @@ fun TodayScreen(
         }
     }
 
-    // Dialogs
+    // Upgraded Extra Class / Activity Creation Dialog (2 Paths)
     if (showExtraClassDialog) {
-        ExtraClassDialog(
+        AddExtraEventDialog(
             subjects = subjects,
+            selectedDate = selectedDateStr,
             onDismiss = { showExtraClassDialog = false },
-            onConfirm = { subId, status, isProxy, notes ->
-                viewModel.logExtraClass(subId, status, isProxy, notes)
+            onConfirmSubjectExtra = { subId, status, isProxy, notes ->
+                viewModel.logExtraClass(subId, status, isProxy, notes ?: "")
+                showExtraClassDialog = false
+            },
+            onConfirmCustomActivity = { title, time, loc ->
+                viewModel.saveCustomActivity(selectedDateStr, title, time, "", loc)
+                showExtraClassDialog = false
             }
         )
     }
@@ -820,6 +1027,18 @@ fun TodayScreen(
         )
     }
 
+    if (showSemesterDatesDialog) {
+        SemesterDatesDialog(
+            currentStartDate = semesterStartDate,
+            currentEndDate = semesterEndDate,
+            onDismiss = { showSemesterDatesDialog = false },
+            onSave = { sDate, eDate ->
+                viewModel.setSemesterDates(sDate, eDate)
+                showSemesterDatesDialog = false
+            }
+        )
+    }
+
     if (editingSlot != null) {
         EditSlotDialog(
             slot = editingSlot!!,
@@ -835,4 +1054,781 @@ fun TodayScreen(
             }
         )
     }
+}
+
+/**
+ * 1-Day Single-Day Custom Activity Card
+ * Renders ONLY on that specific calendar date with a direct delete icon.
+ */
+@Composable
+fun CustomActivityCard(
+    activity: CustomActivityEntity,
+    onDelete: () -> Unit
+) {
+    val context = LocalContext.current
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        borderColors = listOf(Color(0xFF818CF8).copy(alpha = 0.5f), GlassBorderBottom),
+        innerPadding = 11.dp
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFF818CF8).copy(alpha = 0.2f))
+                            .border(0.5.dp, Color(0xFF818CF8), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text("1-DAY ACTIVITY", color = Color(0xFF818CF8), fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = activity.startTime,
+                        color = Color(0xFF94A3B8),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = activity.title,
+                    color = TextPrimary,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (activity.location.isNotBlank()) {
+                    Text(
+                        text = "Location: ${activity.location}",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = {
+                    CaliperHardwareEngine.pulseHaptic(context, true)
+                    onDelete()
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Discard Activity",
+                    tint = StrictRed,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * SlotCard with In-Slot Class Test System
+ */
+@Composable
+fun SlotCard(
+    item: SlotDisplayItem,
+    testRecord: TestRecordEntity?,
+    selectedDate: String,
+    onEditClick: (() -> Unit)? = null,
+    onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit,
+    onSaveTest: (testName: String, marksObtained: Double, maxMarks: Double) -> Unit,
+    onDeleteTest: (testId: Long) -> Unit
+) {
+    val context = LocalContext.current
+    val currentLog = item.currentLog
+    val currentStatus = currentLog?.status
+    val isProxy = currentLog?.isProxy ?: false
+
+    var isTestExpanded by remember { mutableStateOf(false) }
+    var testNameInput by remember(testRecord) { mutableStateOf(testRecord?.testName ?: "Class Test") }
+    var marksObtainedInput by remember(testRecord) { mutableStateOf(testRecord?.marksObtained?.toString() ?: "") }
+    var maxMarksInput by remember(testRecord) { mutableStateOf(testRecord?.maxMarks?.toString() ?: "20") }
+
+    val borderColor = when {
+        item.isOngoing -> NeonCyan
+        currentStatus == "attended" -> NeonEmerald.copy(alpha = 0.6f)
+        currentStatus == "bunked" -> StrictRed.copy(alpha = 0.6f)
+        currentStatus == "cancelled_by_faculty" -> WarningAmber.copy(alpha = 0.6f)
+        currentStatus == "college_off" -> Color(0x6694A3B8)
+        else -> GlassBorderTop
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        borderColors = listOf(borderColor, GlassBorderBottom),
+        borderWidth = if (item.isOngoing) 1.5.dp else 1.dp,
+        innerPadding = 11.dp
+    ) {
+        // Top Row: Time, Room, and Live Indicator
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${item.slot.startTime} - ${item.slot.endTime}",
+                    color = if (item.isOngoing) NeonCyan else Color(0xFF94A3B8),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0x22FFFFFF))
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                ) {
+                    Text(item.slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (item.isOngoing) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(NeonCyan.copy(alpha = 0.2f))
+                            .border(0.5.dp, NeonCyan, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text("LIVE NOW", color = NeonCyan, fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                item.subject?.type?.let { TypeBadge(it) }
+                if (onEditClick != null) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(22.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Slot",
+                            tint = TextMuted,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Subject Title & Faculty
+        Text(
+            text = item.subject?.name ?: "Unknown Subject",
+            color = TextPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${item.subject?.code} • ${item.subject?.facultyName}",
+                color = Color(0xFF94A3B8),
+                fontSize = 11.5.sp
+            )
+            item.subject?.strictness?.let { StrictnessBadge(it) }
+        }
+
+        // Test Score Display Badge (If test is already recorded)
+        if (testRecord != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            val pct = if (testRecord.maxMarks > 0) (testRecord.marksObtained / testRecord.maxMarks) * 100 else 0.0
+            val testColor = if (pct >= 75.0) NeonEmerald else if (pct >= 50.0) WarningAmber else StrictRed
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(testColor.copy(alpha = 0.15f))
+                    .border(0.5.dp, testColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📝", fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${testRecord.testName}: ${testRecord.marksObtained}/${testRecord.maxMarks} (${String.format("%.1f", pct)}%)",
+                        color = testColor,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                IconButton(
+                    onClick = { onDeleteTest(testRecord.id) },
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Delete Test", tint = testColor, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 4-State Quick Action Bar: Attended, Bunked, Cancelled, Off
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            val isAttended = (currentStatus == "attended")
+            Button(
+                onClick = {
+                    CaliperSoundManager.playSuccess()
+                    CaliperHapticManager.successClick(context)
+                    onStatusChange("attended", isProxy, currentLog?.notes)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isAttended) NeonEmerald else Color(0x1A00E676)
+                ),
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isAttended) NeonEmerald else Color(0x3300E676)),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Present", color = if (isAttended) Color.Black else NeonEmerald, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+            }
+
+            val isBunked = (currentStatus == "bunked")
+            Button(
+                onClick = {
+                    CaliperSoundManager.playThud()
+                    CaliperHapticManager.bunkDoubleTap(context)
+                    onStatusChange("bunked", false, currentLog?.notes)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isBunked) StrictRed else Color(0x1AEF4444)
+                ),
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isBunked) StrictRed else Color(0x33EF4444)),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Bunked", color = if (isBunked) Color.White else StrictRed, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+            }
+
+            val isCancelled = (currentStatus == "cancelled_by_faculty")
+            Button(
+                onClick = {
+                    CaliperSoundManager.playPip()
+                    CaliperHapticManager.tick(context)
+                    onStatusChange("cancelled_by_faculty", false, "Faculty absent")
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isCancelled) WarningAmber else Color(0x1AF59E0B)
+                ),
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isCancelled) WarningAmber else Color(0x33F59E0B)),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cancelled", color = if (isCancelled) Color.Black else WarningAmber, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+            }
+
+            val isOff = (currentStatus == "college_off")
+            Button(
+                onClick = {
+                    CaliperSoundManager.playSnap()
+                    CaliperHapticManager.tick(context)
+                    onStatusChange("college_off", false, "College closure")
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isOff) TextSecondary else Color(0x1AFFFFFF)
+                ),
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isOff) TextSecondary else GlassBorderTop),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Off", color = if (isOff) Color.Black else TextSecondary, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Class Test Toggle Action Bar
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isTestExpanded) Color(0x2238BDF8) else Color(0x0CFFFFFF))
+                .clickable { isTestExpanded = !isTestExpanded }
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("📝", fontSize = 11.sp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (testRecord != null) "Update Class Test Score" else "Mark as Class Test",
+                    color = if (isTestExpanded) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Icon(
+                imageVector = if (isTestExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = if (isTestExpanded) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        // Expandable Class Test Score Entry Panel
+        if (isTestExpanded) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF0F172A))
+                    .border(0.5.dp, Color(0x3338BDF8), RoundedCornerShape(8.dp))
+                    .padding(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    OutlinedTextField(
+                        value = marksObtainedInput,
+                        onValueChange = { marksObtainedInput = it },
+                        label = { Text("Marks Scored", fontSize = 10.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = maxMarksInput,
+                        onValueChange = { maxMarksInput = it },
+                        label = { Text("Max Marks", fontSize = 10.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = {
+                            val obt = marksObtainedInput.toDoubleOrNull() ?: 0.0
+                            val max = maxMarksInput.toDoubleOrNull() ?: 20.0
+                            onSaveTest(testNameInput.ifBlank { "Class Test" }, obt, max)
+                            isTestExpanded = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
+                    ) {
+                        Text("Save Test Score", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Proxy Toggle
+        if (currentStatus == "attended") {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x1200E5FF))
+                    .clickable {
+                        onStatusChange("attended", !isProxy, currentLog.notes)
+                    }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isProxy) Icons.Default.Shield else Icons.Default.ShieldMoon,
+                        contentDescription = "Proxy Safeguard",
+                        tint = if (isProxy) NeonCyan else TextMuted,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isProxy) "Proxy Active (Tracked internally)" else "Mark as Proxy Presence",
+                        fontSize = 10.5.sp,
+                        color = if (isProxy) NeonCyan else TextSecondary
+                    )
+                }
+
+                Checkbox(
+                    checked = isProxy,
+                    onCheckedChange = { checked ->
+                        onStatusChange("attended", checked, currentLog.notes)
+                    },
+                    colors = CheckboxDefaults.colors(checkedColor = NeonCyan)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * MarkedSlotCard with test record info and undo action
+ */
+@Composable
+fun MarkedSlotCard(
+    item: SlotDisplayItem,
+    testRecord: TestRecordEntity?,
+    selectedDate: String,
+    onEditClick: (() -> Unit)? = null,
+    onUndo: () -> Unit,
+    onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit,
+    onSaveTest: (testName: String, marksObtained: Double, maxMarks: Double) -> Unit,
+    onDeleteTest: (testId: Long) -> Unit
+) {
+    val status = item.currentLog?.status ?: "attended"
+    val isProxy = item.currentLog?.isProxy ?: false
+
+    val (badgeText, badgeColor) = when (status) {
+        "attended" -> (if (isProxy) "PROXY PRESENT" else "PRESENT") to NeonEmerald
+        "bunked" -> "BUNKED" to StrictRed
+        "cancelled_by_faculty" -> "FACULTY CANCELLED" to WarningAmber
+        "college_off" -> "COLLEGE OFF" to TextSecondary
+        else -> "MARKED" to NeonCyan
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        borderColors = listOf(badgeColor.copy(alpha = 0.4f), GlassBorderBottom)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(badgeColor.copy(alpha = 0.2f))
+                            .border(0.5.dp, badgeColor, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(badgeText, color = badgeColor, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${item.slot.startTime} - ${item.slot.endTime}",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = item.subject?.name ?: "Subject",
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${item.subject?.code} • ${item.slot.roomNo}",
+                    color = TextMuted,
+                    fontSize = 11.sp
+                )
+
+                if (testRecord != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "📝 Test: ${testRecord.marksObtained}/${testRecord.maxMarks}",
+                        color = NeonCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onEditClick != null) {
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Slot", tint = TextMuted, modifier = Modifier.size(15.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                OutlinedButton(
+                    onClick = onUndo,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = WarningAmber),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber.copy(alpha = 0.6f)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Icon(Icons.Default.Undo, contentDescription = "Undo", tint = WarningAmber, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Undo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Upgraded Extra Event Dialog with 2 Creation Paths:
+ * Path 1: Extra Subject Slot (existing curriculum subject)
+ * Path 2: Single-Day Custom Activity (e.g. Seminar, Training, Sports)
+ */
+@Composable
+fun AddExtraEventDialog(
+    subjects: List<com.example.data.local.entity.SubjectEntity>,
+    selectedDate: String,
+    onDismiss: () -> Unit,
+    onConfirmSubjectExtra: (subjectId: Long, status: String, isProxy: Boolean, notes: String?) -> Unit,
+    onConfirmCustomActivity: (title: String, startTime: String, location: String) -> Unit
+) {
+    var selectedPath by remember { mutableIntStateOf(0) } // 0 = Curriculum Subject, 1 = Single-Day Activity
+
+    // Path 0 state
+    var selectedSubjectId by remember { mutableLongStateOf(subjects.firstOrNull()?.id ?: 1L) }
+    var selectedStatus by remember { mutableStateOf("attended") }
+    var extraNotes by remember { mutableStateOf("Extra Class") }
+
+    // Path 1 state
+    var activityTitle by remember { mutableStateOf("") }
+    var activityTime by remember { mutableStateOf("10:00 AM") }
+    var activityLocation by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Add Event for $selectedDate",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Path Selector Tabs
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0x22FFFFFF))
+                        .padding(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (selectedPath == 0) NeonCyan else Color.Transparent)
+                            .clickable { selectedPath = 0 }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Extra Class",
+                            color = if (selectedPath == 0) Color.Black else Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (selectedPath == 1) NeonCyan else Color.Transparent)
+                            .clickable { selectedPath = 1 }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "1-Day Activity",
+                            color = if (selectedPath == 1) Color.Black else Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (selectedPath == 0) {
+                    // Path 1: Curriculum Subject
+                    Text("Select Subject:", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    subjects.forEach { sub ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedSubjectId = sub.id }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (selectedSubjectId == sub.id),
+                                onClick = { selectedSubjectId = sub.id }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("${sub.code} — ${sub.name}", fontSize = 13.sp, color = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Attendance Outcome:", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { selectedStatus = "attended" },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selectedStatus == "attended") NeonEmerald else Color(0x22FFFFFF)
+                            ),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Present", color = if (selectedStatus == "attended") Color.Black else Color.White, fontSize = 11.sp)
+                        }
+                        Button(
+                            onClick = { selectedStatus = "bunked" },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selectedStatus == "bunked") StrictRed else Color(0x22FFFFFF)
+                            ),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Bunked", color = Color.White, fontSize = 11.sp)
+                        }
+                    }
+                } else {
+                    // Path 2: Single-Day Custom Activity
+                    OutlinedTextField(
+                        value = activityTitle,
+                        onValueChange = { activityTitle = it },
+                        label = { Text("Activity Title (e.g., Seminar, Sports, Drill)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = activityTime,
+                        onValueChange = { activityTime = it },
+                        label = { Text("Start Time (e.g., 10:00 AM)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = activityLocation,
+                        onValueChange = { activityLocation = it },
+                        label = { Text("Location (e.g., Auditorium, Ground)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (selectedPath == 0) {
+                        onConfirmSubjectExtra(selectedSubjectId, selectedStatus, false, extraNotes)
+                    } else {
+                        if (activityTitle.isNotBlank()) {
+                            onConfirmCustomActivity(activityTitle, activityTime, activityLocation)
+                        }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+            ) {
+                Text("Add", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.White)
+            }
+        }
+    )
+}
+
+/**
+ * Semester Dates Configuration Dialog
+ */
+@Composable
+fun SemesterDatesDialog(
+    currentStartDate: String,
+    currentEndDate: String,
+    onDismiss: () -> Unit,
+    onSave: (startDate: String, endDate: String) -> Unit
+) {
+    var startDateInput by remember { mutableStateOf(currentStartDate) }
+    var endDateInput by remember { mutableStateOf(currentEndDate) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Semester Timeline Boundary", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Configure start and end dates of current semester. Slots will be suspended outside these bounds.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = startDateInput,
+                    onValueChange = { startDateInput = it },
+                    label = { Text("Start Date (YYYY-MM-DD)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = endDateInput,
+                    onValueChange = { endDateInput = it },
+                    label = { Text("End Date (YYYY-MM-DD)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(startDateInput, endDateInput) },
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+            ) {
+                Text("Save Timeline", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.White)
+            }
+        }
+    )
 }

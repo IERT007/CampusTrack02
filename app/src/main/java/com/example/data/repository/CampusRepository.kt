@@ -28,6 +28,11 @@ class CampusRepository(
     val allHolidayRanges: Flow<List<HolidayRangeEntity>> = db.holidayRangeDao().getAllHolidayRanges()
     val allTasks: Flow<List<AcademicTaskEntity>> = db.academicTaskDao().getAllTasks()
     val allNotes: Flow<List<QuickNoteEntity>> = db.quickNoteDao().getAllNotes()
+    val allTestRecords: Flow<List<TestRecordEntity>> = db.testRecordDao().getAllTestRecords()
+
+    fun getActivitiesForDate(date: String): Flow<List<CustomActivityEntity>> {
+        return db.customActivityDao().getActivitiesForDate(date)
+    }
 
     fun searchSubjects(query: String): Flow<List<SubjectEntity>> {
         return db.subjectDao().searchSubjects("%$query%")
@@ -172,6 +177,36 @@ class CampusRepository(
 
     suspend fun deleteSubject(subject: SubjectEntity) = withContext(Dispatchers.IO) {
         db.subjectDao().deleteSubject(subject)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun deleteSubjectCascade(subject: SubjectEntity) = withContext(Dispatchers.IO) {
+        db.attendanceLogDao().deleteLogsForSubject(subject.id)
+        db.timetableSlotDao().deleteSlotsForSubject(subject.id)
+        db.testRecordDao().deleteTestRecordsForSubject(subject.id)
+        db.subjectDao().deleteSubject(subject)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun saveTestRecord(record: TestRecordEntity): Long = withContext(Dispatchers.IO) {
+        val id = db.testRecordDao().insertTestRecord(record)
+        triggerSilentAutoBackup()
+        id
+    }
+
+    suspend fun deleteTestRecord(id: Long) = withContext(Dispatchers.IO) {
+        db.testRecordDao().deleteTestRecordById(id)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun saveCustomActivity(activity: CustomActivityEntity): Long = withContext(Dispatchers.IO) {
+        val id = db.customActivityDao().insertActivity(activity)
+        triggerSilentAutoBackup()
+        id
+    }
+
+    suspend fun deleteCustomActivity(id: Long) = withContext(Dispatchers.IO) {
+        db.customActivityDao().deleteActivityById(id)
         triggerSilentAutoBackup()
     }
 

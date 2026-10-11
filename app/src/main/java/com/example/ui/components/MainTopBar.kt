@@ -55,7 +55,6 @@ import kotlin.math.max
 fun MainTopBar(
     viewModel: MainViewModel,
     onNavigateToSettings: () -> Unit,
-    onOpenAiAssistant: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -173,7 +172,7 @@ fun MainTopBar(
                             }
                         )
 
-                        // Clear Button or AI Sparkle Button
+                        // Instant Clear Button (✕) when text is present
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
                                 onClick = { viewModel.setSearchQuery("") },
@@ -184,22 +183,6 @@ fun MainTopBar(
                                     contentDescription = "Clear",
                                     tint = Color(0xFF94A3B8),
                                     modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        } else if (onOpenAiAssistant != null) {
-                            IconButton(
-                                onClick = {
-                                    CaliperSoundManager.playSnap()
-                                    CaliperHapticManager.tick(context)
-                                    onOpenAiAssistant()
-                                },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.AutoAwesome,
-                                    contentDescription = "AI Copilot",
-                                    tint = colors.primaryAccent.copy(alpha = 0.85f),
-                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }

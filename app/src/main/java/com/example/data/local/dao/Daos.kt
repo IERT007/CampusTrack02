@@ -63,6 +63,9 @@ interface TimetableSlotDao {
     @Query("DELETE FROM timetable_slots WHERE id = :id")
     suspend fun deleteSlotById(id: Long)
 
+    @Query("DELETE FROM timetable_slots WHERE subjectId = :subjectId")
+    suspend fun deleteSlotsForSubject(subjectId: Long)
+
     @Query("DELETE FROM timetable_slots")
     suspend fun deleteAllSlots()
 }
@@ -92,6 +95,9 @@ interface AttendanceLogDao {
 
     @Query("DELETE FROM attendance_logs WHERE date = :date AND slotId = :slotId")
     suspend fun deleteLogForSlot(date: String, slotId: Long)
+
+    @Query("DELETE FROM attendance_logs WHERE subjectId = :subjectId")
+    suspend fun deleteLogsForSubject(subjectId: Long)
 
     @Query("DELETE FROM attendance_logs")
     suspend fun deleteAllLogs()
@@ -231,4 +237,50 @@ interface QuickNoteDao {
     @Query("DELETE FROM quick_notes")
     suspend fun deleteAllNotes()
 }
+
+@Dao
+interface TestRecordDao {
+    @Query("SELECT * FROM test_records ORDER BY date DESC, timestamp DESC")
+    fun getAllTestRecords(): Flow<List<TestRecordEntity>>
+
+    @Query("SELECT * FROM test_records WHERE subjectId = :subjectId ORDER BY date DESC")
+    fun getTestRecordsForSubject(subjectId: Long): Flow<List<TestRecordEntity>>
+
+    @Query("SELECT * FROM test_records WHERE date = :date")
+    fun getTestRecordsForDate(date: String): Flow<List<TestRecordEntity>>
+
+    @Query("SELECT * FROM test_records WHERE date = :date AND slotId = :slotId LIMIT 1")
+    suspend fun getTestRecordForSlot(date: String, slotId: Long): TestRecordEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTestRecord(testRecord: TestRecordEntity): Long
+
+    @Delete
+    suspend fun deleteTestRecord(testRecord: TestRecordEntity)
+
+    @Query("DELETE FROM test_records WHERE id = :id")
+    suspend fun deleteTestRecordById(id: Long)
+
+    @Query("DELETE FROM test_records WHERE subjectId = :subjectId")
+    suspend fun deleteTestRecordsForSubject(subjectId: Long)
+}
+
+@Dao
+interface CustomActivityDao {
+    @Query("SELECT * FROM custom_activities WHERE date = :date ORDER BY startTime ASC")
+    fun getActivitiesForDate(date: String): Flow<List<CustomActivityEntity>>
+
+    @Query("SELECT * FROM custom_activities ORDER BY date DESC")
+    fun getAllActivities(): Flow<List<CustomActivityEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertActivity(activity: CustomActivityEntity): Long
+
+    @Delete
+    suspend fun deleteActivity(activity: CustomActivityEntity)
+
+    @Query("DELETE FROM custom_activities WHERE id = :id")
+    suspend fun deleteActivityById(id: Long)
+}
+
 

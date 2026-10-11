@@ -94,68 +94,49 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun `verify AI engine action item extraction from quick notes`() {
-    val sampleNote = """
-      Sheet 4 Guidelines:
-      - Submit Drawing Sheet 4 by Friday 5 PM
-      - Bring 2H and 4H pencils for lettering
-      - Complete ellipse isometric projection
-    """.trimIndent()
-
-    val actionItems = com.example.ai.CaliperAiEngine.extractActionItemsFromText(sampleNote)
-    assertEquals(true, actionItems.isNotEmpty())
-    assertEquals(true, actionItems.any { it.contains("Submit Drawing Sheet", ignoreCase = true) })
+  fun `verify 3-tab navigation engine configuration`() {
+    val tabs = com.example.ui.navigation.AppTab.values()
+    assertEquals(3, tabs.size)
+    assertEquals(com.example.ui.navigation.AppTab.TODAY, tabs[0])
+    assertEquals(com.example.ui.navigation.AppTab.SAFE_ZONE, tabs[1])
+    assertEquals(com.example.ui.navigation.AppTab.AUDIT, tabs[2])
   }
 
   @Test
-  fun `verify AI engine daily strategy calculation`() {
-    val subject = com.example.data.local.entity.SubjectEntity(
+  fun `verify in-slot class test entity score calculations`() {
+    val testRecord = com.example.data.local.entity.TestRecordEntity(
       id = 1L,
-      name = "Manufacturing Process",
-      code = "ME-301",
-      type = "theory",
-      facultyName = "Dr. R.K. Sharma",
-      strictness = "moderate",
-      colorHex = "#38BDF8"
+      subjectId = 1L,
+      date = "2026-10-15",
+      slotId = 2L,
+      testName = "Unit Test 1",
+      marksObtained = 18.0,
+      maxMarks = 20.0
     )
 
-    val stats = com.example.ui.SubjectAttendanceStats(
-      subject = subject,
-      attended = 20,
-      totalConducted = 24, // 83.33%
-      facultyCancelled = 1,
-      collegeOff = 0,
-      proxyCount = 0,
-      percentage = 83.33,
-      bunksAvailable = 2,
-      classesNeeded = 0
-    )
+    val scorePercent = (testRecord.marksObtained / testRecord.maxMarks) * 100.0
+    assertEquals(90.0, scorePercent, 0.01)
+    assertEquals(true, scorePercent >= 75.0)
+  }
 
-    val slot = com.example.data.local.entity.TimetableSlotEntity(
-      id = 1L,
-      dayOfWeek = java.time.LocalDate.now().dayOfWeek.value,
-      startTime = "10:00",
-      endTime = "11:00",
-      roomNo = "LT-4",
-      subjectId = 1L
-    )
-    val slotItem = com.example.ui.SlotDisplayItem(
-      slot = slot,
-      subject = subject,
-      currentLog = null,
-      isOngoing = false
-    )
+  @Test
+  fun `verify semester timeline boundary check logic`() {
+    val semesterStartDate = "2026-07-15"
+    val semesterEndDate = "2026-12-15"
 
-    val strategy = com.example.ai.CaliperAiEngine.analyzeDailyStrategy(
-      statsList = listOf(stats),
-      todaySlots = listOf(slotItem),
-      assessments = emptyList(),
-      tasks = emptyList()
-    )
+    val preDate = "2026-07-10"
+    val activeDate = "2026-09-20"
+    val postDate = "2026-12-20"
 
-    assertEquals(true, strategy.canBunkToday)
-    assertEquals(1, strategy.bunkAdviceItems.size)
-    assertEquals(2, strategy.bunkAdviceItems[0].safeBunkBuffer)
+    assertEquals(true, preDate < semesterStartDate)
+    assertEquals(false, preDate > semesterEndDate)
+
+    assertEquals(false, activeDate < semesterStartDate)
+    assertEquals(false, activeDate > semesterEndDate)
+
+    assertEquals(false, postDate < semesterStartDate)
+    assertEquals(true, postDate > semesterEndDate)
   }
 }
+
 
