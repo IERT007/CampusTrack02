@@ -372,6 +372,10 @@ fun TodayScreen(
                                 .clip(RoundedCornerShape(7.dp))
                                 .background(NeonCyan.copy(alpha = animatedAlpha))
                                 .border(1.dp, animatedBorderColor, RoundedCornerShape(7.dp))
+                                .fluidTouchFeedback {
+                                    CaliperHardwareEngine.pulseHaptic(context)
+                                    viewModel.setSelectedDate(stripDateStr)
+                                }
                                 .clickable {
                                     CaliperHardwareEngine.pulseHaptic(context)
                                     viewModel.setSelectedDate(stripDateStr)
@@ -1081,12 +1085,12 @@ fun CustomActivityCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF111622).copy(alpha = 0.75f))
+            .background(Color(0xFF0E121B).copy(alpha = 0.85f))
             .border(
                 0.5.dp,
                 Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.16f),
                         Color.Transparent
                     )
                 ),
@@ -1673,11 +1677,14 @@ fun AddExtraEventDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color(0xFF0E121B),
+        shape = RoundedCornerShape(18.dp),
         title = {
             Text(
                 text = "Add Event for $selectedDate",
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                fontSize = 16.sp,
+                color = Color.White
             )
         },
         text = {

@@ -69,7 +69,7 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(18.dp),
     backgroundColor: Color = GlassFill,
-    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f)),
+    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
     borderWidth: Dp = 0.5.dp,
     innerPadding: Dp = 16.dp,
     onClick: (() -> Unit)? = null,
@@ -86,18 +86,12 @@ fun GlassCard(
 
     Box(
         modifier = modifier
-            .shadow(
-                elevation = 8.dp,
-                shape = shape,
-                spotColor = Color(0x33000000),
-                ambientColor = Color.White.copy(alpha = 0.02f)
-            )
             .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
                         Color.White.copy(alpha = 0.045f),
-                        Color.White.copy(alpha = 0.02f),
+                        Color.White.copy(alpha = 0.015f),
                         colors.containerSurface.copy(alpha = 0.85f)
                     )
                 )
@@ -118,13 +112,12 @@ fun GlassCard(
 fun GlassSurface(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(20.dp),
-    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f)),
+    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
     content: @Composable BoxScope.() -> Unit
 ) {
     val colors = CaliperTheme.colors
     Box(
         modifier = modifier
-            .shadow(elevation = 12.dp, shape = shape, spotColor = Color(0x66000000))
             .clip(shape)
             .background(
                 Brush.verticalGradient(

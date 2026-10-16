@@ -25,7 +25,6 @@ object NotificationHelper {
 
     const val ACTION_MORNING_BRIEFING = "com.example.campustrack.ACTION_MORNING_BRIEFING"
     const val ACTION_PRE_LECTURE = "com.example.campustrack.ACTION_PRE_LECTURE"
-    const val ACTION_DEADLINE_ALERT = "com.example.campustrack.ACTION_DEADLINE_ALERT"
 
     fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -54,6 +53,45 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * Numbered 07:30 AM Morning Briefing using NotificationCompat.InboxStyle
+     * Formats strictly:
+     * Title: Caliper Schedule • Today (N Classes)
+     * Lines: 1. [StartTime] — [Subject Name] (Room [RoomNo])
+     */
+    fun showMorningBriefingInbox(context: Context, title: String, lines: List<String>) {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            1001,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val inboxStyle = NotificationCompat.InboxStyle().setBigContentTitle(title)
+        lines.forEach { line ->
+            inboxStyle.addLine(line)
+        }
+
+        val summaryText = if (lines.isNotEmpty()) lines.first() else "No scheduled lectures today"
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_BRIEFING)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(summaryText)
+            .setStyle(inboxStyle)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(1001, notification)
+        } catch (_: SecurityException) {}
+    }
+
     fun showMorningBriefing(context: Context, bodyText: String) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -80,86 +118,58 @@ object NotificationHelper {
         } catch (_: SecurityException) {}
     }
 
-    fun postQuietNotice(context: Context, title: String, message: String) {
-        showMorningBriefing(context, "$title • $message")
-    }
+    /**
+     * High-Priority Heads-Up Pre-Lecture Alert
+     * Title: Upcoming Lecture in 10 Minutes
+     * Content: [Subject Name] • Room: [RoomNo] • [StartTime] - [EndTime]
+     */
+    fun showPreLectureHeadsUp(
+        context: Context,
+        subjectName: String,
+        roomNo: String,
+        startTime: String,
+        endTime: String
+    ) {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            (subjectName.hashCode() and 0xFFFF) + 2000,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-    fun dispatchMorningBriefing(context: Context, title: String, body: String) {
-        showMorningBriefing(context, "$title: $body")
+        val timeSpan = if (endTime.isNotBlank()) "$startTime - $endTime" else startTime
+        val bodyContent = "$subjectName • Room: $roomNo • $timeSpan"
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_LECTURES)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("Upcoming Lecture in 10 Minutes")
+            .setContentText(bodyContent)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bodyContent))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(
+                (subjectName.hashCode() and 0xFFFF) + 2000,
+                notification
+            )
+        } catch (_: SecurityException) {}
     }
 
     fun showPreLectureAlert(context: Context, subjectName: String, roomNo: String, time: String) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            2001,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        showPreLectureHeadsUp(
+            context = context,
+            subjectName = subjectName,
+            roomNo = roomNo,
+            startTime = time,
+            endTime = ""
         )
-
-        val text = "Starts at $time in $roomNo. Tap to mark attendance or proxy."
-        val notification = NotificationCompat.Builder(context, CHANNEL_LECTURES)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Upcoming Class in 10 Mins: $subjectName")
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        try {
-            NotificationManagerCompat.from(context).notify((subjectName.hashCode() and 0xFFFF) + 2000, notification)
-        } catch (_: SecurityException) {}
-    }
-
-    fun sendNotification(context: Context, id: Int, title: String, message: String) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_LECTURES)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        try {
-            NotificationManagerCompat.from(context).notify(id, notification)
-        } catch (_: SecurityException) {}
-    }
-
-    fun showDeadlineAlert(context: Context, title: String, timeLeft: String, isCritical: Boolean) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            3001,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val header = if (isCritical) "🚨 URGENT DEADLINE (< 2 Hours)" else "⏳ Submission Reminder ($timeLeft left)"
-        val notification = NotificationCompat.Builder(context, CHANNEL_DEADLINES)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(header)
-            .setContentText(title)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$title is due soon. Verify drawing sheets/workshop files."))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        try {
-            NotificationManagerCompat.from(context).notify((title.hashCode() and 0xFFFF) + 3000, notification)
-        } catch (_: SecurityException) {}
     }
 
     fun scheduleDailyMorningBriefing(context: Context) {
@@ -207,12 +217,17 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * Dynamic Pre-Lecture Scheduling with AlarmManager.setExactAndAllowWhileIdle()
+     * Fires precisely 10 minutes prior to slot.startTime
+     */
     fun schedulePreLectureAlert(
         context: Context,
         slotId: Long,
         subjectName: String,
         roomNo: String,
         startTimeStr: String,
+        endTimeStr: String = "",
         dayOfWeek: Int
     ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
@@ -236,6 +251,7 @@ object NotificationHelper {
                 putExtra("subjectName", subjectName)
                 putExtra("roomNo", roomNo)
                 putExtra("startTime", startTimeStr)
+                putExtra("endTime", endTimeStr)
                 putExtra("time", startTimeStr)
             }
 
@@ -250,61 +266,6 @@ object NotificationHelper {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            }
-        } catch (_: Exception) {}
-    }
-
-    fun scheduleDeadlineReminders(
-        context: Context,
-        assessmentId: Long,
-        title: String,
-        dueDateStr: String,
-        dueTimeStr: String
-    ) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-
-        try {
-            val dueTime = if (dueTimeStr.contains(":")) dueTimeStr else "$dueTimeStr:00"
-            val targetDue = LocalDateTime.parse("${dueDateStr}T${dueTime}")
-
-            val now = LocalDateTime.now()
-
-            // 1. 24 hours prior
-            val alert24h = targetDue.minusHours(24)
-            if (alert24h.isAfter(now)) {
-                val millis24 = alert24h.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val intent24 = Intent(context, AlarmReceiver::class.java).apply {
-                    action = ACTION_DEADLINE_ALERT
-                    putExtra("title", title)
-                    putExtra("timeLeft", "24 Hours")
-                    putExtra("isCritical", false)
-                }
-                val pi24 = PendingIntent.getBroadcast(
-                    context,
-                    (assessmentId * 10 + 1).toInt(),
-                    intent24,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                alarmManager.set(AlarmManager.RTC_WAKEUP, millis24, pi24)
-            }
-
-            // 2. 2 hours prior
-            val alert2h = targetDue.minusHours(2)
-            if (alert2h.isAfter(now)) {
-                val millis2 = alert2h.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val intent2 = Intent(context, AlarmReceiver::class.java).apply {
-                    action = ACTION_DEADLINE_ALERT
-                    putExtra("title", title)
-                    putExtra("timeLeft", "2 Hours")
-                    putExtra("isCritical", true)
-                }
-                val pi2 = PendingIntent.getBroadcast(
-                    context,
-                    (assessmentId * 10 + 2).toInt(),
-                    intent2,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                alarmManager.set(AlarmManager.RTC_WAKEUP, millis2, pi2)
             }
         } catch (_: Exception) {}
     }

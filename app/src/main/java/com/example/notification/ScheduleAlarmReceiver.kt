@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 
 class ScheduleAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -19,6 +20,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 val db = AppDatabase.getInstance(appContext)
                 val today = LocalDate.now()
                 val dayOfWeek = today.dayOfWeek.value // 1 = Monday, 7 = Sunday
+                val nowTime = LocalTime.now()
 
                 // Check Institutional Closures and Holidays
                 val holiday = db.holidayDao().getHolidayForDate(today.toString())
@@ -50,15 +52,27 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 }
 
                 val briefingTitle = "Caliper Schedule • Today (${sortedSlots.size} Classes)"
-                val briefingBody = "$briefingTitle\n" + lines.joinToString("\n")
 
-                NotificationHelper.showMorningBriefing(
+                // Numbered 07:30 AM Morning Briefing using NotificationCompat.InboxStyle()
+                NotificationHelper.showMorningBriefingInbox(
                     context = appContext,
-                    bodyText = briefingBody
+                    title = briefingTitle,
+                    lines = lines
                 )
 
-                // Schedule exact 10-Minute Pre-Lecture Heads-Up alerts for each slot today
-                sortedSlots.forEach { slot ->
+                // Deterministic 10-Minute Pre-Lecture Heads-Up:
+                // Query active upcoming slots from Room DB where slot.startTime > LocalTime.now()
+                val upcomingSlots = sortedSlots.filter { slot ->
+                    try {
+                        val sTime = LocalTime.parse(slot.startTime)
+                        sTime.isAfter(nowTime)
+                    } catch (_: Exception) {
+                        true
+                    }
+                }
+
+                // Schedule an exact alarm firing precisely 10 minutes before each upcoming slot's start time
+                upcomingSlots.forEach { slot ->
                     val sub = subjects.find { it.id == slot.subjectId }
                     val subjectName = sub?.name ?: sub?.code ?: "Lecture"
                     NotificationHelper.schedulePreLectureAlert(
@@ -67,11 +81,12 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                         subjectName = subjectName,
                         roomNo = slot.roomNo,
                         startTimeStr = slot.startTime,
+                        endTimeStr = slot.endTime,
                         dayOfWeek = dayOfWeek
                     )
                 }
 
-                // Reschedule for next day
+                // Reschedule for next day 07:30 AM
                 NotificationHelper.scheduleDailyMorningBriefing(appContext)
             } finally {
                 asyncPendingResult.finish()

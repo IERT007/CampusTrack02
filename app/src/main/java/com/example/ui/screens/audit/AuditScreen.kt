@@ -35,8 +35,7 @@ import com.example.ui.MainViewModel
 import com.example.ui.components.*
 import com.example.ui.dialogs.AddMedicalLeaveDialog
 import com.example.ui.dialogs.HolidayManagerDialog
-import com.example.ui.theme.CaliperTheme
-import com.example.ui.theme.tactilePressEffect
+import com.example.ui.theme.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -326,16 +325,20 @@ fun AuditScreen(
                                 val bunked = dayLogs.count { it.status == "bunked" }
                                 val cancelled = dayLogs.count { it.status == "cancelled_by_faculty" }
 
-                                // Status dot color
-                                val dotColor = when {
-                                    isHoliday || dayStatus?.leaveCategory == "college_holiday" -> colors.textSecondary
-                                    dayStatus?.leaveCategory == "mass_bunk" -> colors.bunkDanger
-                                    attended > 0 && bunked == 0 -> colors.safeZone
-                                    attended > 0 && bunked > 0 -> colors.deadlineWarning
-                                    bunked > 0 -> colors.bunkDanger
-                                    cancelled > 0 -> colors.scheduledLecture
+                                // Full-Cell Glow Tint Calculation
+                                val isWeekend = (c == 6) // Sunday in 0..6 (Mon=0 .. Sun=6)
+                                val cellBackground = when {
+                                    isHoliday || dayStatus?.leaveCategory == "college_holiday" -> Color(0x33475569) // Slate tint
+                                    attended > 0 && bunked == 0 -> Color(0x2822C55E) // Sage Emerald tint
+                                    attended > 0 && bunked > 0 -> Color(0x28F59E0B) // Warm Amber tint
+                                    bunked > 0 -> Color(0x28EF4444) // Coral Red tint
+                                    isSelected -> colors.primaryAccent.copy(alpha = 0.20f)
+                                    isToday -> colors.primaryAccent.copy(alpha = 0.12f)
+                                    isWeekend -> Color.Transparent
                                     else -> Color.Transparent
                                 }
+
+                                val isSlateHoliday = (isHoliday || dayStatus?.leaveCategory == "college_holiday")
 
                                 Box(
                                     modifier = Modifier
@@ -343,16 +346,10 @@ fun AuditScreen(
                                         .padding(2.dp)
                                         .aspectRatio(1f)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(
-                                            when {
-                                                isSelected -> colors.primaryAccent.copy(alpha = 0.20f)
-                                                isToday -> colors.primaryAccent.copy(alpha = 0.08f)
-                                                else -> Color.White.copy(alpha = 0.02f)
-                                            }
-                                        )
+                                        .background(cellBackground)
                                         .border(
                                             width = if (isSelected) 1.2.dp else if (isToday) 0.8.dp else 0.5.dp,
-                                            color = if (isSelected) colors.primaryAccent else if (isToday) colors.primaryAccent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.04f),
+                                            color = if (isSelected) colors.primaryAccent else if (isToday) colors.primaryAccent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.05f),
                                             shape = RoundedCornerShape(8.dp)
                                         )
                                         .clickable {
@@ -362,30 +359,24 @@ fun AuditScreen(
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = "$dayNum",
-                                            color = if (isSelected) colors.primaryAccent else if (isToday) Color.White else colors.textPrimary,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
-                                        )
-
-                                        // Status dot indicator
-                                        if (dotColor != Color.Transparent) {
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(4.dp)
-                                                    .clip(CircleShape)
-                                                    .background(dotColor)
+                                    // Subtle diagonal slash accent for holiday/off day
+                                    if (isSlateHoliday) {
+                                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                                            drawLine(
+                                                color = Color(0x6694A3B8),
+                                                start = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.85f),
+                                                end = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f),
+                                                strokeWidth = 1.2f
                                             )
-                                        } else {
-                                            Spacer(modifier = Modifier.height(4.dp))
                                         }
                                     }
+
+                                    Text(
+                                        text = "$dayNum",
+                                        color = if (isSelected) colors.primaryAccent else if (isToday) Color.White else if (isWeekend && cellBackground == Color.Transparent) colors.textMuted.copy(alpha = 0.6f) else colors.textPrimary,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected || isToday || cellBackground != Color.Transparent) FontWeight.Bold else FontWeight.Normal
+                                    )
                                 }
                             } else {
                                 Spacer(modifier = Modifier.weight(1f).padding(2.dp))
@@ -1349,11 +1340,17 @@ private fun AuditMetricBox(
             )
             .then(
                 if (onClick != null) {
-                    Modifier.clickable {
-                        CaliperSoundManager.playSnap()
-                        CaliperHapticManager.tick(context)
-                        onClick()
-                    }
+                    Modifier
+                        .fluidTouchFeedback {
+                            CaliperSoundManager.playSnap()
+                            CaliperHapticManager.tick(context)
+                            onClick()
+                        }
+                        .clickable {
+                            CaliperSoundManager.playSnap()
+                            CaliperHapticManager.tick(context)
+                            onClick()
+                        }
                 } else Modifier
             )
             .padding(vertical = 8.dp, horizontal = 4.dp),

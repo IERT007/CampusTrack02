@@ -838,20 +838,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun scheduleAllDeadlineAlerts() {
-        viewModelScope.launch {
-            val allAssessments = assessments.value
-            for (a in allAssessments) {
-                if (a.status == "pending") {
-                    com.example.notification.NotificationHelper.scheduleDeadlineReminders(
-                        context = getApplication(),
-                        assessmentId = a.id,
-                        title = a.title,
-                        dueDateStr = a.dueDate,
-                        dueTimeStr = a.dueTime
-                    )
-                }
-            }
-        }
+        // Obsolete deadline alarm engine purged per engineering specification
     }
 
     fun preloadDefaultData() {

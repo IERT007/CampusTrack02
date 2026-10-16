@@ -34,13 +34,13 @@ val PsychologyGold = Color(0xFFEAB308)           // Daily Attendance Streak badg
 // ============================================================================
 val AmoledBackground = Color(0xFF000000) // True Pitch Black
 val AmoledSurface = Color(0xFF05070A)
-val AmoledCardSurface = Color(0xFF0E121B).copy(alpha = 0.8f)
+val AmoledCardSurface = Color(0xFF0E121B).copy(alpha = 0.85f) // Deep Obsidian Glass
 val AmoledCardSurfaceElevated = Color(0xFF141924).copy(alpha = 0.85f)
 
-// Frosted Glass Containers
-val GlassBorderTop = Color.White.copy(alpha = 0.15f)
-val GlassBorderBottom = Color.White.copy(alpha = 0.04f)
-val GlassFill = Color(0xFF0E121B).copy(alpha = 0.8f)
+// Frosted Glass Containers - Luminous Directional Top-Edge Border (0.16f to Transparent)
+val GlassBorderTop = Color.White.copy(alpha = 0.16f)
+val GlassBorderBottom = Color.Transparent
+val GlassFill = Color(0xFF0E121B).copy(alpha = 0.85f)
 val GlassFillStrong = Color(0xFF141A26).copy(alpha = 0.85f)
 val GlassFillLight = Color.White.copy(alpha = 0.03f)
 

@@ -49,12 +49,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 NotificationHelper.showPreLectureAlert(context, subjectName, roomNo, time)
             }
 
-            NotificationHelper.ACTION_DEADLINE_ALERT -> {
-                val title = intent.getStringExtra("title") ?: "Submission Due"
-                val timeLeft = intent.getStringExtra("timeLeft") ?: "Few Hours"
-                val isCritical = intent.getBooleanExtra("isCritical", false)
-                NotificationHelper.showDeadlineAlert(context, title, timeLeft, isCritical)
-            }
+
 
             Intent.ACTION_BOOT_COMPLETED -> {
                 NotificationHelper.createNotificationChannels(context)

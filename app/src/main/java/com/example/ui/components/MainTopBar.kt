@@ -39,6 +39,7 @@ import com.example.ui.MainViewModel
 import com.example.ui.SubjectAttendanceStats
 import com.example.ui.theme.CaliperTheme
 import java.time.LocalDate
+import java.time.LocalTime
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -359,17 +360,53 @@ fun SubjectTelemetryDialog(
     val dayNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
     val todayDayOfWeek = remember { LocalDate.now().dayOfWeek.value } // 1 (Mon) .. 7 (Sun)
 
-    // Calculate next schedule
+    // Calculate next schedule with zero temporal drift (never show past lecture as "Next")
     val nextSlotInfo = remember(slots, todayDayOfWeek) {
         if (slots.isEmpty()) {
             "No timetable slot scheduled"
         } else {
-            // Find slot on or after today
-            val upcoming = slots.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime }))
-                .firstOrNull { it.dayOfWeek >= todayDayOfWeek }
-                ?: slots.first()
-            val dayName = dayNames.getOrElse(upcoming.dayOfWeek - 1) { "Day ${upcoming.dayOfWeek}" }
-            "$dayName ${upcoming.startTime} - ${upcoming.endTime} (${upcoming.roomNo})"
+            val nowTime = LocalTime.now()
+
+            // 1. Check today's slots where slot.startTime > LocalTime.now()
+            val todayUpcomingSlot = slots
+                .filter { it.dayOfWeek == todayDayOfWeek }
+                .filter { slot ->
+                    try {
+                        val sTime = LocalTime.parse(slot.startTime)
+                        sTime.isAfter(nowTime)
+                    } catch (_: Exception) {
+                        false
+                    }
+                }
+                .minByOrNull { it.startTime }
+
+            if (todayUpcomingSlot != null) {
+                "Today ${todayUpcomingSlot.startTime} - ${todayUpcomingSlot.endTime} (${todayUpcomingSlot.roomNo})"
+            } else {
+                // 2. Scan subsequent 6 days sequentially
+                var resolvedSlot: TimetableSlotEntity? = null
+                var resolvedDayOffset = 0
+
+                for (offset in 1..6) {
+                    val targetDay = ((todayDayOfWeek - 1 + offset) % 7) + 1
+                    val daySlots = slots.filter { it.dayOfWeek == targetDay }.sortedBy { it.startTime }
+                    if (daySlots.isNotEmpty()) {
+                        resolvedSlot = daySlots.first()
+                        resolvedDayOffset = offset
+                        break
+                    }
+                }
+
+                if (resolvedSlot != null) {
+                    val dayName = if (resolvedDayOffset == 1) "Tomorrow" else dayNames.getOrElse(resolvedSlot.dayOfWeek - 1) { "Day ${resolvedSlot.dayOfWeek}" }
+                    "Next: $dayName ${resolvedSlot.startTime} (${resolvedSlot.roomNo})"
+                } else {
+                    // Fallback to first available slot in schedule
+                    val firstSlot = slots.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })).first()
+                    val dayName = dayNames.getOrElse(firstSlot.dayOfWeek - 1) { "Day ${firstSlot.dayOfWeek}" }
+                    "Next: $dayName ${firstSlot.startTime} (${firstSlot.roomNo})"
+                }
+            }
         }
     }
 

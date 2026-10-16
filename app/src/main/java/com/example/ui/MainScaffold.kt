@@ -30,8 +30,7 @@ import com.example.ui.screens.audit.AuditScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.subjects.SafeZoneScreen
 import com.example.ui.screens.today.TodayScreen
-import com.example.ui.theme.AmoledBackground
-import com.example.ui.theme.CaliperTheme
+import com.example.ui.theme.*
 
 /**
  * MainScaffold — CALIPER OS 3-Tab Container
@@ -185,6 +184,9 @@ fun CompactFloatingGlassNavBar(
                         .background(
                             if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent
                         )
+                        .fluidTouchFeedback {
+                            onTabSelected(tab)
+                        }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = ripple(color = Color.White.copy(alpha = 0.2f)),
