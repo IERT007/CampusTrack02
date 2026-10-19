@@ -1,11 +1,19 @@
-import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Base64
 
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.secrets)
-  alias(libs.plugins.google.services)
+}
+
+val rootDebugKeystore = file("${rootDir}/debug.keystore")
+val rootDebugKeystoreBase64 = file("${rootDir}/debug.keystore.base64")
+if (!rootDebugKeystore.exists() && rootDebugKeystoreBase64.exists()) {
+  runCatching {
+    val decoded = Base64.getMimeDecoder().decode(rootDebugKeystoreBase64.readText())
+    rootDebugKeystore.writeBytes(decoded)
+  }
 }
 
 android {
@@ -68,11 +76,9 @@ secrets {
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
 
-googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
-
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
-  implementation(platform(libs.firebase.bom))
+  // implementation(platform(libs.firebase.bom))
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
