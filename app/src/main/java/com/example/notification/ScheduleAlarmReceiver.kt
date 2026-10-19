@@ -1,95 +1,120 @@
 package com.example.notification
 
+import android.Manifest
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import com.example.MainActivity
 import com.example.data.local.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 
 class ScheduleAlarmReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        val asyncPendingResult = goAsync()
-        val appContext = context.applicationContext
 
+    override fun onReceive(context: Context, intent: Intent?) {
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val db = AppDatabase.getInstance(appContext)
+                NotificationHelper.createNotificationChannels(context)
+                val db = AppDatabase.getDatabase(context)
                 val today = LocalDate.now()
-                val dayOfWeek = today.dayOfWeek.value // 1 = Monday, 7 = Sunday
-                val nowTime = LocalTime.now()
+                val todayStr = today.toString()
 
-                // Check Institutional Closures and Holidays
-                val holiday = db.holidayDao().getHolidayForDate(today.toString())
-                if (holiday != null || dayOfWeek == 7) {
-                    NotificationHelper.showMorningBriefing(
-                        context = appContext,
-                        bodyText = "Campus Closed • ${holiday?.title ?: "Sunday — No academic periods scheduled."}"
-                    )
-                    return@launch
-                }
+                val holiday = db.holidayRangeDao().getHolidayForDate(todayStr)
+                if (holiday == null && today.dayOfWeek.value <= 6) {
+                    val slots = db.timetableSlotDao()
+                        .getSlotsForDayDirect(today.dayOfWeek.value)
+                        .sortedBy { it.startTime }
 
-                // Query Active Scheduled Classes
-                val activeSlots = db.timetableSlotDao().getSlotsForDayDirect(dayOfWeek)
-                if (activeSlots.isEmpty()) {
-                    NotificationHelper.showMorningBriefing(
-                        context = appContext,
-                        bodyText = "Caliper Schedule • Today (0 Classes)\nNo timetable lectures scheduled for today."
-                    )
-                    return@launch
-                }
+                    if (slots.isNotEmpty()) {
+                        val subjectsMap = db.subjectDao()
+                            .getAllSubjectsList()
+                            .associateBy { it.id }
 
-                val subjects = db.subjectDao().getAllSubjectsList()
-                val sortedSlots = activeSlots.sortedBy { it.startTime }
+                        val formattedLines = slots.mapIndexed { index, slot ->
+                            val subjectName = subjectsMap[slot.subjectId]?.name ?: "Lecture"
+                            "${index + 1}. ${slot.startTime} — $subjectName (Room ${slot.roomNo})"
+                        }
 
-                val lines = sortedSlots.mapIndexed { index, slot ->
-                    val sub = subjects.find { it.id == slot.subjectId }
-                    val subjectName = sub?.name ?: sub?.code ?: "Lecture"
-                    "${index + 1}. [${slot.startTime}] — [$subjectName] (Room [${slot.roomNo}])"
-                }
+                        val title = "Caliper Schedule • Today (${slots.size} Classes)"
+                        val inboxStyle = NotificationCompat.InboxStyle()
+                            .setBigContentTitle(title)
+                        formattedLines.forEach { line ->
+                            inboxStyle.addLine(line)
+                        }
 
-                val briefingTitle = "Caliper Schedule • Today (${sortedSlots.size} Classes)"
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            val tapIntent = Intent(context, MainActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            }
+                            val pendingTap = PendingIntent.getActivity(
+                                context,
+                                730,
+                                tapIntent,
+                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                            )
 
-                // Numbered 07:30 AM Morning Briefing using NotificationCompat.InboxStyle()
-                NotificationHelper.showMorningBriefingInbox(
-                    context = appContext,
-                    title = briefingTitle,
-                    lines = lines
-                )
+                            val notification = NotificationCompat.Builder(
+                                context,
+                                NotificationHelper.CHANNEL_BRIEFING
+                            )
+                                .setSmallIcon(android.R.drawable.ic_menu_my_calendar)
+                                .setContentTitle(title)
+                                .setContentText(formattedLines.first())
+                                .setStyle(inboxStyle)
+                                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                                .setContentIntent(pendingTap)
+                                .setAutoCancel(true)
+                                .build()
 
-                // Deterministic 10-Minute Pre-Lecture Heads-Up:
-                // Query active upcoming slots from Room DB where slot.startTime > LocalTime.now()
-                val upcomingSlots = sortedSlots.filter { slot ->
-                    try {
-                        val sTime = LocalTime.parse(slot.startTime)
-                        sTime.isAfter(nowTime)
-                    } catch (_: Exception) {
-                        true
+                            NotificationManagerCompat.from(context).notify(1001, notification)
+                        }
+
+                        // Deterministically schedule today's 10-minute pre-lecture heads-up alarms
+                        val nowTime = LocalTime.now()
+                        slots.forEach { slot ->
+                            val slotStart = runCatching { LocalTime.parse(slot.startTime) }.getOrNull()
+                            if (slotStart != null && slotStart.isAfter(nowTime)) {
+                                val triggerDateTime = LocalDateTime.of(today, slotStart).minusMinutes(10)
+                                val triggerMillis = triggerDateTime
+                                    .atZone(ZoneId.systemDefault())
+                                    .toInstant()
+                                    .toEpochMilli()
+                                val subjectName = subjectsMap[slot.subjectId]?.name ?: "Lecture"
+                                NotificationHelper.schedulePreLectureAlert(
+                                    context = context,
+                                    triggerAtMillis = triggerMillis,
+                                    subjectName = subjectName,
+                                    roomNo = slot.roomNo,
+                                    startTime = slot.startTime,
+                                    endTime = slot.endTime,
+                                    requestCode = (slot.id.toInt() + 2000)
+                                )
+                            }
+                        }
                     }
                 }
 
-                // Schedule an exact alarm firing precisely 10 minutes before each upcoming slot's start time
-                upcomingSlots.forEach { slot ->
-                    val sub = subjects.find { it.id == slot.subjectId }
-                    val subjectName = sub?.name ?: sub?.code ?: "Lecture"
-                    NotificationHelper.schedulePreLectureAlert(
-                        context = appContext,
-                        slotId = slot.id,
-                        subjectName = subjectName,
-                        roomNo = slot.roomNo,
-                        startTimeStr = slot.startTime,
-                        endTimeStr = slot.endTime,
-                        dayOfWeek = dayOfWeek
-                    )
-                }
-
-                // Reschedule for next day 07:30 AM
-                NotificationHelper.scheduleDailyMorningBriefing(appContext)
+                // Re-arm for tomorrow 07:30 AM
+                NotificationHelper.scheduleDailyMorningBriefing(context)
             } finally {
-                asyncPendingResult.finish()
+                pendingResult.finish()
             }
         }
     }

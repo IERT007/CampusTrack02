@@ -1,12 +1,13 @@
 package com.example.data.sample
 
-import com.example.data.local.entity.*
+import com.example.data.local.entity.AssessmentEntity
+import com.example.data.local.entity.HolidayRangeEntity
+import com.example.data.local.entity.SubjectEntity
+import com.example.data.local.entity.TimetableSlotEntity
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 object IertDefaultData {
 
-    // Strictly real 7 subjects for IERT Mechanical (Tool Engg) 3rd Sem
     val defaultSubjects = listOf(
         SubjectEntity(
             id = 1,
@@ -15,9 +16,7 @@ object IertDefaultData {
             type = "theory",
             facultyName = "Er. R. P. Singh",
             strictness = "strict",
-            colorHex = "#00E5FF",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
+            colorHex = "#00E5FF"
         ),
         SubjectEntity(
             id = 2,
@@ -26,209 +25,193 @@ object IertDefaultData {
             type = "theory",
             facultyName = "Dr. S. K. Mishra",
             strictness = "moderate",
-            colorHex = "#38BDF8",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
+            colorHex = "#38BDF8"
         ),
         SubjectEntity(
             id = 3,
+            name = "Strength of Materials",
+            code = "ME-303",
+            type = "theory",
+            facultyName = "Er. A. K. Srivastava",
+            strictness = "strict",
+            colorHex = "#10B981"
+        ),
+        SubjectEntity(
+            id = 4,
+            name = "Fluid Mechanics & Hydraulics",
+            code = "ME-304",
+            type = "theory",
+            facultyName = "Er. D. K. Tiwari",
+            strictness = "moderate",
+            colorHex = "#F59E0B"
+        ),
+        SubjectEntity(
+            id = 5,
+            name = "Materials Science & Metallurgy",
+            code = "ME-305",
+            type = "theory",
+            facultyName = "Er. P. K. Pandey",
+            strictness = "chill",
+            colorHex = "#818CF8"
+        ),
+        SubjectEntity(
+            id = 6,
             name = "Workshop Practice",
             code = "ME-303W",
             type = "workshop",
             facultyName = "Er. V. K. Yadav",
             strictness = "strict",
-            colorHex = "#F43F5E",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
+            colorHex = "#F43F5E"
         ),
         SubjectEntity(
-            id = 4,
+            id = 7,
             name = "M/C Drawing 1",
             code = "ED-301",
             type = "lab",
             facultyName = "Er. N. K. Verma",
             strictness = "moderate",
-            colorHex = "#C084FC",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
+            colorHex = "#C084FC"
         ),
         SubjectEntity(
-            id = 5,
-            name = "Computer Lecture",
-            code = "CS-301",
-            type = "theory",
-            facultyName = "Prof. Amit Patel",
-            strictness = "chill",
-            colorHex = "#10B981",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
-        ),
-        SubjectEntity(
-            id = 6,
-            name = "Material Science",
-            code = "ME-304",
-            type = "theory",
-            facultyName = "Dr. P. K. Tripathi",
-            strictness = "moderate",
-            colorHex = "#F59E0B",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
-        ),
-        SubjectEntity(
-            id = 7,
-            name = "Computer Lab / Thermal Engineering Lab",
-            code = "ME-305L",
+            id = 8,
+            name = "Thermal & Fluid Lab",
+            code = "ME-302L",
             type = "lab",
-            facultyName = "Er. S. C. Sharma",
-            strictness = "strict",
-            colorHex = "#818CF8",
-            reconciledAttendedOffset = 0,
-            reconciledTotalOffset = 0
+            facultyName = "Dr. S. K. Mishra",
+            strictness = "moderate",
+            colorHex = "#2DD4BF"
         )
     )
 
-    // Monday to Saturday schedule (08:00 AM - 04:00 PM with lunch break 12:30 - 01:00 PM)
-    fun createDefaultSlots(): List<TimetableSlotEntity> {
+    fun buildDefaultTimetable(): List<TimetableSlotEntity> {
         val slots = mutableListOf<TimetableSlotEntity>()
         var idCounter = 1L
 
-        // Day 1: Monday
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 1, startTime = "08:00", endTime = "09:00", roomNo = "LT-4", subjectId = 1))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 1, startTime = "09:00", endTime = "10:00", roomNo = "LT-4", subjectId = 2))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 1, startTime = "10:00", endTime = "11:00", roomNo = "LT-4", subjectId = 6))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 1, startTime = "11:00", endTime = "12:00", roomNo = "LT-2", subjectId = 5))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 1, startTime = "12:00", endTime = "12:30", roomNo = "LT-4", subjectId = 1))
-        // 12:30 - 13:00 Lunch Break
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 1, startTime = "13:00", endTime = "16:00", roomNo = "Machine Shop", subjectId = 3))
+        // Monday (1)
+        slots.add(TimetableSlotEntity(idCounter++, 1, "09:00", "10:00", "L-3", 1))
+        slots.add(TimetableSlotEntity(idCounter++, 1, "10:00", "11:00", "L-3", 2))
+        slots.add(TimetableSlotEntity(idCounter++, 1, "11:00", "12:00", "L-3", 3))
+        slots.add(TimetableSlotEntity(idCounter++, 1, "13:00", "14:00", "L-4", 4))
+        slots.add(TimetableSlotEntity(idCounter++, 1, "14:00", "16:00", "Drawing Hall 2", 7))
 
-        // Day 2: Tuesday
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 2, startTime = "08:00", endTime = "09:00", roomNo = "LT-4", subjectId = 2))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 2, startTime = "09:00", endTime = "10:00", roomNo = "LT-4", subjectId = 6))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 2, startTime = "10:00", endTime = "11:00", roomNo = "LT-4", subjectId = 1))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 2, startTime = "11:00", endTime = "12:00", roomNo = "LT-2", subjectId = 5))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 2, startTime = "12:00", endTime = "12:30", roomNo = "LT-4", subjectId = 2))
-        // 12:30 - 13:00 Lunch Break
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 2, startTime = "13:00", endTime = "16:00", roomNo = "Drafting Hall 3", subjectId = 4))
+        // Tuesday (2)
+        slots.add(TimetableSlotEntity(idCounter++, 2, "09:00", "10:00", "L-3", 3))
+        slots.add(TimetableSlotEntity(idCounter++, 2, "10:00", "11:00", "L-3", 4))
+        slots.add(TimetableSlotEntity(idCounter++, 2, "11:00", "12:00", "L-3", 5))
+        slots.add(TimetableSlotEntity(idCounter++, 2, "13:00", "14:00", "L-3", 1))
+        slots.add(TimetableSlotEntity(idCounter++, 2, "14:00", "16:30", "Machine Shop", 6))
 
-        // Day 3: Wednesday
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 3, startTime = "08:00", endTime = "09:00", roomNo = "LT-4", subjectId = 6))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 3, startTime = "09:00", endTime = "10:00", roomNo = "LT-4", subjectId = 1))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 3, startTime = "10:00", endTime = "11:00", roomNo = "LT-4", subjectId = 2))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 3, startTime = "11:00", endTime = "12:00", roomNo = "LT-2", subjectId = 5))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 3, startTime = "12:00", endTime = "12:30", roomNo = "LT-4", subjectId = 6))
-        // 12:30 - 13:00 Lunch Break
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 3, startTime = "13:00", endTime = "16:00", roomNo = "Thermal Lab", subjectId = 7))
+        // Wednesday (3)
+        slots.add(TimetableSlotEntity(idCounter++, 3, "09:00", "10:00", "L-3", 2))
+        slots.add(TimetableSlotEntity(idCounter++, 3, "10:00", "11:00", "L-3", 1))
+        slots.add(TimetableSlotEntity(idCounter++, 3, "11:00", "12:00", "L-3", 4))
+        slots.add(TimetableSlotEntity(idCounter++, 3, "13:00", "14:00", "L-4", 5))
+        slots.add(TimetableSlotEntity(idCounter++, 3, "14:00", "16:00", "Thermal Lab", 8))
 
-        // Day 4: Thursday
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 4, startTime = "08:00", endTime = "09:00", roomNo = "LT-4", subjectId = 1))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 4, startTime = "09:00", endTime = "10:00", roomNo = "LT-4", subjectId = 2))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 4, startTime = "10:00", endTime = "11:00", roomNo = "LT-4", subjectId = 6))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 4, startTime = "11:00", endTime = "12:00", roomNo = "LT-2", subjectId = 5))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 4, startTime = "12:00", endTime = "12:30", roomNo = "LT-4", subjectId = 1))
-        // 12:30 - 13:00 Lunch Break
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 4, startTime = "13:00", endTime = "16:00", roomNo = "Fitting Shop", subjectId = 3))
+        // Thursday (4)
+        slots.add(TimetableSlotEntity(idCounter++, 4, "09:00", "10:00", "L-3", 4))
+        slots.add(TimetableSlotEntity(idCounter++, 4, "10:00", "11:00", "L-3", 3))
+        slots.add(TimetableSlotEntity(idCounter++, 4, "11:00", "12:00", "L-3", 2))
+        slots.add(TimetableSlotEntity(idCounter++, 4, "13:00", "14:00", "L-3", 5))
+        slots.add(TimetableSlotEntity(idCounter++, 4, "14:00", "16:00", "Drawing Hall 2", 7))
 
-        // Day 5: Friday
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 5, startTime = "08:00", endTime = "09:00", roomNo = "LT-4", subjectId = 2))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 5, startTime = "09:00", endTime = "10:00", roomNo = "LT-4", subjectId = 1))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 5, startTime = "10:00", endTime = "11:00", roomNo = "LT-4", subjectId = 6))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 5, startTime = "11:00", endTime = "12:00", roomNo = "LT-2", subjectId = 5))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 5, startTime = "12:00", endTime = "12:30", roomNo = "LT-2", subjectId = 5))
-        // 12:30 - 13:00 Lunch Break
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 5, startTime = "13:00", endTime = "16:00", roomNo = "Drafting Hall 3", subjectId = 4))
+        // Friday (5)
+        slots.add(TimetableSlotEntity(idCounter++, 5, "09:00", "10:00", "L-3", 5))
+        slots.add(TimetableSlotEntity(idCounter++, 5, "10:00", "11:00", "L-3", 1))
+        slots.add(TimetableSlotEntity(idCounter++, 5, "11:00", "12:00", "L-3", 3))
+        slots.add(TimetableSlotEntity(idCounter++, 5, "13:00", "14:00", "L-3", 2))
+        slots.add(TimetableSlotEntity(idCounter++, 5, "14:00", "16:30", "Fitting & Welding Shop", 6))
 
-        // Day 6: Saturday
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 6, startTime = "08:00", endTime = "09:00", roomNo = "LT-4", subjectId = 1))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 6, startTime = "09:00", endTime = "10:00", roomNo = "LT-4", subjectId = 2))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 6, startTime = "10:00", endTime = "11:00", roomNo = "LT-4", subjectId = 6))
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 6, startTime = "11:00", endTime = "12:30", roomNo = "CAD Lab", subjectId = 7))
-        // 12:30 - 13:00 Lunch Break
-        slots.add(TimetableSlotEntity(id = idCounter++, dayOfWeek = 6, startTime = "13:00", endTime = "15:00", roomNo = "ME Seminar Hall", subjectId = 6))
+        // Saturday (6)
+        slots.add(TimetableSlotEntity(idCounter++, 6, "09:00", "10:00", "LT-4", 1))
+        slots.add(TimetableSlotEntity(idCounter++, 6, "10:00", "11:00", "LT-4", 6))
+        slots.add(TimetableSlotEntity(idCounter++, 6, "11:00", "12:30", "CAD Lab", 7))
+        slots.add(TimetableSlotEntity(idCounter++, 6, "13:00", "15:00", "ME Seminar Hall", 8))
 
         return slots
     }
 
-    // Default clean submission deadlines for Machine Drawing sheets, Workshop jobs, and Lab files
-    fun createDefaultAssessments(): List<AssessmentEntity> {
+    fun buildDefaultAssessments(): List<AssessmentEntity> {
         val today = LocalDate.now()
-        val dtf = DateTimeFormatter.ISO_LOCAL_DATE
         return listOf(
             AssessmentEntity(
                 id = 1,
-                subjectId = 4, // M/C Drawing 1
-                type = "drawing_sheet",
-                title = "Sheet 1: Orthographic Projections of Machine Parts",
-                maxMarks = 10.0,
-                obtainedMarks = null,
-                status = "pending",
-                dueDate = today.plusDays(3).format(dtf),
-                dueTime = "16:00",
-                syllabusCoveragePercent = 20
-            ),
-            AssessmentEntity(
-                id = 2,
-                subjectId = 3, // Workshop Practice
-                type = "workshop_job",
-                title = "Job 1: Mild Steel Step Turning on Lathe",
-                maxMarks = 10.0,
-                obtainedMarks = null,
-                status = "pending",
-                dueDate = today.plusDays(5).format(dtf),
-                dueTime = "17:00",
-                syllabusCoveragePercent = 25
-            ),
-            AssessmentEntity(
-                id = 3,
-                subjectId = 7, // Lab
-                type = "lab_file",
-                title = "Thermal Lab File: Study of 2-Stroke & 4-Stroke Engines",
-                maxMarks = 10.0,
-                obtainedMarks = null,
-                status = "pending",
-                dueDate = today.plusDays(7).format(dtf),
-                dueTime = "15:00",
-                syllabusCoveragePercent = 15
-            ),
-            AssessmentEntity(
-                id = 4,
-                subjectId = 4, // M/C Drawing 1
-                type = "drawing_sheet",
-                title = "Sheet 2: Fasteners & Thread Profiles (Square & Acme)",
-                maxMarks = 10.0,
-                obtainedMarks = null,
-                status = "pending",
-                dueDate = today.plusDays(12).format(dtf),
-                dueTime = "16:00",
+                subjectId = 1,
+                type = "SESSIONAL",
+                title = "First Sessional Exam (ME-301)",
+                maxMarks = 20.0,
+                obtainedMarks = 16.5,
+                status = "CHECKED",
+                dueDate = today.minusDays(14).toString(),
+                dueTime = "10:00",
                 syllabusCoveragePercent = 40
             ),
             AssessmentEntity(
-                id = 5,
-                subjectId = 1, // Manufacturing Process
-                type = "sessional_1",
-                title = "Sessional Exam 1 - Foundry & Casting Processes",
-                maxMarks = 30.0,
-                obtainedMarks = null,
-                status = "pending",
-                dueDate = today.plusDays(20).format(dtf),
-                dueTime = "10:00",
-                syllabusCoveragePercent = 50
+                id = 2,
+                subjectId = 2,
+                type = "CLASS_TEST",
+                title = "Rankine & Otto Cycle Quiz",
+                maxMarks = 10.0,
+                obtainedMarks = 8.5,
+                status = "CHECKED",
+                dueDate = today.minusDays(7).toString(),
+                dueTime = "11:00",
+                syllabusCoveragePercent = 30
             ),
             AssessmentEntity(
-                id = 6,
-                subjectId = 2, // Thermal Engineering
-                type = "sessional_1",
-                title = "Sessional Exam 1 - First & Second Laws of Thermo",
-                maxMarks = 30.0,
+                id = 3,
+                subjectId = 7,
+                type = "DRAWING_SHEET",
+                title = "Sheet 04: Knuckle & Cotter Joint Assembly",
+                maxMarks = 25.0,
                 obtainedMarks = null,
-                status = "pending",
-                dueDate = today.plusDays(21).format(dtf),
-                dueTime = "10:00",
-                syllabusCoveragePercent = 50
+                status = "UPCOMING",
+                dueDate = today.plusDays(3).toString(),
+                dueTime = "14:00",
+                syllabusCoveragePercent = 55
+            ),
+            AssessmentEntity(
+                id = 4,
+                subjectId = 6,
+                type = "LAB_RECORD",
+                title = "Lathe & Shaper Job Submission",
+                maxMarks = 25.0,
+                obtainedMarks = 22.0,
+                status = "CHECKED",
+                dueDate = today.minusDays(3).toString(),
+                dueTime = "15:00",
+                syllabusCoveragePercent = 65
             )
         )
     }
 
-    fun createDefaultMedicalLeaves(): List<MedicalLeaveEntity> {
-        return emptyList()
+    fun buildDefaultHolidays(): List<HolidayRangeEntity> {
+        val year = LocalDate.now().year
+        return listOf(
+            HolidayRangeEntity(
+                id = 1,
+                title = "Maha Shivratri",
+                startDate = "$year-02-26",
+                endDate = "$year-02-26",
+                type = "HOLIDAY",
+                notes = "Institute Gazette Holiday"
+            ),
+            HolidayRangeEntity(
+                id = 2,
+                title = "Holi Recess",
+                startDate = "$year-03-13",
+                endDate = "$year-03-15",
+                type = "HOLIDAY",
+                notes = "Spring Festival Break"
+            ),
+            HolidayRangeEntity(
+                id = 3,
+                title = "Dr. Ambedkar Jayanti",
+                startDate = "$year-04-14",
+                endDate = "$year-04-14",
+                type = "HOLIDAY",
+                notes = "Gazette Holiday"
+            )
+        )
     }
 }

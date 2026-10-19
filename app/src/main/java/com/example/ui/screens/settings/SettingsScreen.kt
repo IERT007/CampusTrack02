@@ -2,773 +2,461 @@ package com.example.ui.screens.settings
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.audio.CaliperHapticManager
-import com.example.audio.CaliperSoundManager
-import com.example.notification.NotificationHelper
 import com.example.ui.MainViewModel
 import com.example.ui.components.GlassCard
-import com.example.ui.theme.*
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.example.ui.components.GlassIconButton
+import com.example.ui.dialogs.HolidayManagerDialog
+import com.example.ui.dialogs.WeeklyTimetableEditorDialog
+import com.example.ui.screens.today.SemesterDatesDialog
+import com.example.ui.theme.CaliperTheme
+import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.fluidTouchFeedback
 
-/**
- * Dedicated Full-Page Slide-In Settings Screen
- * Features 6 modular card sections:
- * 1. Audio & Vernier Haptics Hub
- * 2. Academic Semester Timeline Hub
- * 3. Notifications & System Alarms Hub
- * 4. Display & Time Formatting Hub
- * 5. Data Auto-Vault & SAF Backup Hub
- * 6. Curriculum & Timetable Presets Hub
- */
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel,
-    onNavigateBack: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    BackHandler { onClose() }
+
     val context = LocalContext.current
-    val scrollState = rememberScrollState()
+    val colors = CaliperTheme.colors
 
-    val isAudioEnabled by viewModel.isAudioEnabled.collectAsState()
     val isHapticsEnabled by viewModel.isHapticsEnabled.collectAsState()
+    val isAudioEnabled by viewModel.isAudioEnabled.collectAsState()
     val is24HourFormat by viewModel.is24HourFormat.collectAsState()
-    val hasAutoVault by viewModel.hasAutoVault.collectAsState()
-    val semesterStartDate by viewModel.semesterStartDate.collectAsState()
-    val semesterEndDate by viewModel.semesterEndDate.collectAsState()
+    val semesterStart by viewModel.semesterStartDate.collectAsState()
+    val semesterEnd by viewModel.semesterEndDate.collectAsState()
+    val slots by viewModel.slots.collectAsState()
+    val subjects by viewModel.subjects.collectAsState()
+    val holidays by viewModel.holidayRanges.collectAsState()
 
-    var showResetConfirmation by remember { mutableStateOf(false) }
-    var showWipeConfirmation by remember { mutableStateOf(false) }
+    var showTimetableEditor by remember { mutableStateOf(false) }
+    var showHolidayManager by remember { mutableStateOf(false) }
+    var showSemesterDatesDialog by remember { mutableStateOf(false) }
 
-    // Intercept hardware and gesture back
-    BackHandler {
-        CaliperSoundManager.playSnap()
-        CaliperHapticManager.tick(context)
-        onNavigateBack()
-    }
-
-    // SAF Launchers for Export and Import
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) {
-            viewModel.exportBackupToFile(context, uri) { success ->
-                if (success) {
-                    CaliperSoundManager.playSuccess()
-                    CaliperHapticManager.successClick(context)
-                    Toast.makeText(context, "Backup exported successfully to JSON!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importBackupFromFile(context, uri) { success ->
-                if (success) {
-                    CaliperSoundManager.playSuccess()
-                    CaliperHapticManager.successClick(context)
-                    Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_SHORT).show()
-                } else {
-                    CaliperSoundManager.playThud()
-                    Toast.makeText(context, "Invalid JSON backup file", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    Scaffold(
-        containerColor = AmoledBackground,
-        contentWindowInsets = WindowInsets.statusBars
-    ) { innerPadding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(AmoledBackground)
-        ) {
-            // Top Toolbar Navigation Header
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+            .testTag("settings_screen_list"),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item(key = "settings_top_bar") {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        CaliperSoundManager.playSnap()
-                        CaliperHapticManager.tick(context)
-                        onNavigateBack()
-                    },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = IceBlue
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
                 Column {
                     Text(
-                        text = "Caliper Settings & Controls",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "CALIPER OS // SETTINGS",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = SpaceGroteskFamily,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
                     )
                     Text(
-                        text = "Tactical Academic OS • System Preferences",
-                        color = ArchitecturalTitanium,
-                        fontSize = 11.sp
+                        text = "HARDWARE FEEDBACK & ACADEMIC ENGINE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = JetBrainsMonoFamily,
+                            color = colors.textSecondary
+                        )
                     )
                 }
+                GlassIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = "Close Settings",
+                    onClick = {
+                        CaliperHapticManager.tick(context)
+                        onClose()
+                    },
+                    modifier = Modifier.testTag("close_settings_button")
+                )
             }
+        }
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), thickness = 0.5.dp)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                // SECTION 1: Audio & Vernier Haptics Hub
-                SettingsSectionHeader("AUDIO & VERNIER HAPTIC ENGINE", Icons.Default.VolumeUp, IceBlue)
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(IceBlue.copy(alpha = 0.35f), GlassBorderBottom)
-                ) {
+        // Section 1: Tactile & Audio Engine
+        item(key = "section_tactile") {
+            SettingsSectionHeader(
+                title = "LIVING FLUID & HAPTIC ENGINE",
+                icon = Icons.Default.Tune,
+                accentColor = colors.scheduledLecture
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SettingsToggleRow(
-                        title = "Procedural Audio Synthesizer",
-                        subtitle = "Hardware-synthesized tones for ticks, chimes, and alerts",
-                        checked = isAudioEnabled,
-                        onCheckedChange = { viewModel.setAudioEnabled(it) }
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    SettingsToggleRow(
-                        title = "Vernier Micro-Haptic Pulses",
-                        subtitle = "Precision physical clicks on slot toggles and swipes",
+                        title = "Tactile Haptic Feedback",
+                        subtitle = "Crisp mechanical clicks on touch press & actions",
                         checked = isHapticsEnabled,
                         onCheckedChange = { viewModel.setHapticsEnabled(it) }
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Audition Procedural Tones:",
-                        color = ArchitecturalTitanium,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, IceBlue.copy(alpha = 0.5f)),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Tick", fontSize = 10.sp, color = IceBlue)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                CaliperSoundManager.playSuccess()
-                                CaliperHapticManager.successClick(context)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, VelvetSageEmerald.copy(alpha = 0.5f)),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Chime", fontSize = 10.sp, color = VelvetSageEmerald)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                CaliperSoundManager.playThud()
-                                CaliperHapticManager.bunkDoubleTap(context)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, SoftCoralRose.copy(alpha = 0.5f)),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Thud", fontSize = 10.sp, color = SoftCoralRose)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                CaliperSoundManager.playPip()
-                                CaliperHapticManager.tick(context)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, MutedChampagneAmber.copy(alpha = 0.5f)),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Pip", fontSize = 10.sp, color = MutedChampagneAmber)
-                        }
-                    }
-                }
-
-                // SECTION 2: Academic Semester Timeline
-                SettingsSectionHeader("ACADEMIC SEMESTER TIMELINE", Icons.Default.DateRange, IceBlue)
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(IceBlue.copy(alpha = 0.35f), GlassBorderBottom)
-                ) {
-                    Text(
-                        text = "TERM COMMENCEMENT & CONCLUSION",
-                        color = ArchitecturalTitanium,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    SemesterDatePickerRow(
-                        title = "Semester Start Date",
-                        subtitle = "Curriculum begins on this date",
-                        isoDate = semesterStartDate,
-                        onDateSelected = { newStart ->
-                            viewModel.setSemesterDates(newStart, semesterEndDate)
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    SemesterDatePickerRow(
-                        title = "Semester End Date",
-                        subtitle = "Term ends; triggers preparation leave state",
-                        isoDate = semesterEndDate,
-                        onDateSelected = { newEnd ->
-                            viewModel.setSemesterDates(semesterStartDate, newEnd)
-                        }
-                    )
-                }
-
-                // SECTION 3: System Notifications & Background Alarms Hub
-                SettingsSectionHeader("NOTIFICATIONS & ALARM ENGINE", Icons.Default.NotificationsActive, VelvetSageEmerald)
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(VelvetSageEmerald.copy(alpha = 0.35f), GlassBorderBottom)
-                ) {
-                    NotificationSettingItem(
-                        icon = Icons.Default.WbSunny,
-                        title = "07:30 AM Morning Briefing",
-                        description = "Formatted numbered summary of today's classes & room numbers",
-                        active = true
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    NotificationSettingItem(
-                        icon = Icons.Default.Timer,
-                        title = "10-Minute Pre-Lecture Heads-Up",
-                        description = "Exact alarm heads-up with subject name and classroom before slot starts",
-                        active = true
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playPip()
-                            CaliperHapticManager.tick(context)
-                            NotificationHelper.showPreLectureAlert(
-                                context,
-                                subjectName = "Thermal Engg (ME-302)",
-                                roomNo = "204",
-                                time = "in 10 mins"
-                            )
-                            Toast.makeText(context, "Pre-lecture notification ping dispatched!", Toast.LENGTH_SHORT).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = VelvetSageEmerald.copy(alpha = 0.15f)),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, VelvetSageEmerald),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Send, contentDescription = null, tint = VelvetSageEmerald, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Send Test Pre-Lecture Ping", color = VelvetSageEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                // SECTION 3: Display & Dual-Theme Engine Hub
-                SettingsSectionHeader("DISPLAY & DUAL-THEME ENGINE", Icons.Default.Palette, MutedChampagneAmber)
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(MutedChampagneAmber.copy(alpha = 0.35f), GlassBorderBottom)
-                ) {
-                    Text(
-                        text = "THEME SYSTEM & PALETTE",
-                        color = ArchitecturalTitanium,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Flagship Theme Visual Summary Card
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.03f))
-                            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = "Universal Flagship Palette: True Pitch Black (#000000) canvas with Deep Obsidian Glass cards (#0E121B @ 85% alpha) and 0.5.dp specular luminous top borders. 120 FPS fluid physics active.",
-                            color = TextSecondary,
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
-
                     SettingsToggleRow(
-                        title = "24-Hour Military Time Format",
-                        subtitle = "Display timetable as 13:00 - 14:00 instead of 01:00 PM",
+                        title = "Acoustic Confirmation",
+                        subtitle = "Subtle audio feedback on attendance logging",
+                        checked = isAudioEnabled,
+                        onCheckedChange = { viewModel.setAudioEnabled(it) }
+                    )
+                    SettingsToggleRow(
+                        title = "24-Hour Telemetry Clock",
+                        subtitle = "Display timetable slots in military 24h format",
                         checked = is24HourFormat,
                         onCheckedChange = { viewModel.set24HourFormat(it) }
                     )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Statutory Attendance Threshold", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("IERT Prayagraj Academic Ordinance Rule", color = ArchitecturalTitanium, fontSize = 11.sp)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(VelvetSageEmerald.copy(alpha = 0.15f))
-                                .border(0.5.dp, VelvetSageEmerald, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text("75.0%", color = VelvetSageEmerald, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                        }
-                    }
                 }
+            }
+        }
 
-                // SECTION 4: Data Auto-Vault & Cloud-Free Storage Hub
-                SettingsSectionHeader("DATA AUTO-VAULT & BACKUP", Icons.Default.CloudSync, SlateTeal)
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(SlateTeal.copy(alpha = 0.35f), GlassBorderBottom)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(if (hasAutoVault) VelvetSageEmerald else ArchitecturalTitanium)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Silent Background Auto-Vault", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                            Text(
-                                text = "Serializes to context.filesDir/caliper_vault_snapshot.json on every commit",
-                                color = ArchitecturalTitanium,
-                                fontSize = 11.sp
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.triggerAutoBackup()
-                                CaliperSoundManager.playSuccess()
-                                CaliperHapticManager.successClick(context)
-                                Toast.makeText(context, "Auto-Vault snapshot captured!", Toast.LENGTH_SHORT).show()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = SlateTeal.copy(alpha = 0.2f)),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, SlateTeal),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text("Vault Now", color = SlateTeal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text("Storage Access Framework (SAF) File Operations:", color = ArchitecturalTitanium, fontSize = 11.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                exportLauncher.launch("caliper_academic_vault_${System.currentTimeMillis()}.json")
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = IceBlue.copy(alpha = 0.15f)),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, IceBlue),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.UploadFile, contentDescription = null, tint = IceBlue, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Export JSON", color = IceBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        Button(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                importLauncher.launch(arrayOf("application/json", "text/*"))
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = VelvetSageEmerald.copy(alpha = 0.15f)),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, VelvetSageEmerald),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.FileDownload, contentDescription = null, tint = VelvetSageEmerald, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Restore JSON", color = VelvetSageEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // SECTION 5: Curriculum & Semester Timetable Engine
-                SettingsSectionHeader("CURRICULUM & ENGINE PRESETS", Icons.Default.School, SoftCoralRose)
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(SoftCoralRose.copy(alpha = 0.35f), GlassBorderBottom)
-                ) {
-                    Column {
-                        Text(
-                            text = "IERT Prayagraj 3rd Semester",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Mechanical & Tool Engineering (7 Core Subjects)",
-                            color = ArchitecturalTitanium,
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "• ME-301 Manufacturing Process (Theory)\n• ME-302 Thermal Engineering (Theory)\n• ME-303W Workshop Practice (Workshop)\n• ED-301 M/C Drawing 1 (Drafting/Lab)\n• CS-301 Computer Lecture (Theory)\n• ME-304 Material Science (Theory)\n• ME-305L Computer / Thermal Lab (Lab)",
-                        color = TextSecondary,
-                        fontSize = 10.sp,
-                        lineHeight = 15.sp
+        // Section 2: Academic Timetable & Calendar
+        item(key = "section_academic") {
+            SettingsSectionHeader(
+                title = "ACADEMIC SCHEDULE & CALENDAR",
+                icon = Icons.Default.CalendarMonth,
+                accentColor = colors.safeZone
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SemesterDatePickerRow(
+                        label = "SEMESTER WINDOW",
+                        startDate = semesterStart,
+                        endDate = semesterEnd,
+                        onClick = { showSemesterDatesDialog = true }
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    ActionRowButton(
+                        title = "Weekly Timetable Matrix",
+                        subtitle = "${slots.size} active slots across Mon-Sat",
+                        icon = Icons.Default.Event,
+                        accent = colors.scheduledLecture,
+                        onClick = { showTimetableEditor = true }
+                    )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { showResetConfirmation = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = MutedChampagneAmber.copy(alpha = 0.15f)),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, MutedChampagneAmber),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.RestartAlt, contentDescription = null, tint = MutedChampagneAmber, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Reload IERT", color = MutedChampagneAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        Button(
-                            onClick = { showWipeConfirmation = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = SoftCoralRose.copy(alpha = 0.15f)),
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, SoftCoralRose),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = SoftCoralRose, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Wipe Records", color = SoftCoralRose, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    ActionRowButton(
+                        title = "Gazetted Holidays Manager",
+                        subtitle = "${holidays.size} holiday windows configured",
+                        icon = Icons.Default.CalendarMonth,
+                        accent = colors.deadlineWarning,
+                        onClick = { showHolidayManager = true }
+                    )
                 }
+            }
+        }
 
-                // App Signature Footer
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("CALIPER ACADEMIC OS • V2.0", color = ArchitecturalTitanium, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Text("IERT Mechanical & Tool Engineering • Offline-First", color = TextMuted, fontSize = 9.sp)
-                    }
+        // Section 3: Notifications
+        item(key = "section_notifications") {
+            SettingsSectionHeader(
+                title = "ALARM & LECTURE ALERTS",
+                icon = Icons.Default.Notifications,
+                accentColor = colors.deadlineWarning
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    NotificationSettingItem(
+                        icon = Icons.Default.Notifications,
+                        title = "10-Min Pre-Lecture Alerts",
+                        subtitle = "Scheduled for all ${slots.size} weekly slots",
+                        enabled = true
+                    )
+                }
+            }
+        }
+
+        // Section 4: Data & Vault
+        item(key = "section_vault") {
+            SettingsSectionHeader(
+                title = "DATABASE & VAULT MANAGEMENT",
+                icon = Icons.Default.Storage,
+                accentColor = colors.bunkDanger
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ActionRowButton(
+                        title = "Reload IERT CSE Sem-2 Defaults",
+                        subtitle = "Restore official subjects, faculty, and timetable",
+                        icon = Icons.Default.Refresh,
+                        accent = colors.safeZone,
+                        onClick = {
+                            viewModel.preloadDefaultIertData()
+                            Toast.makeText(context, "IERT CSE defaults restored", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    ActionRowButton(
+                        title = "Clear Attendance Logs",
+                        subtitle = "Reset attendance logs while keeping subjects",
+                        icon = Icons.Default.DeleteForever,
+                        accent = colors.bunkDanger,
+                        onClick = {
+                            viewModel.clearAttendanceLogs()
+                            Toast.makeText(context, "Attendance logs cleared", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
         }
     }
 
-    if (showResetConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showResetConfirmation = false },
-            containerColor = Color(0xFF10141D),
-            title = { Text("Reload IERT Curriculum?", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = { Text("This will re-initialize the 7 official IERT 3rd semester subjects and recurring weekly slots with a clean slate.", color = TextSecondary, fontSize = 13.sp) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.preloadDefaultData()
-                        showResetConfirmation = false
-                        CaliperSoundManager.playSuccess()
-                        CaliperHapticManager.successClick(context)
-                        Toast.makeText(context, "IERT Curriculum Reloaded!", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MutedChampagneAmber)
-                ) {
-                    Text("Reload", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetConfirmation = false }) {
-                    Text("Cancel", color = ArchitecturalTitanium)
-                }
-            }
+    if (showTimetableEditor) {
+        WeeklyTimetableEditorDialog(
+            slots = slots,
+            subjects = subjects,
+            onDismiss = { showTimetableEditor = false },
+            onAddSlot = { viewModel.saveSlot(it) },
+            onUpdateSlot = { viewModel.updateTimetableSlot(it) },
+            onDeleteSlot = { viewModel.deleteSlot(it) }
         )
     }
 
-    if (showWipeConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showWipeConfirmation = false },
-            containerColor = Color(0xFF10141D),
-            title = { Text("Wipe Attendance Logs?", color = SoftCoralRose, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to clear all marked attendance logs and reset back to 0%? Timetable slots will remain intact.", color = TextSecondary, fontSize = 13.sp) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.clearAttendanceLogs()
-                        showWipeConfirmation = false
-                        CaliperSoundManager.playThud()
-                        CaliperHapticManager.bunkDoubleTap(context)
-                        Toast.makeText(context, "Attendance records cleared", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftCoralRose)
-                ) {
-                    Text("Wipe", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showWipeConfirmation = false }) {
-                    Text("Cancel", color = ArchitecturalTitanium)
-                }
+    if (showHolidayManager) {
+        HolidayManagerDialog(
+            holidays = holidays,
+            onDismiss = { showHolidayManager = false },
+            onAddHoliday = { viewModel.saveHolidayRange(it) },
+            onDeleteHoliday = { viewModel.deleteHolidayRange(it) }
+        )
+    }
+
+    if (showSemesterDatesDialog) {
+        SemesterDatesDialog(
+            startDate = semesterStart,
+            endDate = semesterEnd,
+            onDismiss = { showSemesterDatesDialog = false },
+            onSave = { start, end ->
+                viewModel.setSemesterDates(start, end)
+                showSemesterDatesDialog = false
             }
         )
     }
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(title, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-    }
-}
-
-@Composable
-private fun SettingsToggleRow(
+fun SettingsSectionHeader(
     title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    icon: ImageVector,
+    accentColor: Color
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = IceBlue,
-                uncheckedThumbColor = ArchitecturalTitanium,
-                uncheckedTrackColor = Color.White.copy(alpha = 0.08f)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp,
+                color = accentColor
             )
         )
     }
 }
 
 @Composable
-private fun NotificationSettingItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    description: String,
-    active: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(VelvetSageEmerald.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = VelvetSageEmerald, modifier = Modifier.size(16.dp))
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Text(description, color = ArchitecturalTitanium, fontSize = 10.sp)
-        }
-        Text("Active", color = VelvetSageEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun SemesterDatePickerRow(
+fun SettingsToggleRow(
     title: String,
     subtitle: String,
-    isoDate: String,
-    onDateSelected: (String) -> Unit
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
 ) {
-    val context = LocalContext.current
-    val parsedDate = remember(isoDate) {
-        try {
-            LocalDate.parse(isoDate, DateTimeFormatter.ISO_LOCAL_DATE)
-        } catch (_: Exception) {
-            LocalDate.now()
-        }
-    }
-    val formattedDisplay = remember(parsedDate) {
-        parsedDate.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy"))
-    }
-
+    val colors = CaliperTheme.colors
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable {
-                CaliperSoundManager.playSnap()
-                CaliperHapticManager.tick(context)
-                android.app.DatePickerDialog(
-                    context,
-                    { _, year, month, dayOfMonth ->
-                        val selected = LocalDate.of(year, month + 1, dayOfMonth)
-                            .format(DateTimeFormatter.ISO_LOCAL_DATE)
-                        onDateSelected(selected)
-                        CaliperSoundManager.playSuccess()
-                        CaliperHapticManager.successClick(context)
-                        Toast.makeText(context, "$title updated: $selected", Toast.LENGTH_SHORT).show()
-                    },
-                    parsedDate.year,
-                    parsedDate.monthValue - 1,
-                    parsedDate.dayOfMonth
-                ).show()
-            }
-            .background(Color.White.copy(alpha = 0.02f))
-            .padding(10.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = SpaceGroteskFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(color = colors.textSecondary)
+            )
         }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
 
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(IceBlue.copy(alpha = 0.15f))
-                .border(0.5.dp, IceBlue.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = IceBlue, modifier = Modifier.size(13.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(formattedDisplay, color = IceBlue, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-            }
+@Composable
+fun SemesterDatePickerRow(
+    label: String,
+    startDate: String,
+    endDate: String,
+    onClick: () -> Unit
+) {
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fluidTouchFeedback(onClick = onClick)
+            .clip(shape)
+            .background(Color.White.copy(alpha = 0.04f), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.1f), shape)
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = JetBrainsMonoFamily,
+                    color = colors.textSecondary
+                )
+            )
+            Text(
+                text = "$startDate → $endDate",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = JetBrainsMonoFamily,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+            )
         }
     }
 }
 
+@Composable
+fun NotificationSettingItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    enabled: Boolean
+) {
+    val colors = CaliperTheme.colors
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) colors.safeZone else colors.textMuted,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = SpaceGroteskFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(color = colors.textSecondary)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionRowButton(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fluidTouchFeedback(onClick = onClick)
+            .clip(shape)
+            .background(accent.copy(alpha = 0.1f), shape)
+            .border(1.dp, accent.copy(alpha = 0.3f), shape)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = accent,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = SpaceGroteskFamily,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(color = colors.textSecondary)
+            )
+        }
+    }
+}

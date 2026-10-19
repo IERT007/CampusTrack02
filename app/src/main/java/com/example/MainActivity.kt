@@ -4,24 +4,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.viewModels
+import com.example.audio.CaliperHardwareEngine
+import com.example.notification.NotificationHelper
 import com.example.ui.CampusTrackRootScreen
 import com.example.ui.MainViewModel
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
-    setContent {
-      val viewModel: MainViewModel = viewModel()
-      val isMonochrome by viewModel.isMonochromeMode.collectAsState()
-      MyApplicationTheme(isMonochrome = isMonochrome) {
-        CampusTrackRootScreen(viewModel = viewModel)
-      }
-    }
-  }
-}
+    private val viewModel: MainViewModel by viewModels()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        CaliperHardwareEngine.enableHighRefreshRate(this)
+        NotificationHelper.createNotificationChannels(this)
+        enableEdgeToEdge()
+        setContent {
+            MyApplicationTheme {
+                CampusTrackRootScreen(viewModel = viewModel)
+            }
+        }
+    }
+}

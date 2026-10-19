@@ -1,326 +1,224 @@
 package com.example.ui.components
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.audio.CaliperHapticManager
-import com.example.audio.CaliperSoundManager
 import com.example.data.local.entity.SubjectEntity
 import com.example.data.local.entity.TimetableSlotEntity
 import com.example.ui.MainViewModel
 import com.example.ui.SubjectAttendanceStats
 import com.example.ui.theme.CaliperTheme
-import java.time.LocalDate
-import java.time.LocalTime
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.max
+import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.fluidTouchFeedback
+import java.util.Locale
 
-/**
- * Centered Google-Style Integrated Glass Search Bar in Top Bar
- * 1. Left (~100.dp): Brand "Caliper", Subtitle "IERT Prayagraj"
- * 2. Center (Flexible Weight): 42.dp Frosted Glass Search Capsule with native BasicTextField
- * 3. Right (~40.dp): Embedded 20.dp Settings Icon (navigates smoothly to SettingsScreen)
- *
- * Reactive Autocomplete & Precision Telemetry Dropdown for matches.
- */
 @Composable
 fun MainTopBar(
     viewModel: MainViewModel,
-    onNavigateToSettings: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val colors = CaliperTheme.colors
-
-    val subjects by viewModel.subjects.collectAsState()
-    val statsList by viewModel.subjectStats.collectAsState()
-    val allSlots by viewModel.slots.collectAsState()
+    val summary by viewModel.globalSummary.collectAsState()
+    val streak by viewModel.collegeStreak.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val subjects by viewModel.subjects.collectAsState()
+    val subjectStats by viewModel.subjectStats.collectAsState()
+    val slots by viewModel.slots.collectAsState()
 
-    var selectedSubjectForTelemetry by remember { mutableStateOf<SubjectEntity?>(null) }
+    var isSearchExpanded by remember { mutableStateOf(false) }
+    var selectedSubjectForDialog by remember { mutableStateOf<SubjectEntity?>(null) }
 
-    // Real-time matched subjects and room slots
-    val matchingSubjects = remember(searchQuery, subjects, allSlots) {
-        if (searchQuery.isBlank()) {
-            emptyList()
-        } else {
-            val q = searchQuery.trim()
-            subjects.filter { sub ->
-                sub.name.contains(q, ignoreCase = true) ||
-                        sub.code.contains(q, ignoreCase = true) ||
-                        sub.facultyName.contains(q, ignoreCase = true) ||
-                        allSlots.any { slot -> slot.subjectId == sub.id && slot.roomNo.contains(q, ignoreCase = true) }
-            }
-        }
-    }
-
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Unified Top Bar Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 1. Left Component (Width: ~100.dp)
-                Column(
-                    modifier = Modifier
-                        .widthIn(min = 90.dp, max = 110.dp),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Caliper",
-                        style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (summary.overallPercentage >= 75.0) colors.safeZone else colors.bunkDanger
+                            )
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "IERT Prayagraj",
-                        style = TextStyle(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF94A3B8)
+                        text = "CALIPER OS // IERT",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = JetBrainsMonoFamily,
+                            letterSpacing = 1.5.sp,
+                            fontSize = 10.sp,
+                            color = colors.textSecondary
                         )
                     )
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // 2. Center Component (Flexible Weight / FillRemainingWidth) - Frosted Glass Search Capsule
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(42.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = "Search",
-                            tint = Color(0xFF94A3B8),
-                            modifier = Modifier.size(18.dp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = String.format(Locale.US, "%.1f%%", summary.overallPercentage),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = colors.textPrimary
                         )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            textStyle = TextStyle(
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Normal
-                            ),
-                            cursorBrush = SolidColor(colors.primaryAccent),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Search subject, room...",
-                                        style = TextStyle(
-                                            color = Color(0xFF64748B),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Normal
-                                        )
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        )
-
-                        // Instant Clear Button (✕) when text is present
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { viewModel.setSearchQuery("") },
-                                modifier = Modifier.size(20.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Close,
-                                    contentDescription = "Clear",
-                                    tint = Color(0xFF94A3B8),
-                                    modifier = Modifier.size(14.dp)
+                    )
+                    if (streak > 0) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        val pillShape = RoundedCornerShape(10.dp)
+                        Box(
+                            modifier = Modifier
+                                .clip(pillShape)
+                                .background(colors.streakGold.copy(alpha = 0.14f), pillShape)
+                                .border(1.dp, colors.streakGold.copy(alpha = 0.35f), pillShape)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "${streak}D STREAK",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = JetBrainsMonoFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    color = colors.streakGold
                                 )
-                            }
+                            )
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // 3. Right Component (Width: ~40.dp) - Embedded 20.dp Settings Icon
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            onNavigateToSettings()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = "System Settings",
-                        tint = Color(0xFFE2E8F0),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
 
-            // Floating Frosted Glass Autocomplete Dropdown Modal
-            AnimatedVisibility(
-                visible = searchQuery.isNotBlank(),
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassIconButton(
+                    icon = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
+                    contentDescription = "Search Subjects",
+                    onClick = {
+                        CaliperHapticManager.tick(context)
+                        isSearchExpanded = !isSearchExpanded
+                        if (!isSearchExpanded) viewModel.setSearchQuery("")
+                    },
+                    modifier = Modifier.testTag("top_bar_search_button")
+                )
+                GlassIconButton(
+                    icon = Icons.Default.Settings,
+                    contentDescription = "Open Settings",
+                    onClick = {
+                        CaliperHapticManager.tick(context)
+                        onOpenSettings()
+                    },
+                    modifier = Modifier.testTag("top_bar_settings_button")
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = isSearchExpanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
             ) {
-                Box(
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.setSearchQuery(it) },
+                    placeholder = { Text("Search subject, code, faculty, room...") },
+                    singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF0F141C).copy(alpha = 0.95f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                        .padding(12.dp)
-                ) {
-                    if (matchingSubjects.isEmpty()) {
-                        Row(
+                        .testTag("global_search_input")
+                )
+
+                if (searchQuery.isNotBlank()) {
+                    val matches = subjects.filter {
+                        it.name.contains(searchQuery, ignoreCase = true) ||
+                            it.code.contains(searchQuery, ignoreCase = true) ||
+                            it.facultyName.contains(searchQuery, ignoreCase = true)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    matches.take(4).forEach { subj ->
+                        GlassCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            onClick = {
+                                CaliperHapticManager.tick(context)
+                                selectedSubjectForDialog = subj
+                            }
                         ) {
-                            Text(
-                                text = "No academic record matching \"$searchQuery\"",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 12.sp
-                            )
-                        }
-                    } else {
-                        Column {
-                            Text(
-                                text = "MATCHING SUBJECTS & LABS (${matchingSubjects.size})",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF64748B),
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-
-                            matchingSubjects.take(5).forEach { sub ->
-                                val stats = statsList.find { it.subject.id == sub.id }
-                                val subSlots = allSlots.filter { it.subjectId == sub.id }
-                                val roomLabel = subSlots.firstOrNull()?.roomNo ?: "LT-TBD"
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
-                                            CaliperSoundManager.playSnap()
-                                            CaliperHapticManager.tick(context)
-                                            selectedSubjectForTelemetry = sub
-                                            viewModel.setSearchQuery("")
-                                        }
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(8.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if ((stats?.percentage ?: 100.0) >= 75.0) colors.safeZone
-                                                    else colors.bunkDanger
-                                                )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${subj.code} • ${subj.name}",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontFamily = SpaceGroteskFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.textPrimary
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
-                                            Text(
-                                                text = "${sub.code} — ${sub.name}",
-                                                color = Color.White,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                            Text(
-                                                text = "${sub.facultyName} • Room: $roomLabel",
-                                                color = Color(0xFF94A3B8),
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
-
-                                    // Attendance % chip
-                                    stats?.let { s ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(
-                                                    if (s.percentage >= 75.0) colors.safeZone.copy(alpha = 0.15f)
-                                                    else colors.bunkDanger.copy(alpha = 0.15f)
-                                                )
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "${String.format("%.1f", s.percentage)}%",
-                                                color = if (s.percentage >= 75.0) colors.safeZone else colors.bunkDanger,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
+                                    )
+                                    Text(
+                                        text = "${subj.facultyName} • ${subj.roomNumber}",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = colors.textSecondary
+                                        )
+                                    )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
                             }
                         }
                     }
@@ -329,25 +227,53 @@ fun MainTopBar(
         }
     }
 
-    // Precision Telemetry Pop-up Card when a subject is tapped
-    selectedSubjectForTelemetry?.let { subject ->
-        val stats = statsList.find { it.subject.id == subject.id }
-        val slots = allSlots.filter { it.subjectId == subject.id }
+    selectedSubjectForDialog?.let { subject ->
+        val stats = subjectStats.firstOrNull { it.subject.id == subject.id }
+        val subjectSlots = slots.filter { it.subjectId == subject.id }
         SubjectTelemetryDialog(
             subject = subject,
             stats = stats,
-            slots = slots,
-            onDismiss = { selectedSubjectForTelemetry = null }
+            slots = subjectSlots,
+            onDismiss = { selectedSubjectForDialog = null }
         )
     }
 }
 
-/**
- * Precision Telemetry Pop-Up Card
- * 1. Next Schedule: Day, Time (e.g., "Wednesday 11:00 AM - 12:30 PM"), and Room No.
- * 2. Academic Tally: Exact count of Attended, Bunked, and Cancelled lectures.
- * 3. Cutoff Status: Live Safe-Zone % and exact bunk buffer remaining B = floor((A - 0.75C)/0.75).
- */
+@Composable
+fun MainTopBar(
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colors = CaliperTheme.colors
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "CALIPER OS",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = SpaceGroteskFamily,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary
+            )
+        )
+        GlassIconButton(
+            icon = Icons.Default.Tune,
+            contentDescription = "Settings",
+            onClick = {
+                CaliperHapticManager.tick(context)
+                onOpenSettings()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectTelemetryDialog(
     subject: SubjectEntity,
@@ -356,276 +282,71 @@ fun SubjectTelemetryDialog(
     onDismiss: () -> Unit
 ) {
     val colors = CaliperTheme.colors
-
-    val dayNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
-    val todayDayOfWeek = remember { LocalDate.now().dayOfWeek.value } // 1 (Mon) .. 7 (Sun)
-
-    // Calculate next schedule with zero temporal drift (never show past lecture as "Next")
-    val nextSlotInfo = remember(slots, todayDayOfWeek) {
-        if (slots.isEmpty()) {
-            "No timetable slot scheduled"
-        } else {
-            val nowTime = LocalTime.now()
-
-            // 1. Check today's slots where slot.startTime > LocalTime.now()
-            val todayUpcomingSlot = slots
-                .filter { it.dayOfWeek == todayDayOfWeek }
-                .filter { slot ->
-                    try {
-                        val sTime = LocalTime.parse(slot.startTime)
-                        sTime.isAfter(nowTime)
-                    } catch (_: Exception) {
-                        false
-                    }
-                }
-                .minByOrNull { it.startTime }
-
-            if (todayUpcomingSlot != null) {
-                "Today ${todayUpcomingSlot.startTime} - ${todayUpcomingSlot.endTime} (${todayUpcomingSlot.roomNo})"
-            } else {
-                // 2. Scan subsequent 6 days sequentially
-                var resolvedSlot: TimetableSlotEntity? = null
-                var resolvedDayOffset = 0
-
-                for (offset in 1..6) {
-                    val targetDay = ((todayDayOfWeek - 1 + offset) % 7) + 1
-                    val daySlots = slots.filter { it.dayOfWeek == targetDay }.sortedBy { it.startTime }
-                    if (daySlots.isNotEmpty()) {
-                        resolvedSlot = daySlots.first()
-                        resolvedDayOffset = offset
-                        break
-                    }
-                }
-
-                if (resolvedSlot != null) {
-                    val dayName = if (resolvedDayOffset == 1) "Tomorrow" else dayNames.getOrElse(resolvedSlot.dayOfWeek - 1) { "Day ${resolvedSlot.dayOfWeek}" }
-                    "Next: $dayName ${resolvedSlot.startTime} (${resolvedSlot.roomNo})"
-                } else {
-                    // Fallback to first available slot in schedule
-                    val firstSlot = slots.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })).first()
-                    val dayName = dayNames.getOrElse(firstSlot.dayOfWeek - 1) { "Day ${firstSlot.dayOfWeek}" }
-                    "Next: $dayName ${firstSlot.startTime} (${firstSlot.roomNo})"
-                }
-            }
-        }
-    }
-
-    val attended = stats?.attended ?: 0
-    val totalConducted = stats?.totalConducted ?: 0
-    val bunked = max(0, totalConducted - attended)
-    val cancelled = stats?.facultyCancelled ?: 0
-    val percentage = stats?.percentage ?: 100.0
-    val bunksAvailable = stats?.bunksAvailable ?: 0
-    val classesNeeded = stats?.classesNeeded ?: 0
-    val isSafe = percentage >= 75.0
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.70f))
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        GlassCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp)
         ) {
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(),
-                borderColors = listOf(
-                    if (isSafe) colors.safeZone.copy(alpha = 0.6f) else colors.bunkDanger.copy(alpha = 0.6f),
-                    colors.cardBorderBottom
-                )
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "${subject.code} Telemetry",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.primaryAccent
-                            )
-                            Text(
-                                text = subject.name,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "${subject.facultyName} • ${subject.type.uppercase()}",
-                                fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
-                            )
-                        }
-
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // 1. Next Schedule Banner
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(colors.scheduledLecture.copy(alpha = 0.18f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Schedule,
-                                contentDescription = null,
-                                tint = colors.scheduledLecture,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Text(
-                                text = "NEXT SCHEDULED LECTURE",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF94A3B8)
-                            )
-                            Text(
-                                text = nextSlotInfo,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // 2. Academic Tally: Attended, Bunked, Cancelled
-                    Text(
-                        text = "ACADEMIC TALLY & LECTURE LOGS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B)
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = subject.code,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        color = colors.scheduledLecture
                     )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subject.name,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = SpaceGroteskFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${subject.facultyName} • ${subject.roomNumber}",
+                    style = MaterialTheme.typography.bodySmall.copy(color = colors.textSecondary)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                if (stats != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         TallyStatBox(
-                            label = "Attended",
-                            value = "$attended",
-                            color = colors.safeZone,
+                            label = "ATTENDED",
+                            value = "${stats.attended}/${stats.totalConducted}",
+                            accentColor = colors.safeZone,
                             modifier = Modifier.weight(1f)
                         )
                         TallyStatBox(
-                            label = "Bunked",
-                            value = "$bunked",
-                            color = colors.bunkDanger,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TallyStatBox(
-                            label = "Cancelled",
-                            value = "$cancelled",
-                            color = colors.scheduledLecture,
+                            label = "CURRENT",
+                            value = String.format(Locale.US, "%.1f%%", stats.percentage),
+                            accentColor = if (stats.percentage >= 75.0) colors.safeZone else colors.bunkDanger,
                             modifier = Modifier.weight(1f)
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // 3. Cutoff Status: Live Safe-Zone % and exact bunk buffer remaining B = floor((A - 0.75C)/0.75)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSafe) colors.safeZone.copy(alpha = 0.12f)
-                                else colors.bunkDanger.copy(alpha = 0.12f)
-                            )
-                            .border(
-                                0.5.dp,
-                                if (isSafe) colors.safeZone.copy(alpha = 0.35f)
-                                else colors.bunkDanger.copy(alpha = 0.35f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Security,
-                                    contentDescription = null,
-                                    tint = if (isSafe) colors.safeZone else colors.bunkDanger,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (isSafe) "SAFE-ZONE MAINTAINED" else "DEBAR CRITICAL RISK",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSafe) colors.safeZone else colors.bunkDanger
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = if (isSafe) {
-                                    "Bunk Buffer Remaining: $bunksAvailable lectures"
-                                } else {
-                                    "Must Attend: $classesNeeded consecutive classes to reach 75%"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Formula: B = ⌊(Attended - 0.75×Total) / 0.75⌋",
-                                fontSize = 9.sp,
-                                color = Color(0xFF94A3B8),
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
-                        }
-
-                        Text(
-                            text = "${String.format("%.1f", percentage)}%",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isSafe) colors.safeZone else colors.bunkDanger
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.scheduledLecture.copy(alpha = 0.18f))
+                        .fluidTouchFeedback(onClick = onDismiss)
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "CLOSE TELEMETRY",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Acknowledge Telemetry", fontWeight = FontWeight.Bold)
-                    }
+                    )
                 }
             }
         }
@@ -633,70 +354,41 @@ fun SubjectTelemetryDialog(
 }
 
 @Composable
-private fun TallyStatBox(
+fun TallyStatBox(
     label: String,
     value: String,
-    color: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(14.dp)
+    Column(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
-            .padding(vertical = 8.dp, horizontal = 6.dp),
-        contentAlignment = Alignment.Center
+            .clip(shape)
+            .background(Color.White.copy(alpha = 0.04f), shape)
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(accentColor.copy(alpha = 0.35f), Color.Transparent)),
+                shape
+            )
+            .padding(12.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = value, color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            Text(text = label, color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Medium)
-        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontSize = 10.sp,
+                color = colors.textSecondary
+            )
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontWeight = FontWeight.Bold,
+                color = accentColor
+            )
+        )
     }
-}
-
-// Backwards-compatible overload for existing calls
-@Composable
-fun MainTopBar(
-    onNavigateToSettings: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // When called without ViewModel, provide standard aligned top bar
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.widthIn(min = 90.dp, max = 110.dp)) {
-            Text(
-                text = "Caliper",
-                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            )
-            Text(
-                text = "IERT Prayagraj",
-                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
-            )
-        }
-
-        IconButton(
-            onClick = onNavigateToSettings,
-            modifier = Modifier.size(40.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Settings,
-                contentDescription = "System Settings",
-                tint = Color(0xFFE2E8F0),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun MainTopBar(
-    onOpenSettings: () -> Unit
-) {
-    MainTopBar(onNavigateToSettings = onOpenSettings)
 }

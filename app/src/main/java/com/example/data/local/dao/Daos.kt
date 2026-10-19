@@ -1,7 +1,22 @@
 package com.example.data.local.dao
 
-import androidx.room.*
-import com.example.data.local.entity.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import com.example.data.local.entity.AcademicTaskEntity
+import com.example.data.local.entity.AssessmentEntity
+import com.example.data.local.entity.AttendanceLogEntity
+import com.example.data.local.entity.CustomActivityEntity
+import com.example.data.local.entity.DailyDayStatusEntity
+import com.example.data.local.entity.HolidayRangeEntity
+import com.example.data.local.entity.MedicalLeaveEntity
+import com.example.data.local.entity.QuickNoteEntity
+import com.example.data.local.entity.SubjectEntity
+import com.example.data.local.entity.TestRecordEntity
+import com.example.data.local.entity.TimetableSlotEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -15,10 +30,10 @@ interface SubjectDao {
     @Query("SELECT * FROM subjects WHERE id = :id LIMIT 1")
     fun getSubjectById(id: Long): Flow<SubjectEntity?>
 
-    @Query("SELECT * FROM subjects WHERE name LIKE :query OR code LIKE :query OR facultyName LIKE :query ORDER BY code ASC")
+    @Query("SELECT * FROM subjects WHERE name LIKE '%' || :query || '%' OR code LIKE '%' || :query || '%' OR facultyName LIKE '%' || :query || '%' ORDER BY code ASC")
     fun searchSubjects(query: String): Flow<List<SubjectEntity>>
 
-    @Query("SELECT * FROM subjects WHERE name LIKE :query OR code LIKE :query OR facultyName LIKE :query ORDER BY code ASC")
+    @Query("SELECT * FROM subjects WHERE name LIKE '%' || :query || '%' OR code LIKE '%' || :query || '%' OR facultyName LIKE '%' || :query || '%' ORDER BY code ASC")
     suspend fun searchSubjectsDirect(query: String): List<SubjectEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -30,11 +45,11 @@ interface SubjectDao {
     @Update
     suspend fun updateSubject(subject: SubjectEntity)
 
-    @Delete
-    suspend fun deleteSubject(subject: SubjectEntity)
-
     @Query("UPDATE subjects SET reconciledAttendedOffset = :attendedOffset, reconciledTotalOffset = :totalOffset WHERE id = :subjectId")
     suspend fun updateOffsets(subjectId: Long, attendedOffset: Int, totalOffset: Int)
+
+    @Delete
+    suspend fun deleteSubject(subject: SubjectEntity)
 
     @Query("DELETE FROM subjects")
     suspend fun deleteAllSubjects()
@@ -52,10 +67,10 @@ interface TimetableSlotDao {
     suspend fun getSlotsForDayDirect(dayOfWeek: Int): List<TimetableSlotEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSlots(slots: List<TimetableSlotEntity>)
+    suspend fun insertSlot(slot: TimetableSlotEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSlot(slot: TimetableSlotEntity): Long
+    suspend fun insertSlots(slots: List<TimetableSlotEntity>)
 
     @Update
     suspend fun updateSlot(slot: TimetableSlotEntity)
@@ -90,14 +105,14 @@ interface AttendanceLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLogs(logs: List<AttendanceLogEntity>)
 
-    @Query("DELETE FROM attendance_logs WHERE id = :id")
-    suspend fun deleteLogById(id: Long)
+    @Query("DELETE FROM attendance_logs WHERE date = :date AND slotId = :slotId")
+    suspend fun deleteLogForSlot(date: String, slotId: Long)
 
     @Query("DELETE FROM attendance_logs WHERE date = :date")
     suspend fun deleteLogsForDate(date: String)
 
-    @Query("DELETE FROM attendance_logs WHERE date = :date AND slotId = :slotId")
-    suspend fun deleteLogForSlot(date: String, slotId: Long)
+    @Query("DELETE FROM attendance_logs WHERE id = :id")
+    suspend fun deleteLogById(id: Long)
 
     @Query("DELETE FROM attendance_logs WHERE subjectId = :subjectId")
     suspend fun deleteLogsForSubject(subjectId: Long)
@@ -171,17 +186,17 @@ interface HolidayRangeDao {
     @Query("SELECT * FROM holiday_ranges ORDER BY startDate ASC")
     fun getAllHolidayRanges(): Flow<List<HolidayRangeEntity>>
 
-    @Query("SELECT * FROM holiday_ranges WHERE :dateStr >= startDate AND :dateStr <= endDate LIMIT 1")
-    suspend fun getHolidayForDate(dateStr: String): HolidayRangeEntity?
+    @Query("SELECT * FROM holiday_ranges WHERE :date >= startDate AND :date <= endDate LIMIT 1")
+    suspend fun getHolidayForDate(date: String): HolidayRangeEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertHolidayRange(range: HolidayRangeEntity): Long
+    suspend fun insertHolidayRange(holiday: HolidayRangeEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertHolidayRanges(ranges: List<HolidayRangeEntity>)
+    suspend fun insertHolidayRanges(holidays: List<HolidayRangeEntity>)
 
     @Update
-    suspend fun updateHolidayRange(range: HolidayRangeEntity)
+    suspend fun updateHolidayRange(holiday: HolidayRangeEntity)
 
     @Query("DELETE FROM holiday_ranges WHERE id = :id")
     suspend fun deleteHolidayRangeById(id: Long)
@@ -204,8 +219,8 @@ interface AcademicTaskDao {
     @Update
     suspend fun updateTask(task: AcademicTaskEntity)
 
-    @Query("UPDATE academic_tasks SET isCompleted = :completed WHERE id = :id")
-    suspend fun updateTaskCompletion(id: Long, completed: Boolean)
+    @Query("UPDATE academic_tasks SET isCompleted = :isCompleted WHERE id = :id")
+    suspend fun updateTaskCompletion(id: Long, isCompleted: Boolean)
 
     @Query("DELETE FROM academic_tasks WHERE id = :id")
     suspend fun deleteTaskById(id: Long)
@@ -219,7 +234,7 @@ interface QuickNoteDao {
     @Query("SELECT * FROM quick_notes ORDER BY isPinned DESC, timestamp DESC")
     fun getAllNotes(): Flow<List<QuickNoteEntity>>
 
-    @Query("SELECT * FROM quick_notes WHERE title LIKE :query OR content LIKE :query ORDER BY isPinned DESC, timestamp DESC")
+    @Query("SELECT * FROM quick_notes WHERE title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%' ORDER BY isPinned DESC, timestamp DESC")
     fun searchNotes(query: String): Flow<List<QuickNoteEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -228,14 +243,14 @@ interface QuickNoteDao {
     @Update
     suspend fun updateNote(note: QuickNoteEntity)
 
+    @Query("UPDATE quick_notes SET isPinned = :isPinned WHERE id = :id")
+    suspend fun togglePin(id: Long, isPinned: Boolean)
+
     @Delete
     suspend fun deleteNote(note: QuickNoteEntity)
 
     @Query("DELETE FROM quick_notes WHERE id = :id")
     suspend fun deleteNoteById(id: Long)
-
-    @Query("UPDATE quick_notes SET isPinned = :pinned WHERE id = :id")
-    suspend fun togglePin(id: Long, pinned: Boolean)
 
     @Query("DELETE FROM quick_notes")
     suspend fun deleteAllNotes()
@@ -256,10 +271,10 @@ interface TestRecordDao {
     suspend fun getTestRecordForSlot(date: String, slotId: Long): TestRecordEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTestRecord(testRecord: TestRecordEntity): Long
+    suspend fun insertTestRecord(record: TestRecordEntity): Long
 
     @Delete
-    suspend fun deleteTestRecord(testRecord: TestRecordEntity)
+    suspend fun deleteTestRecord(record: TestRecordEntity)
 
     @Query("DELETE FROM test_records WHERE id = :id")
     suspend fun deleteTestRecordById(id: Long)
@@ -285,5 +300,3 @@ interface CustomActivityDao {
     @Query("DELETE FROM custom_activities WHERE id = :id")
     suspend fun deleteActivityById(id: Long)
 }
-
-

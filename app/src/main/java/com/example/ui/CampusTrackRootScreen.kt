@@ -1,143 +1,53 @@
 package com.example.ui
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.ui.components.GlassSurface
-import com.example.ui.components.triggerHapticFeedback
 import com.example.ui.navigation.AppTab
-import com.example.ui.theme.*
-
-typealias DashboardTab = AppTab
+import com.example.ui.theme.CaliperTheme
+import com.example.ui.theme.SpaceGroteskFamily
 
 @Composable
-fun CampusTrackRootScreen(
-    viewModel: MainViewModel
-) {
+fun CampusTrackRootScreen(viewModel: MainViewModel) {
     MainScaffold(viewModel = viewModel)
 }
 
 @Composable
 fun CampusHeader(
-    currentTab: DashboardTab,
+    currentTab: AppTab,
     onOpenSettings: () -> Unit = {}
 ) {
+    val colors = CaliperTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
-                        )
-                    )
-                    .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PrecisionManufacturing,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Caliper",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "IERT",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
-                        color = IceBlue
-                    )
-                }
-                Text(
-                    text = "Prayagraj • Mechanical & Tool Engg",
-                    fontSize = 11.sp,
-                    color = TextSecondary
-                )
-            }
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0x2238BDF8))
-                    .border(0.5.dp, IceBlue.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "SEM 3 • 75% MANDATE",
-                    color = IceBlue,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = onOpenSettings,
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x18FFFFFF))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings Hub",
-                    tint = IceBlue,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
+        Text(
+            text = currentTab.title,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontFamily = SpaceGroteskFamily,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary
+            )
+        )
     }
 }
 
 @Composable
 fun FloatingGlassNavBar(
-    selectedTab: DashboardTab,
-    onTabSelected: (DashboardTab) -> Unit,
+    selectedTab: AppTab,
+    onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
     CompactFloatingGlassNavBar(
@@ -146,4 +56,3 @@ fun FloatingGlassNavBar(
         modifier = modifier
     )
 }
-

@@ -1,20 +1,18 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -22,74 +20,50 @@ fun TelemetrySafeZoneGauge(
     percentage: Float,
     modifier: Modifier = Modifier
 ) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = (percentage / 100f).coerceIn(0f, 1f),
-        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy)
+    val clamped = percentage.coerceIn(0f, 100f)
+    val animatedFill by animateFloatAsState(
+        targetValue = clamped / 100f,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "telemetry_safe_zone_fill"
     )
 
-    Canvas(modifier = modifier.fillMaxWidth().height(160.dp)) {
-        val centerOffset = Offset(size.width / 2f, size.height - 16.dp.toPx())
-        val radius = size.width * 0.40f
-        val strokeWidth = 12.dp.toPx()
+    val fillColor = when {
+        clamped >= 80f -> Color(0xFF22C55E)
+        clamped >= 75f -> Color(0xFFF59E0B)
+        else -> Color(0xFFEF4444)
+    }
 
-        // Background Track Cavity
-        drawArc(
-            color = Color.White.copy(alpha = 0.05f),
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = false,
-            topLeft = Offset(centerOffset.x - radius, centerOffset.y - radius),
-            size = Size(radius * 2, radius * 2),
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-        )
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(12.dp)
+    ) {
+        val barHeight = 8.dp.toPx()
+        val topY = (size.height - barHeight) / 2f
+        val cornerRadius = CornerRadius(barHeight / 2f, barHeight / 2f)
 
-        // Dynamic Telemetry Gradient Arc
-        drawArc(
-            brush = Brush.horizontalGradient(
-                colors = listOf(Color(0xFFEF4444), Color(0xFFF59E0B), Color(0xFF22C55E))
-            ),
-            startAngle = 180f,
-            sweepAngle = animatedProgress * 180f,
-            useCenter = false,
-            topLeft = Offset(centerOffset.x - radius, centerOffset.y - radius),
-            size = Size(radius * 2, radius * 2),
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.08f),
+            topLeft = Offset(0f, topY),
+            size = Size(size.width, barHeight),
+            cornerRadius = cornerRadius
         )
 
-        // 75% Statutory Limit Marker
-        val markerAngleRad = Math.toRadians((180f + 0.75f * 180f).toDouble())
-        val innerMarker = Offset(
-            (centerOffset.x + (radius - strokeWidth) * Math.cos(markerAngleRad)).toFloat(),
-            (centerOffset.y + (radius - strokeWidth) * Math.sin(markerAngleRad)).toFloat()
-        )
-        val outerMarker = Offset(
-            (centerOffset.x + (radius + strokeWidth) * Math.cos(markerAngleRad)).toFloat(),
-            (centerOffset.y + (radius + strokeWidth) * Math.sin(markerAngleRad)).toFloat()
-        )
+        if (clamped > 0f) {
+            drawRoundRect(
+                color = fillColor,
+                topLeft = Offset(0f, topY),
+                size = Size((size.width * animatedFill).coerceIn(barHeight, size.width), barHeight),
+                cornerRadius = cornerRadius
+            )
+        }
+
+        val thresholdX = size.width * 0.75f
         drawLine(
-            color = Color.White,
-            start = innerMarker,
-            end = outerMarker,
-            strokeWidth = 2.dp.toPx(),
-            cap = StrokeCap.Round
+            color = Color.White.copy(alpha = 0.9f),
+            start = Offset(thresholdX, 0f),
+            end = Offset(thresholdX, size.height),
+            strokeWidth = 2.dp.toPx()
         )
-
-        // Rotary Needle Indicator
-        val needleAngleRad = Math.toRadians((180f + animatedProgress * 180f).toDouble())
-        val needleLength = radius * 0.85f
-        val needleTip = Offset(
-            (centerOffset.x + needleLength * Math.cos(needleAngleRad)).toFloat(),
-            (centerOffset.y + needleLength * Math.sin(needleAngleRad)).toFloat()
-        )
-
-        drawLine(
-            color = Color.White,
-            start = centerOffset,
-            end = needleTip,
-            strokeWidth = 2.5.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-        drawCircle(color = Color.White, radius = 5.dp.toPx(), center = centerOffset)
-        drawCircle(color = Color(0xFF080A0F), radius = 2.5.dp.toPx(), center = centerOffset)
     }
 }

@@ -1,91 +1,133 @@
 package com.example.ui.screens.today
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.audio.CaliperHapticManager
-import com.example.audio.CaliperSoundManager
-import com.example.ui.components.claymorphicSurface
+import com.example.ui.components.GlassCard
 import com.example.ui.theme.CaliperTheme
+import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.fluidTouchFeedback
+
+enum class AttendanceStatus {
+    PRESENT,
+    ABSENT,
+    COLLEGE_OFF
+}
 
 data class TimetableSlot(
     val slotId: Long,
+    val subjectCode: String,
     val subjectName: String,
-    val subjectCode: String = "",
-    val startTime: String,
-    val endTime: String,
+    val facultyName: String,
     val roomNo: String,
-    val facultyName: String = ""
+    val startTime: String,
+    val endTime: String = ""
 )
 
 data class ProcessedSlotRecord(
     val slotId: Long,
     val subjectName: String,
-    val status: String,
+    val roomNo: String,
     val time: String,
-    val roomNo: String
+    val status: String
 )
-
-enum class AttendanceStatus {
-    PRESENT, BUNKED, CANCELLED, COLLEGE_OFF
-}
 
 @Composable
 fun TodayScheduleFeed(
-    unprocessedSlots: List<TimetableSlot>,
+    activeSlots: List<TimetableSlot>,
     completedSlots: List<ProcessedSlotRecord>,
     onMarkAttendance: (Long, AttendanceStatus) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var trayExpanded by remember { mutableStateOf(false) }
+    var isTrayExpanded by remember { mutableStateOf(false) }
 
-    LazyColumn(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(unprocessedSlots, key = { it.slotId }) { slot ->
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut(animationSpec = tween(200)) + shrinkVertically(animationSpec = tween(250))
-            ) {
-                ActiveSlotCard(
-                    slot = slot,
-                    onStatusSelected = { status -> onMarkAttendance(slot.slotId, status) }
-                )
-            }
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(activeSlots, key = { it.slotId }) { slot ->
+            ActiveSlotCard(
+                slot = slot,
+                onMark = { status -> onMarkAttendance(slot.slotId, status) }
+            )
         }
 
-        item {
-            if (completedSlots.isNotEmpty()) {
+        if (completedSlots.isNotEmpty()) {
+            item(key = "completed_tray_header") {
+                val presentCount = completedSlots.count { it.status == "PRESENT" }
                 CompletedTrayHeader(
-                    count = completedSlots.size,
-                    total = unprocessedSlots.size + completedSlots.size,
-                    isExpanded = trayExpanded,
-                    onToggle = { trayExpanded = !trayExpanded }
+                    presentCount = presentCount,
+                    totalProcessed = completedSlots.size,
+                    isExpanded = isTrayExpanded,
+                    onToggle = { isTrayExpanded = !isTrayExpanded }
                 )
             }
-        }
 
-        if (trayExpanded) {
-            items(completedSlots, key = { it.slotId }) { record ->
-                HistoricalSlotRow(record = record)
+            item(key = "completed_tray_items") {
+                AnimatedVisibility(
+                    visible = isTrayExpanded,
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        completedSlots.forEach { record ->
+                            HistoricalSlotRow(record = record)
+                        }
+                    }
+                }
             }
         }
     }
@@ -94,186 +136,223 @@ fun TodayScheduleFeed(
 @Composable
 fun ActiveSlotCard(
     slot: TimetableSlot,
-    onStatusSelected: (AttendanceStatus) -> Unit
+    onMark: (AttendanceStatus) -> Unit
 ) {
     val context = LocalContext.current
     val colors = CaliperTheme.colors
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .claymorphicSurface(elevation = 6.dp, shape = RoundedCornerShape(14.dp))
-            .padding(11.dp)
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp)
     ) {
-        Column {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${slot.startTime} - ${slot.endTime}",
-                    color = colors.primaryAccent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "${slot.startTime}${if (slot.endTime.isNotBlank()) " - ${slot.endTime}" else ""}",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        color = colors.scheduledLecture
+                    )
                 )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                ) {
-                    Text(slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
-                }
+                Text(
+                    text = slot.roomNo,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        color = colors.textSecondary
+                    )
+                )
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = slot.subjectName,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
-            if (slot.subjectCode.isNotEmpty()) {
-                Text(
-                    text = slot.subjectCode,
-                    color = Color(0xFF94A3B8),
-                    fontSize = 11.5.sp
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = SpaceGroteskFamily,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
                 )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 4-state action bar
+            )
+            Text(
+                text = "${slot.subjectCode} • ${slot.facultyName}",
+                style = MaterialTheme.typography.bodySmall.copy(color = colors.textSecondary)
+            )
+            Spacer(modifier = Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = {
-                        CaliperSoundManager.playSuccess()
-                        CaliperHapticManager.successClick(context)
-                        onStatusSelected(AttendanceStatus.PRESENT)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.safeZone.copy(alpha = 0.2f)),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.safeZone),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                TactileActionPill(
+                    label = "ATTENDED",
+                    icon = Icons.Default.Check,
+                    accentColor = colors.safeZone,
+                    context = context,
+                    onClick = { onMark(AttendanceStatus.PRESENT) },
                     modifier = Modifier.weight(1f)
-                ) {
-                    Text("Present", color = colors.safeZone, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Button(
-                    onClick = {
-                        CaliperSoundManager.playThud()
-                        CaliperHapticManager.bunkDoubleTap(context)
-                        onStatusSelected(AttendanceStatus.BUNKED)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.bunkDanger.copy(alpha = 0.2f)),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.bunkDanger),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                )
+                TactileActionPill(
+                    label = "BUNKED",
+                    icon = Icons.Default.Close,
+                    accentColor = colors.bunkDanger,
+                    context = context,
+                    onClick = { onMark(AttendanceStatus.ABSENT) },
                     modifier = Modifier.weight(1f)
-                ) {
-                    Text("Bunk", color = colors.bunkDanger, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Button(
-                    onClick = {
-                        CaliperSoundManager.playPip()
-                        CaliperHapticManager.tick(context)
-                        onStatusSelected(AttendanceStatus.CANCELLED)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.deadlineWarning.copy(alpha = 0.2f)),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.deadlineWarning),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Cancel", color = colors.deadlineWarning, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Button(
-                    onClick = {
-                        CaliperSoundManager.playSnap()
-                        CaliperHapticManager.tick(context)
-                        onStatusSelected(AttendanceStatus.COLLEGE_OFF)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f)),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Off", color = Color(0xFF94A3B8), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                }
+                )
+                TactileActionPill(
+                    label = "OFF",
+                    icon = Icons.Default.Remove,
+                    accentColor = colors.deadlineWarning,
+                    context = context,
+                    onClick = { onMark(AttendanceStatus.COLLEGE_OFF) },
+                    modifier = Modifier.weight(0.8f)
+                )
             }
         }
     }
 }
 
 @Composable
+private fun TactileActionPill(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accentColor: Color,
+    context: Context,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .fluidTouchFeedback(
+                enabled = true,
+                onClick = {
+                    CaliperHapticManager.confirmTap(context)
+                    onClick()
+                }
+            )
+            .clip(shape)
+            .background(accentColor.copy(alpha = 0.14f), shape)
+            .border(1.dp, accentColor.copy(alpha = 0.38f), shape)
+            .padding(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = accentColor,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = accentColor
+            )
+        )
+    }
+}
+
+@Composable
 fun CompletedTrayHeader(
-    count: Int,
-    total: Int,
+    presentCount: Int,
+    totalProcessed: Int,
     isExpanded: Boolean,
     onToggle: () -> Unit
 ) {
-    val context = LocalContext.current
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(18.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-            .clickable {
-                CaliperSoundManager.playSnap()
-                CaliperHapticManager.tick(context)
-                onToggle()
-            }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .fluidTouchFeedback(enabled = true, onClick = onToggle)
+            .clip(shape)
+            .background(Color(0xFF0E121B).copy(alpha = 0.85f), shape)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.16f), Color.Transparent)
+                ),
+                shape = shape
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Completed Today ($count / $total)",
-            color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(colors.safeZone)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "COMPLETED / PROCESSED ($presentCount/$totalProcessed PRESENT)",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = JetBrainsMonoFamily,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textSecondary
+                )
+            )
+        }
         Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-            contentDescription = null,
-            tint = Color(0xFF94A3B8)
+            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = "Toggle Completed Tray",
+            tint = colors.textSecondary
         )
     }
 }
 
 @Composable
 fun HistoricalSlotRow(record: ProcessedSlotRecord) {
+    val colors = CaliperTheme.colors
+    val statusColor = when (record.status) {
+        "PRESENT" -> colors.safeZone
+        "ABSENT" -> colors.bunkDanger
+        else -> colors.deadlineWarning
+    }
+    val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.02f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .clip(shape)
+            .background(Color(0xFF0E121B).copy(alpha = 0.7f), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text(record.subjectName, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text("${record.time} • ${record.roomNo}", color = Color(0xFF94A3B8), fontSize = 10.sp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = record.subjectName,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = SpaceGroteskFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
+            )
+            Text(
+                text = "${record.time} • ${record.roomNo}",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = JetBrainsMonoFamily,
+                    color = colors.textSecondary
+                )
+            )
         }
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-                .padding(horizontal = 6.dp, vertical = 2.dp)
-        ) {
-            Text(record.status.uppercase(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        }
+        Text(
+            text = record.status,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontWeight = FontWeight.Bold,
+                color = statusColor
+            )
+        )
     }
 }

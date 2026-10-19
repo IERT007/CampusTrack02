@@ -1,6 +1,8 @@
 {
   "name": "Caliper",
-  "description": "Enterprise-grade, offline-first Academic Operating System for IERT Mechanical & Tool Engineering with tactile Vernier engine, procedural audio, mass bunk simulator, and Glance widgets.",
+  "description": "Precision academic telemetry, schedule, and attendance management system with ColorOS fluid dynamics and obsidian glass UI.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

@@ -4,8 +4,28 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.data.local.dao.*
-import com.example.data.local.entity.*
+import com.example.data.local.dao.AcademicTaskDao
+import com.example.data.local.dao.AssessmentDao
+import com.example.data.local.dao.AttendanceLogDao
+import com.example.data.local.dao.CustomActivityDao
+import com.example.data.local.dao.DailyDayStatusDao
+import com.example.data.local.dao.HolidayRangeDao
+import com.example.data.local.dao.MedicalLeaveDao
+import com.example.data.local.dao.QuickNoteDao
+import com.example.data.local.dao.SubjectDao
+import com.example.data.local.dao.TestRecordDao
+import com.example.data.local.dao.TimetableSlotDao
+import com.example.data.local.entity.AcademicTaskEntity
+import com.example.data.local.entity.AssessmentEntity
+import com.example.data.local.entity.AttendanceLogEntity
+import com.example.data.local.entity.CustomActivityEntity
+import com.example.data.local.entity.DailyDayStatusEntity
+import com.example.data.local.entity.HolidayRangeEntity
+import com.example.data.local.entity.MedicalLeaveEntity
+import com.example.data.local.entity.QuickNoteEntity
+import com.example.data.local.entity.SubjectEntity
+import com.example.data.local.entity.TestRecordEntity
+import com.example.data.local.entity.TimetableSlotEntity
 
 @Database(
     entities = [
@@ -32,11 +52,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dailyDayStatusDao(): DailyDayStatusDao
     abstract fun medicalLeaveDao(): MedicalLeaveDao
     abstract fun holidayRangeDao(): HolidayRangeDao
-    fun holidayDao(): HolidayRangeDao = holidayRangeDao()
     abstract fun academicTaskDao(): AcademicTaskDao
     abstract fun quickNoteDao(): QuickNoteDao
     abstract fun testRecordDao(): TestRecordDao
     abstract fun customActivityDao(): CustomActivityDao
+
+    fun holidayDao(): HolidayRangeDao = holidayRangeDao()
 
     companion object {
         @Volatile
@@ -48,12 +69,12 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "campustrack_iert.db"
-                ).fallbackToDestructiveMigration().build()
+                )
+                    .fallbackToDestructiveMigration(true)
+                    .build()
                 INSTANCE = instance
                 instance
             }
         }
-
-        fun getInstance(context: Context): AppDatabase = getDatabase(context)
     }
 }

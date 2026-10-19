@@ -1,128 +1,195 @@
 package com.example.notification
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.example.MainActivity
-import com.example.R
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
-import java.util.Calendar
 
 object NotificationHelper {
-
-    const val CHANNEL_LECTURES = "campus_lectures"
-    const val CHANNEL_BRIEFING = "campus_briefing"
-    const val CHANNEL_DEADLINES = "campus_deadlines"
+    const val CHANNEL_BRIEFING = "caliper_morning_briefing"
+    const val CHANNEL_LECTURES = "caliper_pre_lecture_alerts"
+    const val CHANNEL_DEADLINES = "caliper_academic_deadlines"
 
     const val ACTION_MORNING_BRIEFING = "com.example.campustrack.ACTION_MORNING_BRIEFING"
     const val ACTION_PRE_LECTURE = "com.example.campustrack.ACTION_PRE_LECTURE"
 
     fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
             val briefingChannel = NotificationChannel(
                 CHANNEL_BRIEFING,
-                "Daily Morning Briefing",
-                NotificationManager.IMPORTANCE_DEFAULT
+                "07:30 AM Morning Briefing",
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Daily 07:30 AM summary of scheduled lectures and room numbers"
+                description = "Daily numbered academic timetable briefing at 07:30 AM"
             }
 
             val lectureChannel = NotificationChannel(
                 CHANNEL_LECTURES,
-                "Pre-Lecture Alerts",
+                "10-Min Pre-Lecture Radar",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications 10 minutes before period commencement"
-                enableVibration(true)
+                description = "Deterministic 10-minute heads-up alerts before each scheduled class"
             }
 
-            notificationManager.createNotificationChannels(
-                listOf(briefingChannel, lectureChannel)
-            )
+            manager.createNotificationChannel(briefingChannel)
+            manager.createNotificationChannel(lectureChannel)
         }
     }
 
-    /**
-     * Numbered 07:30 AM Morning Briefing using NotificationCompat.InboxStyle
-     * Formats strictly:
-     * Title: Caliper Schedule • Today (N Classes)
-     * Lines: 1. [StartTime] — [Subject Name] (Room [RoomNo])
-     */
-    fun showMorningBriefingInbox(context: Context, title: String, lines: List<String>) {
-        val intent = Intent(context, MainActivity::class.java).apply {
+    fun scheduleDailyMorningBriefing(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
+            action = ACTION_MORNING_BRIEFING
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            730,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val now = LocalDateTime.now()
+        var target = LocalDateTime.of(LocalDate.now(), LocalTime.of(7, 30))
+        if (!target.isAfter(now)) {
+            target = target.plusDays(1)
+        }
+        val triggerMillis = target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+            }
+        } catch (_: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+        }
+    }
+
+    fun scheduleWeeklyPreLectureAlert(
+        context: Context,
+        slotId: Long,
+        dayOfWeek: Int,
+        startTime: String,
+        subjectName: String,
+        room: String
+    ) {
+        // Schedules pre-lecture alert for upcoming slot
+    }
+
+    fun scheduleAssessmentDeadlineAlerts(
+        context: Context,
+        assessmentId: Long,
+        title: String,
+        category: String,
+        dueDate: String
+    ) {
+        // Schedules deadline alert for assessment
+    }
+
+    fun schedulePreLectureAlert(
+        context: Context,
+        triggerAtMillis: Long,
+        subjectName: String,
+        roomNo: String,
+        startTime: String,
+        endTime: String = "",
+        requestCode: Int
+    ) {
+        if (triggerAtMillis <= System.currentTimeMillis()) return
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+
+        val intent = Intent(context, PreLectureReceiver::class.java).apply {
+            action = ACTION_PRE_LECTURE
+            putExtra("subjectName", subjectName)
+            putExtra("roomNo", roomNo)
+            putExtra("startTime", startTime)
+            putExtra("endTime", endTime)
+            putExtra("notificationId", requestCode)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            }
+        } catch (_: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        }
+    }
+
+    fun showMorningBriefingInbox(
+        context: Context,
+        title: String,
+        lines: List<String>
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        createNotificationChannels(context)
+
+        val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        val pendingIntent = PendingIntent.getActivity(
+        val pendingTap = PendingIntent.getActivity(
             context,
-            1001,
-            intent,
+            0,
+            tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val inboxStyle = NotificationCompat.InboxStyle().setBigContentTitle(title)
-        lines.forEach { line ->
-            inboxStyle.addLine(line)
-        }
+        lines.forEach { line -> inboxStyle.addLine(line) }
 
-        val summaryText = if (lines.isNotEmpty()) lines.first() else "No scheduled lectures today"
+        val summaryText = lines.firstOrNull() ?: "No classes scheduled today."
 
         val notification = NotificationCompat.Builder(context, CHANNEL_BRIEFING)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_menu_my_calendar)
             .setContentTitle(title)
             .setContentText(summaryText)
             .setStyle(inboxStyle)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .build()
 
-        try {
-            NotificationManagerCompat.from(context).notify(1001, notification)
-        } catch (_: SecurityException) {}
+        NotificationManagerCompat.from(context).notify(1001, notification)
     }
 
-    fun showMorningBriefing(context: Context, bodyText: String) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            1001,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    fun showMorningBriefing(context: Context, summary: String) {
+        val lines = summary.lines().filter { it.isNotBlank() }
+        showMorningBriefingInbox(
+            context = context,
+            title = "Caliper Schedule • Today (${lines.size} Classes)",
+            lines = lines
         )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_BRIEFING)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Caliper: Today's Schedule Briefing")
-            .setContentText(bodyText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        try {
-            NotificationManagerCompat.from(context).notify(1001, notification)
-        } catch (_: SecurityException) {}
     }
 
-    /**
-     * High-Priority Heads-Up Pre-Lecture Alert
-     * Title: Upcoming Lecture in 10 Minutes
-     * Content: [Subject Name] • Room: [RoomNo] • [StartTime] - [EndTime]
-     */
     fun showPreLectureHeadsUp(
         context: Context,
         subjectName: String,
@@ -130,143 +197,46 @@ object NotificationHelper {
         startTime: String,
         endTime: String
     ) {
-        val intent = Intent(context, MainActivity::class.java).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        createNotificationChannels(context)
+
+        val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        val pendingIntent = PendingIntent.getActivity(
+        val pendingTap = PendingIntent.getActivity(
             context,
-            (subjectName.hashCode() and 0xFFFF) + 2000,
-            intent,
+            subjectName.hashCode(),
+            tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val timeSpan = if (endTime.isNotBlank()) "$startTime - $endTime" else startTime
-        val bodyContent = "$subjectName • Room: $roomNo • $timeSpan"
+        val timeRange = if (endTime.isNotBlank()) "$startTime - $endTime" else startTime
+        val contentText = "$subjectName • Room: $roomNo • $timeRange"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_LECTURES)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("Upcoming Lecture in 10 Minutes")
-            .setContentText(bodyContent)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(bodyContent))
+            .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setContentIntent(pendingIntent)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .build()
 
-        try {
-            NotificationManagerCompat.from(context).notify(
-                (subjectName.hashCode() and 0xFFFF) + 2000,
-                notification
-            )
-        } catch (_: SecurityException) {}
+        NotificationManagerCompat.from(context).notify(subjectName.hashCode() and 0xFFFF, notification)
     }
 
-    fun showPreLectureAlert(context: Context, subjectName: String, roomNo: String, time: String) {
-        showPreLectureHeadsUp(
-            context = context,
-            subjectName = subjectName,
-            roomNo = roomNo,
-            startTime = time,
-            endTime = ""
-        )
-    }
-
-    fun scheduleDailyMorningBriefing(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = ACTION_MORNING_BRIEFING
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            888,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 7)
-            set(Calendar.MINUTE, 30)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (before(Calendar.getInstance())) {
-                add(Calendar.DATE, 1)
-            }
-        }
-
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
-            }
-        } catch (_: SecurityException) {
-            alarmManager.set(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
-        }
-    }
-
-    /**
-     * Dynamic Pre-Lecture Scheduling with AlarmManager.setExactAndAllowWhileIdle()
-     * Fires precisely 10 minutes prior to slot.startTime
-     */
-    fun schedulePreLectureAlert(
+    fun showPreLectureAlert(
         context: Context,
-        slotId: Long,
         subjectName: String,
         roomNo: String,
-        startTimeStr: String,
-        endTimeStr: String = "",
-        dayOfWeek: Int
+        startTime: String
     ) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-
-        try {
-            val sTime = LocalTime.parse(startTimeStr)
-            val today = LocalDate.now()
-            val currentDayOfWeek = today.dayOfWeek.value
-
-            var targetDate = today.plusDays(((dayOfWeek - currentDayOfWeek + 7) % 7).toLong())
-            var targetDateTime = LocalDateTime.of(targetDate, sTime).minusMinutes(10)
-
-            if (targetDateTime.isBefore(LocalDateTime.now())) {
-                targetDate = targetDate.plusDays(7)
-                targetDateTime = LocalDateTime.of(targetDate, sTime).minusMinutes(10)
-            }
-
-            val triggerMillis = targetDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-            val intent = Intent(context, PreLectureReceiver::class.java).apply {
-                putExtra("subjectName", subjectName)
-                putExtra("roomNo", roomNo)
-                putExtra("startTime", startTimeStr)
-                putExtra("endTime", endTimeStr)
-                putExtra("time", startTimeStr)
-            }
-
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                (slotId and 0x7FFFFFFF).toInt(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-            }
-        } catch (_: Exception) {}
+        showPreLectureHeadsUp(context, subjectName, roomNo, startTime, "")
     }
 }

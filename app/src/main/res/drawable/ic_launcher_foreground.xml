@@ -4,64 +4,39 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Solid Deep Charcoal / Obsidian Circle Background (#12161F) -->
     <path
         android:fillColor="#12161F"
-        android:strokeColor="#24FFFFFF"
+        android:pathData="M54,21 A33,33 0 1,1 53.99,21 Z"
         android:strokeWidth="1"
-        android:pathData="M54,21 A33,33 0 1,1 53.99,21 Z" />
-
-    <!-- Sleek Minimalist Geometric Vernier Caliper Body & Fixed Jaw (#F8FAFC) -->
-    <!-- Main Horizontal Beam -->
+        android:strokeColor="#24FFFFFF" />
     <path
         android:fillColor="#F8FAFC"
         android:pathData="M35,44.5 L73,44.5 L73,49 L35,49 Z" />
-
-    <!-- Main Fixed Lower Measuring Jaw (Left) -->
     <path
         android:fillColor="#F8FAFC"
         android:pathData="M35,44.5 L40,44.5 L40,50 L38.5,65 L35.5,65 L35,50 Z" />
-
-    <!-- Fixed Upper Internal Measuring Nib -->
     <path
         android:fillColor="#F8FAFC"
         android:pathData="M35,44.5 L39.5,44.5 L37.5,35.5 L35,36.5 Z" />
-
-    <!-- Sliding Vernier Sleeve & Movable Lower Jaw -->
     <path
         android:fillColor="#E2E8F0"
         android:pathData="M48.5,42.5 L55.5,42.5 L55.5,51 L53,51 L52,62 L49.5,62 L50.5,51 L48.5,51 Z" />
-
-    <!-- Sliding Upper Internal Measuring Nib -->
     <path
         android:fillColor="#E2E8F0"
         android:pathData="M50.5,42.5 L54.5,42.5 L52.5,35.5 L50.5,36.5 Z" />
-
-    <!-- Knurled Locking Thumb Wheel -->
     <path
         android:fillColor="#94A3B8"
         android:pathData="M50,40.5 L54,40.5 L54,42.5 L50,42.5 Z" />
-
-    <!-- 3 Micro-Scale Calibration Tick Marks in soft matte white (#F8FAFC) -->
-    <!-- Tick Mark 1 -->
     <path
         android:fillColor="#12161F"
         android:pathData="M59,44.5 L60.2,44.5 L60.2,47.5 L59,47.5 Z" />
-
-    <!-- Tick Mark 2 -->
     <path
         android:fillColor="#12161F"
         android:pathData="M63.5,44.5 L64.7,44.5 L64.7,48.2 L63.5,48.2 Z" />
-
-    <!-- Tick Mark 3 -->
     <path
         android:fillColor="#12161F"
         android:pathData="M68,44.5 L69.2,44.5 L69.2,47.5 L68,47.5 Z" />
-
-    <!-- Depth Measuring Probe (Extending from right end of beam) -->
     <path
         android:fillColor="#94A3B8"
         android:pathData="M73,46.2 L75.5,46.2 L75.5,47.2 L73,47.2 Z" />
-
 </vector>

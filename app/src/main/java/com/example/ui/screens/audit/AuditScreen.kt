@@ -1,870 +1,222 @@
 package com.example.ui.screens.audit
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.audio.CaliperHapticManager
-import com.example.audio.CaliperSoundManager
 import com.example.data.local.entity.MedicalLeaveEntity
 import com.example.ui.MainViewModel
-import com.example.ui.components.*
+import com.example.ui.components.AcademicMilestoneBadges
+import com.example.ui.components.AttendanceTrajectoryWaveChart
+import com.example.ui.components.GlassCard
 import com.example.ui.dialogs.AddMedicalLeaveDialog
-import com.example.ui.dialogs.HolidayManagerDialog
-import com.example.ui.theme.*
-import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.YearMonth
-import java.time.format.DateTimeFormatter
+import com.example.ui.theme.CaliperTheme
+import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.fluidTouchFeedback
+import java.util.Locale
 
-/**
- * AuditScreen — Interactive Google Calendar & Academic History Engine
- * Completely replaces static calendar with a 2-way dynamic month navigation engine,
- * interactive day cells with attendance indicators, smooth day detail transitions,
- * Bezier trajectory wave, and engineering milestone shields.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditScreen(
     viewModel: MainViewModel,
-    onNavigateToDate: (String) -> Unit,
+    onJumpToDate: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val colors = CaliperTheme.colors
-    val coroutineScope = rememberCoroutineScope()
-
-    val logs by viewModel.logs.collectAsState()
-    val slots by viewModel.slots.collectAsState()
-    val dayStatuses by viewModel.dayStatuses.collectAsState()
-    val medicalLeaves by viewModel.medicalLeaves.collectAsState()
     val summary by viewModel.globalSummary.collectAsState()
-    val holidayRanges by viewModel.holidayRanges.collectAsState()
-    val subjects by viewModel.subjects.collectAsState()
-    val testRecords by viewModel.testRecords.collectAsState()
+    val cia by viewModel.ciaBreakdown.collectAsState()
+    val logs by viewModel.logs.collectAsState()
+    val streak by viewModel.collegeStreak.collectAsState()
+    val medicalLeaves by viewModel.medicalLeaves.collectAsState()
 
-    var showMedicalDialog by remember { mutableStateOf(false) }
-    var showHolidayDialog by remember { mutableStateOf(false) }
-    var showMonthPicker by remember { mutableStateOf(false) }
-    var showCancelledClassesSheet by remember { mutableStateOf(false) }
-    var showCollegeOffSheet by remember { mutableStateOf(false) }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
-
-    // Interactive Google Calendar Month State
-    var displayedMonth by remember { mutableStateOf(YearMonth.now()) }
-    val todayDate = remember { LocalDate.now() }
-    val todayDateStr = remember { todayDate.format(DateTimeFormatter.ISO_LOCAL_DATE) }
-
-    // Selected date defaults to today or first day
-    var selectedAuditDate by remember { mutableStateOf<String?>(todayDateStr) }
-
-    // SAF Launchers for JSON Backup
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch {
-                try {
-                    val json = viewModel.exportBackupJson()
-                    context.contentResolver.openOutputStream(uri)?.use { os ->
-                        os.write(json.toByteArray())
-                    }
-                    CaliperSoundManager.playSuccess()
-                    CaliperHapticManager.successClick(context)
-                    statusMessage = "Backup exported successfully to JSON file!"
-                    Toast.makeText(context, "Export complete", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    statusMessage = "Export failed: ${e.localizedMessage}"
-                }
-            }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch {
-                try {
-                    val json = context.contentResolver.openInputStream(uri)?.use { ins ->
-                        ins.bufferedReader().readText()
-                    } ?: ""
-                    val success = viewModel.importBackupJson(json)
-                    if (success) {
-                        CaliperSoundManager.playSuccess()
-                        CaliperHapticManager.successClick(context)
-                        statusMessage = "Backup restored successfully from JSON!"
-                        Toast.makeText(context, "Restore complete", Toast.LENGTH_SHORT).show()
-                    } else {
-                        CaliperSoundManager.playThud()
-                        statusMessage = "Invalid backup format or empty file."
-                    }
-                } catch (e: Exception) {
-                    statusMessage = "Restore failed: ${e.localizedMessage}"
-                }
-            }
-        }
-    }
-
-    // Dynamic month calculations
-    val daysInMonth = remember(displayedMonth) { displayedMonth.lengthOfMonth() }
-    val firstDayOffset = remember(displayedMonth) {
-        displayedMonth.atDay(1).dayOfWeek.value - 1 // 0 (Mon) .. 6 (Sun)
-    }
+    var showAddMedicalDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 14.dp, bottom = 100.dp),
+            .background(Color.Black)
+            .testTag("audit_screen_list"),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Status Message Banner
-        if (statusMessage != null) {
-            item {
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(colors.primaryAccent.copy(alpha = 0.5f), colors.cardBorderBottom)
-                ) {
+        item(key = "audit_header") {
+            Column {
+                Text(
+                    text = "TELEMETRY AUDIT & CIA",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = SpaceGroteskFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                )
+                Text(
+                    text = "CONTINUOUS INTERNAL ASSESSMENT & TRAJECTORY",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        color = colors.textSecondary
+                    )
+                )
+            }
+        }
+
+        // Trajectory Wave Chart
+        item(key = "trajectory_wave_card") {
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(statusMessage ?: "", color = colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        IconButton(onClick = { statusMessage = null }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
-                        }
+                        Text(
+                            text = "ATTENDANCE TRAJECTORY",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textSecondary
+                            )
+                        )
+                        Text(
+                            text = String.format(Locale.US, "%.1f%%", summary.overallPercentage),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.safeZone
+                            )
+                        )
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    AttendanceTrajectoryWaveChart(
+                        logs = logs,
+                        currentPercentage = summary.overallPercentage
+                    )
                 }
             }
         }
 
-        // 1. Attendance Trajectory Quadratic Bezier Wave Chart
-        item {
-            AttendanceTrajectoryWaveChart(
-                logs = logs,
+        // Metric Boxes
+        item(key = "audit_metrics_row") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AuditMetricBox(
+                    label = "CIA SCORE",
+                    value = String.format(Locale.US, "%.1f/50", cia.totalInternalScore),
+                    accentColor = colors.scheduledLecture,
+                    modifier = Modifier.weight(1f)
+                )
+                AuditMetricBox(
+                    label = "FACULTY OFF",
+                    value = summary.totalFacultyCancelled.toString(),
+                    accentColor = colors.deadlineWarning,
+                    modifier = Modifier.weight(1f)
+                )
+                AuditMetricBox(
+                    label = "PROXIES",
+                    value = summary.totalProxy.toString(),
+                    accentColor = colors.safeZone,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Milestone Badges
+        item(key = "milestone_badges") {
+            AcademicMilestoneBadges(
+                streakDays = streak,
                 overallPercentage = summary.overallPercentage,
-                height = 130.dp
+                allSubjectsSafe = summary.criticalSubjectCount == 0,
+                zeroBunksThisWeek = true
             )
         }
 
-        // 3. Dynamic Interactive Google Calendar Month Card
-        item {
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("interactive_calendar_card"),
-                borderColors = listOf(colors.primaryAccent.copy(alpha = 0.4f), colors.cardBorderBottom)
-            ) {
-                // Calendar Top Bar: Month Switcher Controls
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Clickable Month-Year title with dropdown arrow
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                showMonthPicker = true
-                            }
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = displayedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Select Month",
-                                    tint = colors.primaryAccent,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Text(
-                                text = "Tap to switch semester month",
-                                fontSize = 10.sp,
-                                color = colors.textMuted
-                            )
-                        }
-                    }
-
-                    // Navigation Chevrons: < and >
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (displayedMonth != YearMonth.now()) {
-                            TextButton(
-                                onClick = {
-                                    CaliperSoundManager.playSnap()
-                                    CaliperHapticManager.tick(context)
-                                    displayedMonth = YearMonth.now()
-                                    selectedAuditDate = todayDateStr
-                                },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("Current", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        IconButton(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                displayedMonth = displayedMonth.minusMonths(1)
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Previous Month",
-                                tint = colors.primaryAccent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                displayedMonth = displayedMonth.plusMonths(1)
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "Next Month",
-                                tint = colors.primaryAccent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
+        // Interactive Audit Calendar
+        item(key = "interactive_calendar") {
+            InteractiveAuditCalendar(
+                viewModel = viewModel,
+                onDateSelected = { dateStr ->
+                    viewModel.setSelectedDate(dateStr)
+                    onJumpToDate(dateStr)
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Days of week header (Mon - Sun)
-                val dayHeaders = listOf("M", "T", "W", "T", "F", "S", "S")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    dayHeaders.forEachIndexed { idx, day ->
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day,
-                                color = if (idx == 6) colors.bunkDanger else colors.textMuted,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Interactive Month Grid
-                val totalCells = firstDayOffset + daysInMonth
-                val rowCount = (totalCells + 6) / 7
-
-                for (r in 0 until rowCount) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        for (c in 0..6) {
-                            val cellIndex = r * 7 + c
-                            val dayNum = cellIndex - firstDayOffset + 1
-
-                            if (dayNum in 1..daysInMonth) {
-                                val cellDate = displayedMonth.atDay(dayNum)
-                                val dateStr = cellDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                                val isSelected = (selectedAuditDate == dateStr)
-                                val isToday = (dateStr == todayDateStr)
-
-                                val dayLogs = logs.filter { it.date == dateStr }
-                                val dayStatus = dayStatuses.find { it.date == dateStr }
-                                val isHoliday = holidayRanges.any { dateStr >= it.startDate && dateStr <= it.endDate }
-
-                                val attended = dayLogs.count { it.status == "attended" }
-                                val bunked = dayLogs.count { it.status == "bunked" }
-                                val cancelled = dayLogs.count { it.status == "cancelled_by_faculty" }
-
-                                // Full-Cell Glow Tint Calculation
-                                val isWeekend = (c == 6) // Sunday in 0..6 (Mon=0 .. Sun=6)
-                                val cellBackground = when {
-                                    isHoliday || dayStatus?.leaveCategory == "college_holiday" -> Color(0x33475569) // Slate tint
-                                    attended > 0 && bunked == 0 -> Color(0x2822C55E) // Sage Emerald tint
-                                    attended > 0 && bunked > 0 -> Color(0x28F59E0B) // Warm Amber tint
-                                    bunked > 0 -> Color(0x28EF4444) // Coral Red tint
-                                    isSelected -> colors.primaryAccent.copy(alpha = 0.20f)
-                                    isToday -> colors.primaryAccent.copy(alpha = 0.12f)
-                                    isWeekend -> Color.Transparent
-                                    else -> Color.Transparent
-                                }
-
-                                val isSlateHoliday = (isHoliday || dayStatus?.leaveCategory == "college_holiday")
-
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(2.dp)
-                                        .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(cellBackground)
-                                        .border(
-                                            width = if (isSelected) 1.2.dp else if (isToday) 0.8.dp else 0.5.dp,
-                                            color = if (isSelected) colors.primaryAccent else if (isToday) colors.primaryAccent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.05f),
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable {
-                                            CaliperSoundManager.playSnap()
-                                            CaliperHapticManager.tick(context)
-                                            selectedAuditDate = dateStr
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    // Subtle diagonal slash accent for holiday/off day
-                                    if (isSlateHoliday) {
-                                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                                            drawLine(
-                                                color = Color(0x6694A3B8),
-                                                start = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.85f),
-                                                end = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f),
-                                                strokeWidth = 1.2f
-                                            )
-                                        }
-                                    }
-
-                                    Text(
-                                        text = "$dayNum",
-                                        color = if (isSelected) colors.primaryAccent else if (isToday) Color.White else if (isWeekend && cellBackground == Color.Transparent) colors.textMuted.copy(alpha = 0.6f) else colors.textPrimary,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected || isToday || cellBackground != Color.Transparent) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f).padding(2.dp))
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(3.dp))
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Legend row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    CalendarLegendDot("Present", colors.safeZone)
-                    CalendarLegendDot("Partial", colors.deadlineWarning)
-                    CalendarLegendDot("Bunked", colors.bunkDanger)
-                    CalendarLegendDot("Off/Holiday", colors.textSecondary)
-                }
-            }
+            )
         }
 
-        // 3B. Academic Test Performance Ledger Card
-        item {
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("academic_test_performance_card"),
-                borderColors = listOf(colors.primaryAccent.copy(alpha = 0.5f), colors.cardBorderBottom),
-                innerPadding = 14.dp
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📝", fontSize = 14.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "ACADEMIC TEST PERFORMANCE",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.primaryAccent,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(colors.primaryAccent.copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "${testRecords.size} Tests Logged",
-                                color = colors.primaryAccent,
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    if (testRecords.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.03f))
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No class tests recorded yet. Mark tests directly on lecture slot cards in Today's schedule.",
-                                color = colors.textMuted,
-                                fontSize = 11.5.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    } else {
-                        // Group tests by subject
-                        val testsBySubject = testRecords.groupBy { it.subjectId }
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            testsBySubject.forEach { (subId, records) ->
-                                val sub = subjects.find { it.id == subId }
-                                val avgPct = records.map {
-                                    if (it.maxMarks > 0) (it.marksObtained / it.maxMarks) * 100.0 else 0.0
-                                }.average()
-
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFF0F172A))
-                                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
-                                        .padding(10.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = "${sub?.code ?: "SUB"} — ${sub?.name ?: "Subject"}",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White
-                                            )
-                                            Text(
-                                                text = "${records.size} Evaluation${if (records.size == 1) "" else "s"}",
-                                                fontSize = 10.5.sp,
-                                                color = colors.textMuted
-                                            )
-                                        }
-
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(
-                                                    if (avgPct >= 75.0) colors.safeZone.copy(alpha = 0.2f)
-                                                    else if (avgPct >= 50.0) colors.deadlineWarning.copy(alpha = 0.2f)
-                                                    else colors.bunkDanger.copy(alpha = 0.2f)
-                                                )
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "Avg: ${String.format("%.1f", avgPct)}%",
-                                                color = if (avgPct >= 75.0) colors.safeZone else if (avgPct >= 50.0) colors.deadlineWarning else colors.bunkDanger,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                    records.forEach { record ->
-                                        val testPct = if (record.maxMarks > 0) (record.marksObtained / record.maxMarks) * 100.0 else 0.0
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 3.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = "• ${record.testName}",
-                                                    fontSize = 11.5.sp,
-                                                    color = Color(0xFFE2E8F0)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "(${record.date})",
-                                                    fontSize = 10.sp,
-                                                    color = colors.textMuted
-                                                )
-                                            }
-
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = "${record.marksObtained} / ${record.maxMarks} (${String.format("%.1f", testPct)}%)",
-                                                    fontSize = 11.5.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (testPct >= 75.0) colors.safeZone else colors.bunkDanger
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                IconButton(
-                                                    onClick = { viewModel.deleteTestRecord(record.id) },
-                                                    modifier = Modifier.size(20.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Close,
-                                                        contentDescription = "Delete",
-                                                        tint = colors.textMuted,
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Smooth Transition Filtered Day Detail Inspector Card
-        item {
-            AnimatedContent(
-                targetState = selectedAuditDate,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(180))
-                },
-                label = "day_detail_transition"
-            ) { dateStr ->
-                val inspectLogs = logs.filter { it.date == dateStr }
-                val inspectStatus = dayStatuses.find { it.date == dateStr }
-                val isHoliday = holidayRanges.any { dateStr != null && dateStr >= it.startDate && dateStr <= it.endDate }
-
-                val parsedDateLabel = remember(dateStr) {
-                    try {
-                        dateStr?.let {
-                            LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
-                                .format(DateTimeFormatter.ofPattern("EEEE, dd MMM yyyy"))
-                        } ?: "Selected Date"
-                    } catch (_: Exception) {
-                        dateStr ?: "Selected Date"
-                    }
-                }
-
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColors = listOf(colors.primaryAccent.copy(alpha = 0.35f), colors.cardBorderBottom)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.EventNote,
-                                    contentDescription = null,
-                                    tint = colors.primaryAccent,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "DAY AUDIT DOSSIER",
-                                    color = colors.primaryAccent,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                            Text(
-                                text = parsedDateLabel,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
-                            )
-                        }
-
-                        dateStr?.let { d ->
-                            Button(
-                                onClick = {
-                                    CaliperSoundManager.playSnap()
-                                    CaliperHapticManager.tick(context)
-                                    onNavigateToDate(d)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent.copy(alpha = 0.18f)),
-                                border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.primaryAccent),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("Open in Today →", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    if (isHoliday) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(colors.deadlineWarning.copy(alpha = 0.12f))
-                                .border(0.5.dp, colors.deadlineWarning.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                .padding(8.dp)
-                        ) {
-                            Text("Official Institutional Holiday / Break Window Declared", color = colors.deadlineWarning, fontSize = 11.sp)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    if (inspectStatus != null && inspectStatus.leaveCategory != "none") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(colors.bunkDanger.copy(alpha = 0.12f))
-                                .border(0.5.dp, colors.bunkDanger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = "Day Level Event: ${inspectStatus.notes ?: inspectStatus.leaveCategory.replace('_', ' ').uppercase()}",
-                                color = colors.bunkDanger,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    if (inspectLogs.isEmpty()) {
-                        Text(
-                            text = "No period attendance recorded for this date.",
-                            color = colors.textMuted,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            inspectLogs.forEach { log ->
-                                val sub = subjects.find { it.id == log.subjectId }
-                                val (statusText, statusColor) = when (log.status) {
-                                    "attended" -> (if (log.isProxy) "PROXY PRESENT" else "PRESENT") to colors.safeZone
-                                    "bunked" -> "BUNKED" to colors.bunkDanger
-                                    "cancelled_by_faculty" -> "FACULTY CANCELLED" to colors.deadlineWarning
-                                    "college_off" -> "COLLEGE OFF" to colors.textSecondary
-                                    else -> log.status.uppercase() to colors.primaryAccent
-                                }
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color.White.copy(alpha = 0.02f))
-                                        .border(0.5.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = sub?.name ?: "Subject #${log.subjectId}",
-                                            color = colors.textPrimary,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "${sub?.code ?: ""} ${if (log.notes != null) "• ${log.notes}" else ""}",
-                                            color = colors.textSecondary,
-                                            fontSize = 10.sp
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(statusColor.copy(alpha = 0.15f))
-                                            .border(0.5.dp, statusColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = statusText,
-                                            color = statusColor,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 5. Global Cumulative Metrics Tally
-        item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "ACADEMIC AGGREGATE SUMMARY",
-                    color = colors.textMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AuditMetricBox("Attended", "${summary.totalAttended}", colors.safeZone, Modifier.weight(1f))
-                    AuditMetricBox("Conducted", "${summary.totalConducted}", colors.scheduledLecture, Modifier.weight(1f))
-                    AuditMetricBox(
-                        title = "Cancelled",
-                        value = "${summary.totalFacultyCancelled}",
-                        color = colors.deadlineWarning,
-                        modifier = Modifier.weight(1f),
-                        isClickable = true,
-                        onClick = { showCancelledClassesSheet = true }
-                    )
-                    AuditMetricBox(
-                        title = "College Off",
-                        value = "${summary.totalCollegeOff}",
-                        color = colors.textSecondary,
-                        modifier = Modifier.weight(1f),
-                        isClickable = true,
-                        onClick = { showCollegeOffSheet = true }
-                    )
-                }
-            }
-        }
-
-        // 6. Institutional Holiday / College Off Manager Button
-        item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.BeachAccess, contentDescription = null, tint = colors.deadlineWarning, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("HOLIDAYS & BREAK RANGES", color = colors.deadlineWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        }
-                        Text(
-                            text = "${holidayRanges.size} Institutional Ranges Declared",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
-                        )
-                        Text("Suppresses attendance penalties during closures", color = colors.textSecondary, fontSize = 11.sp)
-                    }
-
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            showHolidayDialog = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.deadlineWarning.copy(alpha = 0.2f)),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.deadlineWarning),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text("Manage", color = colors.deadlineWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        // 7. Medical Leave Archive
-        item {
+        // Medical Leaves Section
+        item(key = "medical_leave_header") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "MEDICAL LEAVE & CONDONATION ARCHIVE",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textMuted,
-                    letterSpacing = 1.sp
+                    text = "MEDICAL AFFIDAVIT LOGS",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontFamily = SpaceGroteskFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
                 )
-
-                Button(
-                    onClick = { showMedicalDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.safeZone.copy(alpha = 0.2f)),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.scheduledLecture.copy(alpha = 0.16f))
+                        .fluidTouchFeedback(onClick = { showAddMedicalDialog = true })
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = colors.safeZone, modifier = Modifier.size(14.dp))
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Medical Leave",
+                        tint = colors.scheduledLecture,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Log Slip", color = colors.safeZone, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        if (medicalLeaves.isEmpty()) {
-            item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Default.MedicalServices, contentDescription = null, tint = colors.primaryAccent, modifier = Modifier.size(28.dp))
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("No Medical Certificates Archived", color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("Certificates submitted to HOD Mechanical for attendance condonation.", color = colors.textSecondary, fontSize = 11.sp)
-                    }
+                    Text(
+                        text = "ADD LOG",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.scheduledLecture
+                        )
+                    )
                 }
             }
         }
@@ -872,555 +224,112 @@ fun AuditScreen(
         items(medicalLeaves, key = { it.id }) { leave ->
             MedicalLeaveCard(leave = leave)
         }
-
-        // 8. JSON Backup & Restore Card
-        item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "JSON BACKUP & RESTORE HUB",
-                    color = colors.textMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            val filename = "caliper_backup_${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.json"
-                            exportLauncher.launch(filename)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent.copy(alpha = 0.15f)),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.primaryAccent),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.UploadFile, contentDescription = null, tint = colors.primaryAccent, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Export JSON", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            importLauncher.launch(arrayOf("application/json", "text/*"))
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.safeZone.copy(alpha = 0.15f)),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.safeZone),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.FileDownload, contentDescription = null, tint = colors.safeZone, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Restore JSON", color = colors.safeZone, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
     }
 
-    // Quick Semester Month Selector Dialog
-    if (showMonthPicker) {
-        AlertDialog(
-            onDismissRequest = { showMonthPicker = false },
-            containerColor = colors.containerSurface,
-            title = {
-                Text(
-                    text = "Select Semester Month",
-                    color = colors.textPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val currentYear = remember { LocalDate.now().year }
-                    val semesterMonths = listOf(
-                        YearMonth.of(currentYear, 7),
-                        YearMonth.of(currentYear, 8),
-                        YearMonth.of(currentYear, 9),
-                        YearMonth.of(currentYear, 10),
-                        YearMonth.of(currentYear, 11),
-                        YearMonth.of(currentYear, 12)
-                    )
-
-                    semesterMonths.forEach { ym ->
-                        val isChosen = (ym == displayedMonth)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isChosen) colors.primaryAccent.copy(alpha = 0.15f) else Color.Transparent)
-                                .border(0.5.dp, if (isChosen) colors.primaryAccent else Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
-                                .clickable {
-                                    CaliperSoundManager.playSnap()
-                                    CaliperHapticManager.tick(context)
-                                    displayedMonth = ym
-                                    showMonthPicker = false
-                                }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = ym.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                                color = if (isChosen) colors.primaryAccent else colors.textPrimary,
-                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 13.sp
-                            )
-                            if (isChosen) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = colors.primaryAccent, modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showMonthPicker = false }) {
-                    Text("Close", color = colors.primaryAccent)
-                }
-            }
-        )
-    }
-
-    if (showMedicalDialog) {
+    if (showAddMedicalDialog) {
         AddMedicalLeaveDialog(
-            onDismiss = { showMedicalDialog = false },
-            onSave = { leave -> viewModel.saveMedicalLeave(leave) }
-        )
-    }
-
-    if (showHolidayDialog) {
-        HolidayManagerDialog(
-            holidayRanges = holidayRanges,
-            onDismiss = { showHolidayDialog = false },
-            onSaveHoliday = { range -> viewModel.saveHolidayRange(range) },
-            onDeleteHoliday = { id -> viewModel.deleteHolidayRange(id) }
-        )
-    }
-
-    // Historical Faculty Cancellations Drill-Down Bottom Sheet
-    if (showCancelledClassesSheet) {
-        val cancelledLogs = remember(logs) {
-            logs.filter { it.status == "cancelled_by_faculty" }.sortedByDescending { it.date }
-        }
-        ModalBottomSheet(
-            onDismissRequest = { showCancelledClassesSheet = false },
-            containerColor = Color(0xFF0F141C),
-            scrimColor = Color.Black.copy(alpha = 0.75f)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(colors.deadlineWarning.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Cancel, contentDescription = null, tint = colors.deadlineWarning, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Faculty Cancelled Classes",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${cancelledLogs.size} Historical Cancellations by Faculty",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                    IconButton(onClick = { showCancelledClassesSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                if (cancelledLogs.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.03f))
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No faculty cancellations recorded in academic history.",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 420.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(cancelledLogs, key = { it.id }) { log ->
-                            val sub = subjects.find { it.id == log.subjectId }
-                            val slot = slots.find { it.id == log.slotId }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF141A26))
-                                    .border(0.5.dp, colors.deadlineWarning.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "${sub?.code ?: "SUB"} — ${sub?.name ?: "Curriculum Lecture"}",
-                                            color = Color.White,
-                                            fontSize = 13.5.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Faculty: ${sub?.facultyName ?: "Instructor"} • Slot: ${slot?.startTime ?: "Period"} (${slot?.roomNo ?: "LT-TBD"})",
-                                            color = Color(0xFF94A3B8),
-                                            fontSize = 11.sp
-                                        )
-                                        if (!log.notes.isNullOrBlank()) {
-                                            Text(
-                                                text = "Note: ${log.notes}",
-                                                color = colors.deadlineWarning,
-                                                fontSize = 10.5.sp
-                                            )
-                                        }
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(colors.deadlineWarning.copy(alpha = 0.15f))
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text(log.date, color = colors.deadlineWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            onDismiss = { showAddMedicalDialog = false },
+            onSave = { leave ->
+                viewModel.saveMedicalLeave(leave)
+                showAddMedicalDialog = false
             }
-        }
-    }
-
-    // Recorded Holidays and College Off Days Drill-Down Bottom Sheet
-    if (showCollegeOffSheet) {
-        val offDayStatuses = remember(dayStatuses) {
-            dayStatuses.filter { it.leaveCategory != "none" || !it.wentToCollege }
-        }
-        val collegeOffLogs = remember(logs) {
-            logs.filter { it.status == "college_off" }
-        }
-
-        ModalBottomSheet(
-            onDismissRequest = { showCollegeOffSheet = false },
-            containerColor = Color(0xFF0F141C),
-            scrimColor = Color.Black.copy(alpha = 0.75f)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(colors.textSecondary.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.BeachAccess, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Recorded Holidays & College Off Days",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${holidayRanges.size} Declared Ranges • ${offDayStatuses.size + collegeOffLogs.size} Event Logs",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                    IconButton(onClick = { showCollegeOffSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (holidayRanges.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "INSTITUTIONAL HOLIDAY RANGES",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                        items(holidayRanges, key = { "range_${it.id}" }) { range ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF141A26))
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(range.title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-                                        Text("Period: ${range.startDate} to ${range.endDate}", color = Color(0xFF94A3B8), fontSize = 11.sp)
-                                        if (!range.notes.isNullOrBlank()) {
-                                            Text(range.notes, color = Color(0xFFCBD5E1), fontSize = 10.sp)
-                                        }
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(range.type.uppercase(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (offDayStatuses.isNotEmpty()) {
-                        item {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "LOGGED DAILY OFF EVENTS",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                        items(offDayStatuses, key = { "status_${it.date}" }) { status ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF141A26))
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
-                                    .padding(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = if (status.leaveCategory == "mass_bunk") "Mass Bunk Declared"
-                                                   else if (status.leaveCategory == "college_holiday") "College Holiday"
-                                                   else "College Off",
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        if (!status.notes.isNullOrBlank()) {
-                                            Text(status.notes, color = Color(0xFF94A3B8), fontSize = 10.5.sp)
-                                        }
-                                    }
-                                    Text(status.date, color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-
-                    if (holidayRanges.isEmpty() && offDayStatuses.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.03f))
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No holidays or institutional off days recorded.", color = Color(0xFF94A3B8), fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        )
     }
 }
 
 @Composable
-private fun CalendarLegendDot(label: String, color: Color) {
+fun AuditMetricBox(
+    label: String,
+    value: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    isHighlighted: Boolean = false,
+    onClick: (() -> Unit)? = null
+) {
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(Color(0xFF0E121B).copy(alpha = 0.85f), shape)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(accentColor.copy(alpha = 0.35f), Color.Transparent)
+                ),
+                shape = shape
+            )
+            .let { if (onClick != null) it.fluidTouchFeedback(onClick = onClick) else it }
+            .padding(14.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontSize = 10.sp,
+                color = colors.textSecondary
+            )
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontWeight = FontWeight.Bold,
+                color = accentColor
+            )
+        )
+    }
+}
+
+@Composable
+fun CalendarLegendDot(
+    label: String,
+    color: Color
+) {
+    val colors = CaliperTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(6.dp)
+                .size(8.dp)
                 .clip(CircleShape)
                 .background(color)
         )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(label, color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                color = colors.textSecondary
+            )
+        )
     }
 }
 
 @Composable
-private fun AuditMetricBox(
-    title: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier,
-    isClickable: Boolean = false,
-    onClick: (() -> Unit)? = null
-) {
-    val context = LocalContext.current
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (isClickable) color.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.02f))
-            .border(
-                if (isClickable) 1.dp else 0.5.dp,
-                color.copy(alpha = if (isClickable) 0.6f else 0.35f),
-                RoundedCornerShape(10.dp)
-            )
-            .then(
-                if (onClick != null) {
-                    Modifier
-                        .fluidTouchFeedback {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            onClick()
-                        }
-                        .clickable {
-                            CaliperSoundManager.playSnap()
-                            CaliperHapticManager.tick(context)
-                            onClick()
-                        }
-                } else Modifier
-            )
-            .padding(vertical = 8.dp, horizontal = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = color)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    fontSize = 9.sp,
-                    color = if (isClickable) color else CaliperTheme.colors.textMuted,
-                    maxLines = 1,
-                    fontWeight = if (isClickable) FontWeight.Bold else FontWeight.Normal
-                )
-                if (isClickable) {
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text("▾", fontSize = 8.sp, color = color)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MedicalLeaveCard(leave: MedicalLeaveEntity) {
+fun MedicalLeaveCard(leave: MedicalLeaveEntity) {
     val colors = CaliperTheme.colors
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        borderColors = listOf(colors.safeZone.copy(alpha = 0.35f), colors.cardBorderBottom)
+        shape = RoundedCornerShape(18.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${leave.startDate} to ${leave.endDate}",
-                    color = colors.safeZone,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = leave.reason,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontFamily = SpaceGroteskFamily,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
                 )
-                Text(
-                    text = leave.reason,
-                    color = colors.textPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${leave.startDate} → ${leave.endDate} • ${leave.classesMissedCount} lectures",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = JetBrainsMonoFamily,
+                    color = colors.textSecondary
                 )
-                Text(
-                    text = "Ref: ${leave.refNo} • Dr. ${leave.doctorName} • Submitted to ${leave.submittedTo}",
-                    color = colors.textMuted,
-                    fontSize = 10.sp
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(colors.safeZone.copy(alpha = 0.15f))
-                    .border(0.5.dp, colors.safeZone, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 6.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = leave.status.uppercase(),
-                    color = colors.safeZone,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            )
         }
     }
 }

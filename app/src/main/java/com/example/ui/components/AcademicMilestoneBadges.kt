@@ -3,140 +3,128 @@ package com.example.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.*
+import com.example.ui.theme.CaliperTheme
+import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.SpaceGroteskFamily
 
-/**
- * Academic Milestones & Gamified Consistency Badges
- * Horizontal chips with subtle pastel cards honoring engineering rigor:
- * "🔥 N-Day College Streak", "🛡️ Workshop Veteran", "📐 Drawing Precision", and "⚡ 85%+ Elite Shield".
- */
 @Composable
 fun AcademicMilestoneBadges(
     streakDays: Int,
     overallPercentage: Double,
-    isWorkshopVeteran: Boolean = true,
-    isDrawingPrecision: Boolean = true,
+    allSubjectsSafe: Boolean,
+    zeroBunksThisWeek: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val scrollState = rememberScrollState()
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "ENGINEERING CONSISTENCY SHIELDS",
-                color = ArchitecturalTitanium,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-            Text(
-                text = "Academic Milestones",
-                color = TextSecondary,
-                fontSize = 11.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scrollState),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // 1. College Streak Shield
-            MilestoneBadgeCard(
-                icon = "🔥",
-                title = "$streakDays-Day Streak",
-                subtitle = if (streakDays > 0) "Active Discipline" else "Starts Next Class",
-                accentColor = MutedChampagneAmber,
-                isUnlocked = streakDays > 0
-            )
-
-            // 2. Workshop Veteran (ME-303W)
-            MilestoneBadgeCard(
-                icon = "🛡️",
-                title = "Workshop Veteran",
-                subtitle = "ME-303W Lathe & Fitting",
-                accentColor = SlateTeal,
-                isUnlocked = isWorkshopVeteran
-            )
-
-            // 3. Drawing Precision (ED-301)
-            MilestoneBadgeCard(
-                icon = "📐",
-                title = "Drawing Precision",
-                subtitle = "ED-301 Sheet Drafter",
-                accentColor = IceBlue,
-                isUnlocked = isDrawingPrecision
-            )
-
-            // 4. Elite Shield (85%+)
-            MilestoneBadgeCard(
-                icon = "⚡",
-                title = "85%+ Elite Shield",
-                subtitle = if (overallPercentage >= 85.0) "Admit Card Safe" else "Target 85.0%",
-                accentColor = VelvetSageEmerald,
-                isUnlocked = overallPercentage >= 85.0
-            )
-        }
+    val colors = CaliperTheme.colors
+    Row(
+        modifier = modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        MilestoneBadgeCard(
+            title = "IRON STREAK",
+            subtitle = "${streakDays}D ACTIVE",
+            code = "MS-01",
+            accentColor = colors.streakGold,
+            unlocked = streakDays >= 3
+        )
+        MilestoneBadgeCard(
+            title = "SAFE ZONE SHIELD",
+            subtitle = ">= 75% ALL",
+            code = "MS-02",
+            accentColor = colors.safeZone,
+            unlocked = allSubjectsSafe
+        )
+        MilestoneBadgeCard(
+            title = "DEAN'S TIER",
+            subtitle = ">= 85% AGG",
+            code = "MS-03",
+            accentColor = colors.scheduledLecture,
+            unlocked = overallPercentage >= 85.0
+        )
+        MilestoneBadgeCard(
+            title = "ZERO DRIFT",
+            subtitle = "CLEAN WEEK",
+            code = "MS-04",
+            accentColor = Color(0xFF06B6D4),
+            unlocked = zeroBunksThisWeek
+        )
     }
 }
 
 @Composable
-private fun MilestoneBadgeCard(
-    icon: String,
+fun MilestoneBadgeCard(
     title: String,
     subtitle: String,
+    code: String,
     accentColor: Color,
-    isUnlocked: Boolean
+    unlocked: Boolean
 ) {
-    Box(
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(18.dp)
+    val effectiveColor = if (unlocked) accentColor else colors.textMuted
+
+    Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (isUnlocked) accentColor.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.02f)
-            )
+            .width(138.dp)
+            .clip(shape)
+            .background(Color(0xFF0E121B).copy(alpha = 0.85f), shape)
             .border(
-                0.5.dp,
-                if (isUnlocked) accentColor.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f),
-                RoundedCornerShape(14.dp)
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        if (unlocked) accentColor.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.12f),
+                        Color.Transparent
+                    )
+                ),
+                shape = shape
             )
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .padding(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = icon, fontSize = 20.sp)
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = title,
-                    color = if (isUnlocked) Color.White else ArchitecturalTitanium,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle,
-                    color = if (isUnlocked) accentColor else TextMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
+        Text(
+            text = code,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontSize = 10.sp,
+                color = effectiveColor
+            )
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontFamily = SpaceGroteskFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = if (unlocked) colors.textPrimary else colors.textMuted
+            )
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontSize = 10.sp,
+                color = effectiveColor
+            )
+        )
     }
 }
