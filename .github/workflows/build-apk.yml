@@ -7,22 +7,31 @@ on:
     branches: [ "**" ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Clean Stale Build Caches
+        run: |
+          rm -rf .gradle .kotlin .build-outputs build app/build local.properties
+
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36.1" "platforms;android-36" "build-tools;36.0.0" || true
 
       - name: Decode Debug Keystore
         run: |
@@ -31,13 +40,12 @@ jobs:
             cp debug.keystore app/debug.keystore
           fi
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.1.0'
-
-      - name: Build Debug & Release APK
-        run: gradle assembleDebug assembleRelease --stacktrace
+      - name: Setup Gradle 9.3.1 & Build APKs
+        run: |
+          curl -sL https://services.gradle.org/distributions/gradle-9.3.1-bin.zip -o /tmp/gradle-9.3.1.zip
+          unzip -q /tmp/gradle-9.3.1.zip -d /tmp/gradle
+          chmod +x /tmp/gradle/gradle-9.3.1/bin/gradle
+          /tmp/gradle/gradle-9.3.1/bin/gradle assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
