@@ -7,9 +7,6 @@ on:
     branches: [ "**" ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-apk:
     runs-on: ubuntu-24.04
@@ -40,12 +37,19 @@ jobs:
             cp debug.keystore app/debug.keystore
           fi
 
-      - name: Setup Gradle 9.3.1 & Build APKs
+      - name: Setup Gradle 9.3.1
         run: |
           curl -sL https://services.gradle.org/distributions/gradle-9.3.1-bin.zip -o /tmp/gradle-9.3.1.zip
           unzip -q /tmp/gradle-9.3.1.zip -d /tmp/gradle
           chmod +x /tmp/gradle/gradle-9.3.1/bin/gradle
-          /tmp/gradle/gradle-9.3.1/bin/gradle assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Build Debug APK
+        run: |
+          /tmp/gradle/gradle-9.3.1/bin/gradle assembleDebug --stacktrace
+
+      - name: Build Release APK
+        run: |
+          /tmp/gradle/gradle-9.3.1/bin/gradle assembleRelease --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
