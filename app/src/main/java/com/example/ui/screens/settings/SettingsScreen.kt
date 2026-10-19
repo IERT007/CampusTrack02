@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +57,7 @@ import com.example.ui.dialogs.WeeklyTimetableEditorDialog
 import com.example.ui.screens.today.SemesterDatesDialog
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.JetBrainsMonoFamily
-import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.PlusJakartaFamily
 import com.example.ui.theme.fluidTouchFeedback
 
 @Composable
@@ -71,6 +71,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val colors = CaliperTheme.colors
 
+    val isDarkObsidian by viewModel.isMonochromeMode.collectAsState()
     val isHapticsEnabled by viewModel.isHapticsEnabled.collectAsState()
     val isAudioEnabled by viewModel.isAudioEnabled.collectAsState()
     val is24HourFormat by viewModel.is24HourFormat.collectAsState()
@@ -87,7 +88,11 @@ fun SettingsScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(
+                Brush.verticalGradient(
+                    listOf(colors.baseSurface, colors.baseSurfaceSecondary, colors.baseSurface)
+                )
+            )
             .statusBarsPadding()
             .testTag("settings_screen_list"),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
@@ -101,17 +106,17 @@ fun SettingsScreen(
             ) {
                 Column {
                     Text(
-                        text = "CALIPER OS // SETTINGS",
+                        text = "Preferences & Setup",
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = SpaceGroteskFamily,
+                            fontFamily = PlusJakartaFamily,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
                     )
                     Text(
-                        text = "HARDWARE FEEDBACK & ACADEMIC ENGINE",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
+                        text = "Appearance, Schedule & Academic Engine",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = PlusJakartaFamily,
                             color = colors.textSecondary
                         )
                     )
@@ -128,16 +133,22 @@ fun SettingsScreen(
             }
         }
 
-        // Section 1: Tactile & Audio Engine
+        // Section 1: Appearance & Tactile Engine
         item(key = "section_tactile") {
             SettingsSectionHeader(
-                title = "LIVING FLUID & HAPTIC ENGINE",
+                title = "APPEARANCE & HAPTICS",
                 icon = Icons.Default.Tune,
                 accentColor = colors.scheduledLecture
             )
             Spacer(modifier = Modifier.height(8.dp))
-            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
                 Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SettingsToggleRow(
+                        title = "Obsidian Night Glass Mode",
+                        subtitle = "Switch between Warm Alabaster Glass and Obsidian Dark",
+                        checked = isDarkObsidian,
+                        onCheckedChange = { viewModel.setMonochromeMode(it) }
+                    )
                     SettingsToggleRow(
                         title = "Tactile Haptic Feedback",
                         subtitle = "Crisp mechanical clicks on touch press & actions",
@@ -151,8 +162,8 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setAudioEnabled(it) }
                     )
                     SettingsToggleRow(
-                        title = "24-Hour Telemetry Clock",
-                        subtitle = "Display timetable slots in military 24h format",
+                        title = "24-Hour Clock",
+                        subtitle = "Display timetable slots in 24h format",
                         checked = is24HourFormat,
                         onCheckedChange = { viewModel.set24HourFormat(it) }
                     )
@@ -168,7 +179,7 @@ fun SettingsScreen(
                 accentColor = colors.safeZone
             )
             Spacer(modifier = Modifier.height(8.dp))
-            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
                 Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SemesterDatePickerRow(
                         label = "SEMESTER WINDOW",
@@ -199,12 +210,12 @@ fun SettingsScreen(
         // Section 3: Notifications
         item(key = "section_notifications") {
             SettingsSectionHeader(
-                title = "ALARM & LECTURE ALERTS",
+                title = "LECTURE ALERTS",
                 icon = Icons.Default.Notifications,
                 accentColor = colors.deadlineWarning
             )
             Spacer(modifier = Modifier.height(8.dp))
-            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
                 Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     NotificationSettingItem(
                         icon = Icons.Default.Notifications,
@@ -219,12 +230,12 @@ fun SettingsScreen(
         // Section 4: Data & Vault
         item(key = "section_vault") {
             SettingsSectionHeader(
-                title = "DATABASE & VAULT MANAGEMENT",
+                title = "DATABASE & VAULT",
                 icon = Icons.Default.Storage,
                 accentColor = colors.bunkDanger
             )
             Spacer(modifier = Modifier.height(8.dp))
-            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+            GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
                 Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ActionRowButton(
                         title = "Reload IERT CSE Sem-2 Defaults",
@@ -301,9 +312,9 @@ fun SettingsSectionHeader(
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium.copy(
-                fontFamily = JetBrainsMonoFamily,
+                fontFamily = PlusJakartaFamily,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp,
+                letterSpacing = 1.0.sp,
                 color = accentColor
             )
         )
@@ -327,7 +338,7 @@ fun SettingsToggleRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = SpaceGroteskFamily,
+                    fontFamily = PlusJakartaFamily,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textPrimary
                 )
@@ -349,14 +360,14 @@ fun SemesterDatePickerRow(
     onClick: () -> Unit
 ) {
     val colors = CaliperTheme.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .fluidTouchFeedback(onClick = onClick)
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.04f), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.1f), shape)
+            .background(colors.cardFillSecondary, shape)
+            .border(1.dp, colors.cardBorderTop, shape)
             .padding(14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -404,7 +415,7 @@ fun NotificationSettingItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = SpaceGroteskFamily,
+                    fontFamily = PlusJakartaFamily,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textPrimary
                 )
@@ -426,14 +437,14 @@ private fun ActionRowButton(
     onClick: () -> Unit
 ) {
     val colors = CaliperTheme.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .fluidTouchFeedback(onClick = onClick)
             .clip(shape)
-            .background(accent.copy(alpha = 0.1f), shape)
-            .border(1.dp, accent.copy(alpha = 0.3f), shape)
+            .background(accent.copy(alpha = 0.12f), shape)
+            .border(1.dp, accent.copy(alpha = 0.30f), shape)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -448,7 +459,7 @@ private fun ActionRowButton(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = SpaceGroteskFamily,
+                    fontFamily = PlusJakartaFamily,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )

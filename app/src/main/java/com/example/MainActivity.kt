@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.audio.CaliperHardwareEngine
 import com.example.notification.NotificationHelper
 import com.example.ui.CampusTrackRootScreen
@@ -20,7 +22,8 @@ class MainActivity : ComponentActivity() {
         NotificationHelper.createNotificationChannels(this)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val isDarkObsidian by viewModel.isMonochromeMode.collectAsState()
+            MyApplicationTheme(darkTheme = isDarkObsidian) {
                 CampusTrackRootScreen(viewModel = viewModel)
             }
         }

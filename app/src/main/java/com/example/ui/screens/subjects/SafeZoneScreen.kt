@@ -3,7 +3,6 @@ package com.example.ui.screens.subjects
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,7 +52,7 @@ import com.example.ui.dialogs.AddEditSubjectDialog
 import com.example.ui.dialogs.ReconciliationDialog
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.JetBrainsMonoFamily
-import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.PlusJakartaFamily
 import com.example.ui.theme.fluidTouchFeedback
 
 @Composable
@@ -72,9 +71,9 @@ fun SafeZoneScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Transparent)
             .testTag("safe_zone_screen_list"),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 120.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 128.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item(key = "safe_zone_header") {
@@ -85,33 +84,32 @@ fun SafeZoneScreen(
             ) {
                 Column {
                     Text(
-                        text = "SAFE ZONE RADAR",
+                        text = "Subject Progress",
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = SpaceGroteskFamily,
+                            fontFamily = PlusJakartaFamily,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
                     )
                     Text(
-                        text = "75% MANDATORY THRESHOLD BUFFER",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
+                        text = "75% Target Buffer & Skip Calculator",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = PlusJakartaFamily,
                             color = colors.textSecondary
                         )
                     )
                 }
                 Row(
                     modifier = Modifier
-                        .height(48.dp)
+                        .height(44.dp)
                         .fluidTouchFeedback(
                             onClick = {
                                 CaliperHapticManager.tick(context)
                                 showAddSubjectDialog = true
                             }
                         )
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.scheduledLecture.copy(alpha = 0.16f))
-                        .border(1.dp, colors.scheduledLecture.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.scheduledLecture, RoundedCornerShape(16.dp))
                         .padding(horizontal = 14.dp)
                         .testTag("add_subject_button"),
                     verticalAlignment = Alignment.CenterVertically
@@ -119,16 +117,16 @@ fun SafeZoneScreen(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Subject",
-                        tint = colors.scheduledLecture,
+                        tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "SUBJECT",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.scheduledLecture
+                        text = "Subject",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = PlusJakartaFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                     )
                 }
@@ -191,7 +189,7 @@ fun SubjectCardWithMenu(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("subject_card_${stats.subject.id}"),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(26.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(
@@ -219,7 +217,7 @@ fun SubjectCardWithMenu(
                     Text(
                         text = stats.subject.name,
                         style = MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = SpaceGroteskFamily,
+                            fontFamily = PlusJakartaFamily,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
@@ -244,21 +242,21 @@ fun SubjectCardWithMenu(
             ) {
                 Column {
                     Text(
-                        text = "TALLY: ${stats.attended}/${stats.totalConducted} LECTURES",
+                        text = "${stats.attended} of ${stats.totalConducted} Lectures Attended",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
-                            fontWeight = FontWeight.Bold,
+                            fontFamily = PlusJakartaFamily,
+                            fontWeight = FontWeight.SemiBold,
                             color = colors.textPrimary
                         )
                     )
                     Text(
                         text = if (isSafe) {
-                            "SAFE BUFFER: CAN SKIP ${stats.bunksAvailable} LECTURES"
+                            "Safe Buffer: Can skip ${stats.bunksAvailable} lectures"
                         } else {
-                            "RECOVERY: ATTEND NEXT ${stats.classesNeeded} LECTURES"
+                            "Recovery: Attend next ${stats.classesNeeded} lectures"
                         },
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = PlusJakartaFamily,
                             fontSize = 11.sp,
                             color = if (isSafe) colors.safeZone else colors.bunkDanger
                         )

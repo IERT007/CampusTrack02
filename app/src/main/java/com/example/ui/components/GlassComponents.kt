@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -48,17 +49,24 @@ fun triggerHapticFeedback(context: Context, isStrong: Boolean = false) {
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(24.dp),
-    containerColor: Color = Color(0xFF0E121B).copy(alpha = 0.85f),
+    shape: Shape = RoundedCornerShape(26.dp),
+    containerColor: Color = CaliperTheme.colors.cardFill,
     borderColors: List<Color> = listOf(
-        Color.White.copy(alpha = 0.16f),
-        Color.Transparent
+        CaliperTheme.colors.cardBorderTop,
+        CaliperTheme.colors.cardBorderBottom
     ),
-    borderWidth: Dp = 1.dp,
-    elevation: Dp = 8.dp,
+    borderWidth: Dp = 1.2.dp,
+    elevation: Dp = 6.dp,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val colors = CaliperTheme.colors
+    val shadowSpotColor = if (colors.isLightGlass) {
+        Color(0xFF4A4238).copy(alpha = 0.10f)
+    } else {
+        Color.Black.copy(alpha = 0.45f)
+    }
+
     val interactiveModifier = if (onClick != null) {
         modifier.fluidTouchFeedback(enabled = true, onClick = onClick)
     } else {
@@ -67,6 +75,12 @@ fun GlassCard(
 
     Column(
         modifier = interactiveModifier
+            .shadow(
+                elevation = elevation,
+                shape = shape,
+                ambientColor = shadowSpotColor,
+                spotColor = shadowSpotColor
+            )
             .clip(shape)
             .background(containerColor, shape)
             .border(
@@ -81,10 +95,10 @@ fun GlassCard(
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(24.dp),
+    shape: Shape = RoundedCornerShape(26.dp),
     borderColors: List<Color> = listOf(
-        Color.White.copy(alpha = 0.16f),
-        Color.Transparent
+        CaliperTheme.colors.cardBorderTop,
+        CaliperTheme.colors.cardBorderBottom
     ),
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -103,9 +117,10 @@ fun GlassIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = CaliperTheme.colors.textPrimary,
-    containerColor: Color = Color(0xFF141923).copy(alpha = 0.88f)
+    containerColor: Color = CaliperTheme.colors.containerSurface
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val colors = CaliperTheme.colors
+    val shape = RoundedCornerShape(16.dp)
     Box(
         modifier = modifier
             .size(48.dp)
@@ -115,7 +130,7 @@ fun GlassIconButton(
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.16f), Color.Transparent)
+                    listOf(colors.cardBorderTop, colors.cardBorderBottom)
                 ),
                 shape = shape
             ),
@@ -133,7 +148,7 @@ fun GlassIconButton(
 @Composable
 fun MetricRadialRing(
     percentage: Double,
-    size: Dp = 56.dp,
+    size: Dp = 60.dp,
     strokeWidth: Dp = 6.dp,
     modifier: Modifier = Modifier
 ) {
@@ -157,7 +172,7 @@ fun MetricRadialRing(
         Canvas(modifier = Modifier.size(size)) {
             val strokePx = strokeWidth.toPx()
             drawArc(
-                color = Color.White.copy(alpha = 0.08f),
+                color = colors.divider,
                 startAngle = 0f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -176,9 +191,9 @@ fun MetricRadialRing(
             style = MaterialTheme.typography.labelSmall.copy(
                 fontFamily = JetBrainsMonoFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.sp
+                fontSize = 12.sp
             ),
-            color = ringColor
+            color = colors.textPrimary
         )
     }
 }
@@ -191,7 +206,7 @@ fun StrictnessBadge(strictness: String) {
         "MODERATE" -> colors.deadlineWarning
         else -> colors.safeZone
     }
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = Modifier
             .clip(shape)
@@ -215,10 +230,10 @@ fun StrictnessBadge(strictness: String) {
 fun TypeBadge(type: String) {
     val colors = CaliperTheme.colors
     val badgeColor = when (type.uppercase(Locale.US)) {
-        "LAB", "WORKSHOP" -> Color(0xFF06B6D4)
+        "LAB", "WORKSHOP" -> colors.safeZone
         else -> colors.scheduledLecture
     }
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = Modifier
             .clip(shape)

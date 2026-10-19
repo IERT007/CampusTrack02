@@ -46,6 +46,7 @@ import com.example.ui.components.GlassCard
 import com.example.ui.dialogs.AddMedicalLeaveDialog
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.PlusJakartaFamily
 import com.example.ui.theme.SpaceGroteskFamily
 import com.example.ui.theme.fluidTouchFeedback
 import java.util.Locale
@@ -68,25 +69,25 @@ fun AuditScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Transparent)
             .testTag("audit_screen_list"),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 120.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 128.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item(key = "audit_header") {
             Column {
                 Text(
-                    text = "TELEMETRY AUDIT & CIA",
+                    text = "Analytics & CIA Report",
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = SpaceGroteskFamily,
+                        fontFamily = PlusJakartaFamily,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                 )
                 Text(
-                    text = "CONTINUOUS INTERNAL ASSESSMENT & TRAJECTORY",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = JetBrainsMonoFamily,
+                    text = "Continuous Internal Assessment & Calendar History",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = PlusJakartaFamily,
                         color = colors.textSecondary
                     )
                 )
@@ -97,7 +98,7 @@ fun AuditScreen(
         item(key = "trajectory_wave_card") {
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(26.dp)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Row(
@@ -106,17 +107,17 @@ fun AuditScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "ATTENDANCE TRAJECTORY",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontFamily = JetBrainsMonoFamily,
+                            text = "Attendance Trajectory",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontFamily = PlusJakartaFamily,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textSecondary
+                                color = colors.textPrimary
                             )
                         )
                         Text(
                             text = String.format(Locale.US, "%.1f%%", summary.overallPercentage),
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontFamily = JetBrainsMonoFamily,
+                                fontFamily = SpaceGroteskFamily,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.safeZone
                             )
@@ -138,19 +139,19 @@ fun AuditScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 AuditMetricBox(
-                    label = "CIA SCORE",
+                    label = "CIA Score",
                     value = String.format(Locale.US, "%.1f/50", cia.totalInternalScore),
                     accentColor = colors.scheduledLecture,
                     modifier = Modifier.weight(1f)
                 )
                 AuditMetricBox(
-                    label = "FACULTY OFF",
+                    label = "Faculty Off",
                     value = summary.totalFacultyCancelled.toString(),
                     accentColor = colors.deadlineWarning,
                     modifier = Modifier.weight(1f)
                 )
                 AuditMetricBox(
-                    label = "PROXIES",
+                    label = "Proxies",
                     value = summary.totalProxy.toString(),
                     accentColor = colors.safeZone,
                     modifier = Modifier.weight(1f)
@@ -187,17 +188,17 @@ fun AuditScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "MEDICAL AFFIDAVIT LOGS",
+                    text = "Medical Leave Logs",
                     style = MaterialTheme.typography.titleSmall.copy(
-                        fontFamily = SpaceGroteskFamily,
+                        fontFamily = PlusJakartaFamily,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                 )
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.scheduledLecture.copy(alpha = 0.16f))
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.scheduledLecture)
                         .fluidTouchFeedback(onClick = { showAddMedicalDialog = true })
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -205,16 +206,16 @@ fun AuditScreen(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Medical Leave",
-                        tint = colors.scheduledLecture,
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "ADD LOG",
+                        text = "Add Log",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.scheduledLecture
+                            fontFamily = PlusJakartaFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                     )
                 }
@@ -247,15 +248,15 @@ fun AuditMetricBox(
     onClick: (() -> Unit)? = null
 ) {
     val colors = CaliperTheme.colors
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(20.dp)
     Column(
         modifier = modifier
             .clip(shape)
-            .background(Color(0xFF0E121B).copy(alpha = 0.85f), shape)
+            .background(colors.cardFill, shape)
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
-                    listOf(accentColor.copy(alpha = 0.35f), Color.Transparent)
+                    listOf(colors.cardBorderTop, colors.cardBorderBottom)
                 ),
                 shape = shape
             )
@@ -264,9 +265,9 @@ fun AuditMetricBox(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = JetBrainsMonoFamily,
-                fontSize = 10.sp,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = PlusJakartaFamily,
+                fontSize = 11.sp,
                 color = colors.textSecondary
             )
         )
@@ -274,7 +275,7 @@ fun AuditMetricBox(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = JetBrainsMonoFamily,
+                fontFamily = SpaceGroteskFamily,
                 fontWeight = FontWeight.Bold,
                 color = accentColor
             )
@@ -299,7 +300,7 @@ fun CalendarLegendDot(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = JetBrainsMonoFamily,
+                fontFamily = PlusJakartaFamily,
                 color = colors.textSecondary
             )
         )
@@ -311,13 +312,13 @@ fun MedicalLeaveCard(leave: MedicalLeaveEntity) {
     val colors = CaliperTheme.colors
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = leave.reason,
                 style = MaterialTheme.typography.titleSmall.copy(
-                    fontFamily = SpaceGroteskFamily,
+                    fontFamily = PlusJakartaFamily,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )

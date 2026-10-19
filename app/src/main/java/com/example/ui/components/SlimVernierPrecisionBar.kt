@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.CaliperTheme
 
 /**
  * Slim Horizontal Vernier Precision Progress Bar with 75% Target Tick.
@@ -23,6 +23,7 @@ fun SlimVernierPrecisionBar(
     percentage: Float,
     modifier: Modifier = Modifier
 ) {
+    val colors = CaliperTheme.colors
     val clamped = percentage.coerceIn(0f, 100f)
     val animatedFill by animateFloatAsState(
         targetValue = clamped / 100f,
@@ -31,9 +32,9 @@ fun SlimVernierPrecisionBar(
     )
 
     val barColor = when {
-        clamped >= 80f -> Color(0xFF22C55E)
-        clamped >= 75f -> Color(0xFFF59E0B)
-        else -> Color(0xFFEF4444)
+        clamped >= 80f -> colors.safeZone
+        clamped >= 75f -> colors.deadlineWarning
+        else -> colors.bunkDanger
     }
 
     Canvas(
@@ -47,7 +48,7 @@ fun SlimVernierPrecisionBar(
 
         // Track background
         drawRoundRect(
-            color = Color.White.copy(alpha = 0.08f),
+            color = colors.divider,
             topLeft = Offset(0f, trackTop),
             size = Size(size.width, trackHeight),
             cornerRadius = radius
@@ -67,7 +68,7 @@ fun SlimVernierPrecisionBar(
         // 75% Mandatory Target Vernier Tick Marker
         val targetX = size.width * 0.75f
         drawLine(
-            color = Color.White.copy(alpha = 0.85f),
+            color = colors.textPrimary.copy(alpha = 0.55f),
             start = Offset(targetX, 0f),
             end = Offset(targetX, size.height),
             strokeWidth = 2.dp.toPx()

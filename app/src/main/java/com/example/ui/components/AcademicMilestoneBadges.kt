@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.JetBrainsMonoFamily
-import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.PlusJakartaFamily
 
 @Composable
 fun AcademicMilestoneBadges(
@@ -40,31 +40,31 @@ fun AcademicMilestoneBadges(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         MilestoneBadgeCard(
-            title = "IRON STREAK",
-            subtitle = "${streakDays}D ACTIVE",
-            code = "MS-01",
+            title = "Consistency Streak",
+            subtitle = "${streakDays}d Active",
+            code = "STREAK",
             accentColor = colors.streakGold,
             unlocked = streakDays >= 3
         )
         MilestoneBadgeCard(
-            title = "SAFE ZONE SHIELD",
-            subtitle = ">= 75% ALL",
-            code = "MS-02",
+            title = "Safe Zone Shield",
+            subtitle = ">= 75% All",
+            code = "SHIELD",
             accentColor = colors.safeZone,
             unlocked = allSubjectsSafe
         )
         MilestoneBadgeCard(
-            title = "DEAN'S TIER",
-            subtitle = ">= 85% AGG",
-            code = "MS-03",
+            title = "Dean's Honors",
+            subtitle = ">= 85% Agg",
+            code = "HONORS",
             accentColor = colors.scheduledLecture,
             unlocked = overallPercentage >= 85.0
         )
         MilestoneBadgeCard(
-            title = "ZERO DRIFT",
-            subtitle = "CLEAN WEEK",
-            code = "MS-04",
-            accentColor = Color(0xFF06B6D4),
+            title = "Zero Drift",
+            subtitle = "Clean Week",
+            code = "FOCUS",
+            accentColor = colors.safeZone,
             unlocked = zeroBunksThisWeek
         )
     }
@@ -79,25 +79,25 @@ fun MilestoneBadgeCard(
     unlocked: Boolean
 ) {
     val colors = CaliperTheme.colors
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(20.dp)
     val effectiveColor = if (unlocked) accentColor else colors.textMuted
 
     Column(
         modifier = Modifier
-            .width(138.dp)
+            .width(142.dp)
             .clip(shape)
-            .background(Color(0xFF0E121B).copy(alpha = 0.85f), shape)
+            .background(colors.cardFill, shape)
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        if (unlocked) accentColor.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.12f),
-                        Color.Transparent
+                        if (unlocked) accentColor.copy(alpha = 0.45f) else colors.cardBorderTop,
+                        colors.cardBorderBottom
                     )
                 ),
                 shape = shape
             )
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Text(
             text = code,
@@ -111,9 +111,9 @@ fun MilestoneBadgeCard(
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall.copy(
-                fontFamily = SpaceGroteskFamily,
+                fontFamily = PlusJakartaFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = if (unlocked) colors.textPrimary else colors.textMuted
             )
         )
@@ -122,7 +122,7 @@ fun MilestoneBadgeCard(
             text = subtitle,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontFamily = JetBrainsMonoFamily,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 color = effectiveColor
             )
         )

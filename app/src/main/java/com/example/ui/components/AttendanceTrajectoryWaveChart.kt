@@ -21,18 +21,26 @@ fun AttendanceTrajectoryWaveChart(
     logs: List<AttendanceLogEntity>,
     currentPercentage: Double,
     modifier: Modifier = Modifier,
-    height: Dp = 120.dp
+    height: Dp = 110.dp
 ) {
     val colors = CaliperTheme.colors
     val lineColor = when {
-        currentPercentage >= 80.0 -> colors.safeZone
-        currentPercentage >= 75.0 -> colors.deadlineWarning
+        currentPercentage >= 75.0 -> colors.safeZone
         else -> colors.bunkDanger
     }
 
     val sortedLogs = logs.filter { it.status == "PRESENT" || it.status == "ABSENT" }.sortedBy { it.date }
-    val points = if (sortedLogs.isEmpty()) {
-        listOf(currentPercentage.toFloat().coerceIn(0f, 100f), currentPercentage.toFloat().coerceIn(0f, 100f))
+    val points = if (sortedLogs.size < 2) {
+        // Provide a natural organic wave leading up to currentPercentage
+        val base = currentPercentage.toFloat().coerceIn(50f, 100f)
+        listOf(
+            (base - 8f).coerceAtLeast(45f),
+            (base - 3f).coerceAtLeast(50f),
+            (base - 6f).coerceAtLeast(48f),
+            (base + 2f).coerceAtMost(100f),
+            (base - 2f).coerceAtLeast(50f),
+            base
+        )
     } else {
         var attended = 0
         var total = 0
@@ -40,7 +48,7 @@ fun AttendanceTrajectoryWaveChart(
             total++
             if (log.status == "PRESENT") attended++
             ((attended.toFloat() / total.toFloat()) * 100f).coerceIn(0f, 100f)
-        }.takeLast(24).let { list ->
+        }.takeLast(18).let { list ->
             if (list.size == 1) listOf(list.first(), list.first()) else list
         }
     }
@@ -58,7 +66,7 @@ fun AttendanceTrajectoryWaveChart(
         // 75% Reference Line
         val y75 = padVertical + usableH * (1f - 0.75f)
         drawLine(
-            color = Color.White.copy(alpha = 0.16f),
+            color = colors.divider,
             start = Offset(0f, y75),
             end = Offset(w, y75),
             strokeWidth = 1.dp.toPx()
@@ -70,14 +78,16 @@ fun AttendanceTrajectoryWaveChart(
 
         points.forEachIndexed { idx, pct ->
             val x = idx * stepX
-            val y = padVertical + usableH * (1f - (pct / 100f))
+            val normalized = ((pct - 40f) / 60f).coerceIn(0.05f, 0.95f)
+            val y = padVertical + usableH * (1f - normalized)
             if (idx == 0) {
                 linePath.moveTo(x, y)
                 fillPath.moveTo(x, h)
                 fillPath.lineTo(x, y)
             } else {
                 val prevX = (idx - 1) * stepX
-                val prevY = padVertical + usableH * (1f - (points[idx - 1] / 100f))
+                val prevNorm = ((points[idx - 1] - 40f) / 60f).coerceIn(0.05f, 0.95f)
+                val prevY = padVertical + usableH * (1f - prevNorm)
                 val ctrlX = (prevX + x) / 2f
                 linePath.cubicTo(ctrlX, prevY, ctrlX, y, x, y)
                 fillPath.cubicTo(ctrlX, prevY, ctrlX, y, x, y)
@@ -90,7 +100,7 @@ fun AttendanceTrajectoryWaveChart(
             path = fillPath,
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    lineColor.copy(alpha = 0.28f),
+                    lineColor.copy(alpha = 0.22f),
                     Color.Transparent
                 )
             )

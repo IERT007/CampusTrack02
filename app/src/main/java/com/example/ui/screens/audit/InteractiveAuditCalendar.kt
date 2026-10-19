@@ -38,7 +38,7 @@ import com.example.ui.MainViewModel
 import com.example.ui.components.GlassCard
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.JetBrainsMonoFamily
-import com.example.ui.theme.SpaceGroteskFamily
+import com.example.ui.theme.PlusJakartaFamily
 import com.example.ui.theme.fluidTouchFeedback
 import java.time.LocalDate
 import java.time.YearMonth
@@ -56,7 +56,7 @@ fun InteractiveAuditCalendar(
 
     GlassCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(26.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(
@@ -64,27 +64,29 @@ fun InteractiveAuditCalendar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
-                    Icon(
-                        imageVector = Icons.Default.ChevronLeft,
-                        contentDescription = "Previous Month",
-                        tint = colors.textSecondary
-                    )
-                }
                 Text(
-                    text = "${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.US).uppercase(Locale.US)} ${currentMonth.year}",
+                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.US)} ${currentMonth.year}",
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = SpaceGroteskFamily,
+                        fontFamily = PlusJakartaFamily,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                 )
-                IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Next Month",
-                        tint = colors.textSecondary
-                    )
+                Row {
+                    IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = "Previous Month",
+                            tint = colors.textSecondary
+                        )
+                    }
+                    IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Next Month",
+                            tint = colors.textSecondary
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -123,7 +125,7 @@ fun MonthGrid(
                     Text(
                         text = h,
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
+                            fontFamily = PlusJakartaFamily,
                             color = colors.textMuted
                         )
                     )
@@ -156,15 +158,10 @@ fun MonthGrid(
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(CircleShape)
                                 .background(
-                                    if (isSelected) colors.scheduledLecture.copy(alpha = 0.25f)
-                                    else Color.White.copy(alpha = 0.03f)
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) colors.scheduledLecture else Color.Transparent,
-                                    shape = RoundedCornerShape(10.dp)
+                                    if (isSelected) colors.scheduledLecture
+                                    else Color.Transparent
                                 )
                                 .fluidTouchFeedback(onClick = { onDateSelected(dateStr) }),
                             contentAlignment = Alignment.Center
@@ -174,8 +171,11 @@ fun MonthGrid(
                                     text = dayNum.toString(),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontFamily = JetBrainsMonoFamily,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         fontSize = 11.sp,
-                                        color = if (date == LocalDate.now()) colors.scheduledLecture else colors.textPrimary
+                                        color = if (isSelected) Color.White
+                                        else if (date == LocalDate.now()) colors.safeZone
+                                        else colors.textPrimary
                                     )
                                 )
                                 if (dotColor != Color.Transparent) {
@@ -184,7 +184,7 @@ fun MonthGrid(
                                         modifier = Modifier
                                             .size(4.dp)
                                             .clip(CircleShape)
-                                            .background(dotColor)
+                                            .background(if (isSelected) Color.White else dotColor)
                                     )
                                 }
                             }

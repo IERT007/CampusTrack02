@@ -19,11 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -50,8 +49,10 @@ import com.example.ui.MainViewModel
 import com.example.ui.SubjectAttendanceStats
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.JetBrainsMonoFamily
+import com.example.ui.theme.PlusJakartaFamily
 import com.example.ui.theme.SpaceGroteskFamily
 import com.example.ui.theme.fluidTouchFeedback
+import java.time.LocalTime
 import java.util.Locale
 
 @Composable
@@ -72,11 +73,20 @@ fun MainTopBar(
     var isSearchExpanded by remember { mutableStateOf(false) }
     var selectedSubjectForDialog by remember { mutableStateOf<SubjectEntity?>(null) }
 
+    val greeting = remember {
+        val hour = LocalTime.now().hour
+        when {
+            hour < 12 -> "Good Morning,"
+            hour < 17 -> "Good Day,"
+            else -> "Good Evening,"
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -84,54 +94,72 @@ fun MainTopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (summary.overallPercentage >= 75.0) colors.safeZone else colors.bunkDanger
-                            )
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = PlusJakartaFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 14.sp,
+                        color = colors.textSecondary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "CALIPER OS // IERT",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFamily,
-                            letterSpacing = 1.5.sp,
-                            fontSize = 10.sp,
-                            color = colors.textSecondary
-                        )
-                    )
-                }
+                )
                 Spacer(modifier = Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = String.format(Locale.US, "%.1f%%", summary.overallPercentage),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = JetBrainsMonoFamily,
+                        text = "CALIPER",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = PlusJakartaFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
+                            fontSize = 23.sp,
+                            letterSpacing = 0.6.sp,
                             color = colors.textPrimary
                         )
                     )
-                    if (streak > 0) {
-                        Spacer(modifier = Modifier.width(10.dp))
-                        val pillShape = RoundedCornerShape(10.dp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    val pillColor = if (summary.overallPercentage >= 75.0) colors.safeZone else colors.bunkDanger
+                    val pillShape = RoundedCornerShape(12.dp)
+                    Row(
+                        modifier = Modifier
+                            .clip(pillShape)
+                            .background(pillColor.copy(alpha = 0.14f), pillShape)
+                            .border(1.dp, pillColor.copy(alpha = 0.30f), pillShape)
+                            .padding(horizontal = 9.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
-                                .clip(pillShape)
-                                .background(colors.streakGold.copy(alpha = 0.14f), pillShape)
-                                .border(1.dp, colors.streakGold.copy(alpha = 0.35f), pillShape)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(pillColor)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = String.format(Locale.US, "%.0f%%", summary.overallPercentage),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = pillColor
+                            )
+                        )
+                    }
+                    if (streak > 0) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        val streakShape = RoundedCornerShape(12.dp)
+                        Box(
+                            modifier = Modifier
+                                .clip(streakShape)
+                                .background(colors.scheduledLecture.copy(alpha = 0.14f), streakShape)
+                                .border(1.dp, colors.scheduledLecture.copy(alpha = 0.30f), streakShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "${streak}D STREAK",
+                                text = "${streak}d Streak",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontFamily = JetBrainsMonoFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    color = colors.streakGold
+                                    fontFamily = PlusJakartaFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp,
+                                    color = colors.scheduledLecture
                                 )
                             )
                         }
@@ -151,8 +179,8 @@ fun MainTopBar(
                     modifier = Modifier.testTag("top_bar_search_button")
                 )
                 GlassIconButton(
-                    icon = Icons.Default.Settings,
-                    contentDescription = "Open Settings",
+                    icon = Icons.Outlined.Notifications,
+                    contentDescription = "Open Settings & Alerts",
                     onClick = {
                         CaliperHapticManager.tick(context)
                         onOpenSettings()
@@ -173,6 +201,7 @@ fun MainTopBar(
                     onValueChange = { viewModel.setSearchQuery(it) },
                     placeholder = { Text("Search subject, code, faculty, room...") },
                     singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("global_search_input")
@@ -190,7 +219,7 @@ fun MainTopBar(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             onClick = {
                                 CaliperHapticManager.tick(context)
                                 selectedSubjectForDialog = subj
@@ -199,7 +228,7 @@ fun MainTopBar(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
+                                    .padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -207,7 +236,7 @@ fun MainTopBar(
                                     Text(
                                         text = "${subj.code} • ${subj.name}",
                                         style = MaterialTheme.typography.titleSmall.copy(
-                                            fontFamily = SpaceGroteskFamily,
+                                            fontFamily = PlusJakartaFamily,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.textPrimary
                                         )
@@ -255,15 +284,15 @@ fun MainTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "CALIPER OS",
+            text = "CALIPER",
             style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = SpaceGroteskFamily,
+                fontFamily = PlusJakartaFamily,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
         )
         GlassIconButton(
-            icon = Icons.Default.Tune,
+            icon = Icons.Outlined.Tune,
             contentDescription = "Settings",
             onClick = {
                 CaliperHapticManager.tick(context)
@@ -285,9 +314,9 @@ fun SubjectTelemetryDialog(
     BasicAlertDialog(onDismissRequest = onDismiss) {
         GlassCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp)
+            shape = RoundedCornerShape(28.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column(modifier = Modifier.padding(22.dp)) {
                 Text(
                     text = subject.code,
                     style = MaterialTheme.typography.labelMedium.copy(
@@ -299,7 +328,7 @@ fun SubjectTelemetryDialog(
                 Text(
                     text = subject.name,
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = SpaceGroteskFamily,
+                        fontFamily = PlusJakartaFamily,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
@@ -333,18 +362,18 @@ fun SubjectTelemetryDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.scheduledLecture.copy(alpha = 0.18f))
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.scheduledLecture)
                         .fluidTouchFeedback(onClick = onDismiss)
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "CLOSE TELEMETRY",
+                        text = "Done",
                         style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = JetBrainsMonoFamily,
+                            fontFamily = PlusJakartaFamily,
                             fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
+                            color = Color.White
                         )
                     )
                 }
@@ -361,11 +390,11 @@ fun TallyStatBox(
     modifier: Modifier = Modifier
 ) {
     val colors = CaliperTheme.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     Column(
         modifier = modifier
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.04f), shape)
+            .background(colors.cardFillSecondary, shape)
             .border(
                 1.dp,
                 Brush.verticalGradient(listOf(accentColor.copy(alpha = 0.35f), Color.Transparent)),
@@ -385,7 +414,7 @@ fun TallyStatBox(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = JetBrainsMonoFamily,
+                fontFamily = SpaceGroteskFamily,
                 fontWeight = FontWeight.Bold,
                 color = accentColor
             )
