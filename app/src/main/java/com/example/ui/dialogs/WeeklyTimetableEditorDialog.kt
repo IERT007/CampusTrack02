@@ -3,6 +3,8 @@ package com.example.ui.dialogs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -125,20 +127,21 @@ fun WeeklyTimetableEditorDialog(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Day of Week Selector Bar
+                    // Day of Week Selector Bar (Horizontally scrollable to display all 6 days Mon-Sat)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color(0x221F293D))
+                            .horizontalScroll(androidx.compose.foundation.rememberScrollState())
                             .padding(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         daysList.forEach { (dayInt, label) ->
                             val isSelected = (selectedDayOfWeek == dayInt)
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
+                                    .defaultMinSize(minWidth = 50.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(if (isSelected) NeonCyan.copy(alpha = 0.22f) else Color.Transparent)
                                     .border(
@@ -150,11 +153,11 @@ fun WeeklyTimetableEditorDialog(
                                         triggerHapticFeedback(context, false)
                                         selectedDayOfWeek = dayInt
                                     }
-                                    .padding(vertical = 8.dp),
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = label,
+                                    text = label.uppercase(),
                                     color = if (isSelected) NeonCyan else TextSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium

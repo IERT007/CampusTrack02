@@ -523,16 +523,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         subjectId: Long,
         status: String,
         isProxy: Boolean = false,
+        isExtraClass: Boolean = false,
         notes: String? = null
     ) {
         viewModelScope.launch {
+            val isExtra = isExtraClass || slots.value.find { it.id == slotId }?.roomNo?.contains("Extra", ignoreCase = true) == true
             repository.setSlotAttendance(
                 date = _selectedDate.value,
                 slotId = slotId,
                 subjectId = subjectId,
                 status = status,
                 isProxy = isProxy,
-                isExtraClass = false,
+                isExtraClass = isExtra,
                 notes = notes
             )
             when (status) {
@@ -557,6 +559,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.deleteSlotAttendance(_selectedDate.value, slotId)
             com.example.audio.CaliperSoundManager.playThud()
             com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun deleteAttendanceLog(log: AttendanceLogEntity) {
+        viewModelScope.launch {
+            repository.deleteAttendanceLog(log)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
+        }
+    }
+
+    fun deleteAttendanceLogById(logId: Long) {
+        viewModelScope.launch {
+            repository.deleteAttendanceLogById(logId)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
         }
     }
 

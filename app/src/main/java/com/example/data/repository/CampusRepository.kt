@@ -77,6 +77,16 @@ class CampusRepository(
         triggerSilentAutoBackup()
     }
 
+    suspend fun deleteAttendanceLog(log: AttendanceLogEntity) = withContext(Dispatchers.IO) {
+        db.attendanceLogDao().deleteAttendanceLog(log)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun deleteAttendanceLogById(logId: Long) = withContext(Dispatchers.IO) {
+        db.attendanceLogDao().deleteLogById(logId)
+        triggerSilentAutoBackup()
+    }
+
     suspend fun markWholeDayPresent(date: String, slots: List<TimetableSlotEntity>) = withContext(Dispatchers.IO) {
         db.dailyDayStatusDao().insertOrUpdate(
             DailyDayStatusEntity(date = date, wentToCollege = true, leaveCategory = "none", notes = "Whole day marked present")

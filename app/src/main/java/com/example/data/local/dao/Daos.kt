@@ -90,6 +90,9 @@ interface AttendanceLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLogs(logs: List<AttendanceLogEntity>)
 
+    @Delete
+    suspend fun deleteAttendanceLog(log: AttendanceLogEntity)
+
     @Query("DELETE FROM attendance_logs WHERE id = :id")
     suspend fun deleteLogById(id: Long)
 

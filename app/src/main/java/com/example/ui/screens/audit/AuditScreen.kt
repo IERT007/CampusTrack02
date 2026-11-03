@@ -725,19 +725,42 @@ fun AuditScreen(
                                         )
                                     }
 
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(statusColor.copy(alpha = 0.15f))
-                                            .border(0.5.dp, statusColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Text(
-                                            text = statusText,
-                                            color = statusColor,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(statusColor.copy(alpha = 0.15f))
+                                                .border(0.5.dp, statusColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = statusText,
+                                                color = statusColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.ExtraBold
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                CaliperHapticManager.bunkDoubleTap(context)
+                                                CaliperSoundManager.playThud()
+                                                viewModel.deleteAttendanceLog(log)
+                                            },
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .testTag("delete_log_${log.id}")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete Attendance Log",
+                                                tint = colors.bunkDanger.copy(alpha = 0.85f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }

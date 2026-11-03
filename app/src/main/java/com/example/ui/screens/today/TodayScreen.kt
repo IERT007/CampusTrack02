@@ -8,6 +8,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -875,18 +878,25 @@ fun TodayScreen(
         if (!isPreSemester && !isPostSemester) {
             items(upcomingSlots, key = { it.slot.id }) { item ->
                 val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
+                val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true)
                 SlotCard(
                     item = item,
                     testRecord = slotTest,
                     selectedDate = selectedDateStr,
                     onEditClick = { editingSlot = item.slot },
+                    onDeleteSlot = {
+                        CaliperHardwareEngine.pulseHaptic(context)
+                        CaliperSoundManager.playThud()
+                        viewModel.deleteSlot(item.slot.id)
+                    },
                     onStatusChange = { status, isProxy, notes ->
                         viewModel.setSlotAttendance(
                             slotId = item.slot.id,
                             subjectId = item.slot.subjectId,
                             status = status,
                             isProxy = isProxy,
-                            notes = notes
+                            isExtraClass = isExtra,
+                            notes = notes ?: if (isExtra) "Extra Class" else null
                         )
                     },
                     onSaveTest = { name, obtained, max ->
@@ -950,11 +960,17 @@ fun TodayScreen(
             if (showMarkedTray) {
                 items(markedSlots, key = { "marked_${it.slot.id}" }) { item ->
                     val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
+                    val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true)
                     MarkedSlotCard(
                         item = item,
                         testRecord = slotTest,
                         selectedDate = selectedDateStr,
                         onEditClick = { editingSlot = item.slot },
+                        onDeleteSlot = {
+                            CaliperHardwareEngine.pulseHaptic(context)
+                            CaliperSoundManager.playThud()
+                            viewModel.deleteSlot(item.slot.id)
+                        },
                         onUndo = {
                             CaliperHardwareEngine.pulseHaptic(context)
                             viewModel.undoSlotAttendance(item.slot.id)
@@ -965,7 +981,8 @@ fun TodayScreen(
                                 subjectId = item.slot.subjectId,
                                 status = status,
                                 isProxy = isProxy,
-                                notes = notes
+                                isExtraClass = isExtra,
+                                notes = notes ?: if (isExtra) "Extra Class" else null
                             )
                         },
                         onSaveTest = { name, obtained, max ->
@@ -987,14 +1004,33 @@ fun TodayScreen(
         }
     }
 
-    // Upgraded Extra Class / Activity Creation Dialog (2 Paths)
+    // Interactive Extra Class / Activity Creation Dialog
     if (showExtraClassDialog) {
         AddExtraEventDialog(
             subjects = subjects,
             selectedDate = selectedDateStr,
             onDismiss = { showExtraClassDialog = false },
-            onConfirmSubjectExtra = { subId, status, isProxy, notes ->
-                viewModel.logExtraClass(subId, status, isProxy, notes ?: "")
+            onConfirmExtraClass = { subId, startTime, endTime, roomNo, tag ->
+                val parsedDayOfWeek = try {
+                    java.time.LocalDate.parse(selectedDateStr).dayOfWeek.value
+                } catch (_: Exception) {
+                    java.time.LocalDate.now().dayOfWeek.value
+                }
+                val roomDisplay = buildString {
+                    if (roomNo.isNotBlank()) append(roomNo) else append("LT-Extra")
+                    if (tag.isNotBlank()) append(" • $tag") else append(" • Extra Class")
+                }
+                viewModel.saveSlot(
+                    com.example.data.local.entity.TimetableSlotEntity(
+                        dayOfWeek = parsedDayOfWeek,
+                        startTime = startTime,
+                        endTime = endTime,
+                        roomNo = roomDisplay,
+                        subjectId = subId
+                    )
+                )
+                com.example.audio.CaliperSoundManager.playSnap()
+                com.example.audio.CaliperHapticManager.tick(context)
                 showExtraClassDialog = false
             },
             onConfirmCustomActivity = { title, startTime, endTime, loc, countAttendance ->
@@ -1195,6 +1231,7 @@ fun SlotCard(
     testRecord: TestRecordEntity?,
     selectedDate: String,
     onEditClick: (() -> Unit)? = null,
+    onDeleteSlot: (() -> Unit)? = null,
     onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit,
     onSaveTest: (testName: String, marksObtained: Double, maxMarks: Double) -> Unit,
     onDeleteTest: (testId: Long) -> Unit
@@ -1203,6 +1240,7 @@ fun SlotCard(
     val currentLog = item.currentLog
     val currentStatus = currentLog?.status
     val isProxy = currentLog?.isProxy ?: false
+    val isExtraClass = item.slot.roomNo.contains("Extra", ignoreCase = true)
 
     var isTestExpanded by remember { mutableStateOf(false) }
     var testNameInput by remember(testRecord) { mutableStateOf(testRecord?.testName ?: "Class Test") }
@@ -1211,6 +1249,7 @@ fun SlotCard(
 
     val borderColor = when {
         item.isOngoing -> NeonCyan
+        isExtraClass -> NeonCyan.copy(alpha = 0.5f)
         currentStatus == "attended" -> NeonEmerald.copy(alpha = 0.6f)
         currentStatus == "bunked" -> StrictRed.copy(alpha = 0.6f)
         currentStatus == "cancelled_by_faculty" -> WarningAmber.copy(alpha = 0.6f)
@@ -1249,6 +1288,18 @@ fun SlotCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isExtraClass) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(NeonCyan.copy(alpha = 0.2f))
+                            .border(0.5.dp, NeonCyan, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text("EXTRA CLASS", color = NeonCyan, fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 if (item.isOngoing) {
                     Box(
                         modifier = Modifier
@@ -1273,6 +1324,22 @@ fun SlotCard(
                             contentDescription = "Edit Slot",
                             tint = TextMuted,
                             modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+                if (onDeleteSlot != null) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onDeleteSlot,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .testTag("delete_slot_${item.slot.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete Slot",
+                            tint = StrictRed.copy(alpha = 0.85f),
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                 }
@@ -1554,6 +1621,7 @@ fun MarkedSlotCard(
     testRecord: TestRecordEntity?,
     selectedDate: String,
     onEditClick: (() -> Unit)? = null,
+    onDeleteSlot: (() -> Unit)? = null,
     onUndo: () -> Unit,
     onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit,
     onSaveTest: (testName: String, marksObtained: Double, maxMarks: Double) -> Unit,
@@ -1561,6 +1629,7 @@ fun MarkedSlotCard(
 ) {
     val status = item.currentLog?.status ?: "attended"
     val isProxy = item.currentLog?.isProxy ?: false
+    val isExtraClass = item.slot.roomNo.contains("Extra", ignoreCase = true)
 
     val (badgeText, badgeColor) = when (status) {
         "attended" -> (if (isProxy) "PROXY PRESENT" else "PRESENT") to NeonEmerald
@@ -1581,6 +1650,18 @@ fun MarkedSlotCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isExtraClass) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NeonCyan.copy(alpha = 0.2f))
+                                .border(0.5.dp, NeonCyan, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("EXTRA CLASS", color = NeonCyan, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -1632,6 +1713,17 @@ fun MarkedSlotCard(
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                 }
+                if (onDeleteSlot != null) {
+                    IconButton(
+                        onClick = onDeleteSlot,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("delete_marked_slot_${item.slot.id}")
+                    ) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete Slot", tint = StrictRed.copy(alpha = 0.85f), modifier = Modifier.size(16.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 OutlinedButton(
                     onClick = onUndo,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = WarningAmber),
@@ -1658,17 +1750,31 @@ fun AddExtraEventDialog(
     subjects: List<com.example.data.local.entity.SubjectEntity>,
     selectedDate: String,
     onDismiss: () -> Unit,
-    onConfirmSubjectExtra: (subjectId: Long, status: String, isProxy: Boolean, notes: String?) -> Unit,
+    onConfirmExtraClass: (subjectId: Long, startTime: String, endTime: String, roomNo: String, tag: String) -> Unit,
     onConfirmCustomActivity: (title: String, startTime: String, endTime: String, location: String, countAttendance: Boolean) -> Unit
 ) {
-    var selectedPath by remember { mutableIntStateOf(0) } // 0 = Curriculum Subject, 1 = Single-Day Activity
+    var selectedPath by remember { mutableIntStateOf(0) } // 0 = Extra Class Slot, 1 = 1-Day Activity
 
-    // Path 0 state
+    // Path 0 (Extra Class) state
     var selectedSubjectId by remember { mutableLongStateOf(subjects.firstOrNull()?.id ?: 1L) }
-    var selectedStatus by remember { mutableStateOf("attended") }
-    var extraNotes by remember { mutableStateOf("Extra Class") }
+    var slotStartTime by remember { mutableStateOf("09:00") }
+    var slotEndTime by remember { mutableStateOf("10:00") }
+    var slotRoomNo by remember { mutableStateOf("Room 301") }
+    var selectedTag by remember { mutableStateOf("Extra Class") }
 
-    // Path 1 state
+    val quickTimePresets = listOf(
+        "08:00" to "09:00",
+        "09:00" to "10:00",
+        "10:00" to "11:00",
+        "11:30" to "12:30",
+        "01:30" to "02:30",
+        "02:30" to "03:30",
+        "03:30" to "04:30"
+    )
+
+    val tagPresets = listOf("Extra Class", "Theory", "Lab", "Tutorial", "Doubt Session")
+
+    // Path 1 (Custom Activity) state
     var activityTitle by remember { mutableStateOf("") }
     var activityStartTime by remember { mutableStateOf("02:00 PM") }
     var activityEndTime by remember { mutableStateOf("04:30 PM") }
@@ -1681,14 +1787,18 @@ fun AddExtraEventDialog(
         shape = RoundedCornerShape(18.dp),
         title = {
             Text(
-                text = "Add Event for $selectedDate",
+                text = "Schedule Event for $selectedDate",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = Color.White
             )
         },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
                 // Path Selector Tabs
                 Row(
                     modifier = Modifier
@@ -1735,55 +1845,159 @@ fun AddExtraEventDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 if (selectedPath == 0) {
-                    // Path 1: Curriculum Subject
-                    Text("Select Subject:", fontSize = 12.sp, color = Color(0xFF94A3B8))
-                    Spacer(modifier = Modifier.height(4.dp))
-                    subjects.forEach { sub ->
-                        Row(
+                    // Path 0: Curriculum Extra Class Slot
+                    Text("Select Subject:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    if (subjects.isEmpty()) {
+                        Text("No subjects registered yet. Add subjects first.", fontSize = 12.sp, color = StrictRed)
+                    } else {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { selectedSubjectId = sub.id }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0x11FFFFFF))
+                                .padding(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            RadioButton(
-                                selected = (selectedSubjectId == sub.id),
-                                onClick = { selectedSubjectId = sub.id }
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("${sub.code} — ${sub.name}", fontSize = 13.sp, color = Color.White)
+                            subjects.forEach { sub ->
+                                val isSelected = (selectedSubjectId == sub.id)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isSelected) NeonCyan.copy(alpha = 0.15f) else Color.Transparent)
+                                        .border(
+                                            0.5.dp,
+                                            if (isSelected) NeonCyan else Color.Transparent,
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .clickable { selectedSubjectId = sub.id }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { selectedSubjectId = sub.id },
+                                        colors = RadioButtonDefaults.colors(selectedColor = NeonCyan)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column {
+                                        Text(
+                                            text = "${sub.code} — ${sub.name}",
+                                            fontSize = 12.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) NeonCyan else Color.White
+                                        )
+                                        Text(
+                                            text = sub.facultyName,
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF94A3B8)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Time Presets
+                    Text("Lecture Time:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        quickTimePresets.forEach { (start, end) ->
+                            val isPresetSelected = (slotStartTime == start && slotEndTime == end)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isPresetSelected) NeonCyan.copy(alpha = 0.25f) else Color(0x22FFFFFF))
+                                    .border(0.5.dp, if (isPresetSelected) NeonCyan else Color.Transparent, RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        slotStartTime = start
+                                        slotEndTime = end
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "$start - $end",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = if (isPresetSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isPresetSelected) NeonCyan else Color.White
+                                )
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Attendance Outcome:", fontSize = 12.sp, color = Color(0xFF94A3B8))
+
+                    // Start & End Time Inputs
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = { selectedStatus = "attended" },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selectedStatus == "attended") NeonEmerald else Color(0x22FFFFFF)
-                            ),
-                            shape = RoundedCornerShape(6.dp),
+                        OutlinedTextField(
+                            value = slotStartTime,
+                            onValueChange = { slotStartTime = it },
+                            label = { Text("Start Time") },
+                            singleLine = true,
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Present", color = if (selectedStatus == "attended") Color.Black else Color.White, fontSize = 11.sp)
-                        }
-                        Button(
-                            onClick = { selectedStatus = "bunked" },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selectedStatus == "bunked") StrictRed else Color(0x22FFFFFF)
-                            ),
-                            shape = RoundedCornerShape(6.dp),
+                        )
+                        OutlinedTextField(
+                            value = slotEndTime,
+                            onValueChange = { slotEndTime = it },
+                            label = { Text("End Time") },
+                            singleLine = true,
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Bunked", color = Color.White, fontSize = 11.sp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Room & Tag
+                    OutlinedTextField(
+                        value = slotRoomNo,
+                        onValueChange = { slotRoomNo = it },
+                        label = { Text("Room / Hall (e.g., Room 301, LT-4)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Type Tag:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        tagPresets.forEach { tag ->
+                            val isTagSelected = (selectedTag == tag)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isTagSelected) NeonCyan.copy(alpha = 0.25f) else Color(0x22FFFFFF))
+                                    .border(0.5.dp, if (isTagSelected) NeonCyan else Color.Transparent, RoundedCornerShape(6.dp))
+                                    .clickable { selectedTag = tag }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = tag,
+                                    fontSize = 10.5.sp,
+                                    fontWeight = if (isTagSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isTagSelected) NeonCyan else Color.White
+                                )
+                            }
                         }
                     }
                 } else {
-                    // Path 2: Single-Day Custom Activity
+                    // Path 1: Single-Day Custom Activity
                     OutlinedTextField(
                         value = activityTitle,
                         onValueChange = { activityTitle = it },
@@ -1864,7 +2078,13 @@ fun AddExtraEventDialog(
             Button(
                 onClick = {
                     if (selectedPath == 0) {
-                        onConfirmSubjectExtra(selectedSubjectId, selectedStatus, false, extraNotes)
+                        onConfirmExtraClass(
+                            selectedSubjectId,
+                            slotStartTime,
+                            slotEndTime,
+                            slotRoomNo,
+                            selectedTag
+                        )
                     } else {
                         if (activityTitle.isNotBlank()) {
                             onConfirmCustomActivity(
@@ -1877,9 +2097,10 @@ fun AddExtraEventDialog(
                         }
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                modifier = Modifier.testTag("add_to_schedule_btn")
             ) {
-                Text("Add", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text("Add to Schedule", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
