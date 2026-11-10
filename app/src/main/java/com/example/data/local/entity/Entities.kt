@@ -59,7 +59,9 @@ data class AssessmentEntity(
     val dueDate: String, // "YYYY-MM-DD"
     val dueTime: String = "17:00", // "HH:mm" target time
     val syllabusCoveragePercent: Int = 0
-)
+) {
+    val marksObtained: Float? get() = obtainedMarks?.toFloat()
+}
 
 @Entity(tableName = "daily_day_status")
 data class DailyDayStatusEntity(
@@ -129,7 +131,7 @@ data class TestRecordEntity(
     val date: String, // "YYYY-MM-DD"
     val slotId: Long? = null,
     val testName: String = "Class Test",
-    val marksObtained: Double,
+    val marksObtained: Double? = null, // Nullable for Result Pending / Two-Step Test Logging
     val maxMarks: Double,
     val timestamp: Long = System.currentTimeMillis()
 )

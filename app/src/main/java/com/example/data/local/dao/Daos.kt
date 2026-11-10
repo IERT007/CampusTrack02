@@ -261,6 +261,12 @@ interface TestRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTestRecord(testRecord: TestRecordEntity): Long
 
+    @Update
+    suspend fun updateTestRecord(testRecord: TestRecordEntity)
+
+    @Query("UPDATE test_records SET marksObtained = :marksObtained WHERE id = :id")
+    suspend fun updateMarksObtained(id: Long, marksObtained: Double?)
+
     @Delete
     suspend fun deleteTestRecord(testRecord: TestRecordEntity)
 

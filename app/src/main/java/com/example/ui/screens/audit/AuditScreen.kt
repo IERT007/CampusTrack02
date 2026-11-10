@@ -73,6 +73,7 @@ fun AuditScreen(
     var showCancelledClassesSheet by remember { mutableStateOf(false) }
     var showCollegeOffSheet by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    var enteringMarksRecord by remember { mutableStateOf<com.example.data.local.entity.TestRecordEntity?>(null) }
 
     // Interactive Google Calendar Month State
     var displayedMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -179,225 +180,18 @@ fun AuditScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("interactive_calendar_card"),
-                borderColors = listOf(colors.primaryAccent.copy(alpha = 0.4f), colors.cardBorderBottom)
+                borderColors = listOf(colors.primaryAccent.copy(alpha = 0.4f), colors.cardBorderBottom),
+                innerPadding = 12.dp
             ) {
-                // Calendar Top Bar: Month Switcher Controls
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Clickable Month-Year title with dropdown arrow
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                showMonthPicker = true
-                            }
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = displayedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Select Month",
-                                    tint = colors.primaryAccent,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Text(
-                                text = "Tap to switch semester month",
-                                fontSize = 10.sp,
-                                color = colors.textMuted
-                            )
-                        }
+                InteractiveAuditCalendar(
+                    viewModel = viewModel,
+                    onDateSelected = { date ->
+                        selectedAuditDate = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    },
+                    onNavigateToTodayView = { dateStr ->
+                        onNavigateToDate(dateStr)
                     }
-
-                    // Navigation Chevrons: < and >
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (displayedMonth != YearMonth.now()) {
-                            TextButton(
-                                onClick = {
-                                    CaliperSoundManager.playSnap()
-                                    CaliperHapticManager.tick(context)
-                                    displayedMonth = YearMonth.now()
-                                    selectedAuditDate = todayDateStr
-                                },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("Current", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        IconButton(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                displayedMonth = displayedMonth.minusMonths(1)
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Previous Month",
-                                tint = colors.primaryAccent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                CaliperSoundManager.playSnap()
-                                CaliperHapticManager.tick(context)
-                                displayedMonth = displayedMonth.plusMonths(1)
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "Next Month",
-                                tint = colors.primaryAccent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Days of week header (Mon - Sun)
-                val dayHeaders = listOf("M", "T", "W", "T", "F", "S", "S")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    dayHeaders.forEachIndexed { idx, day ->
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day,
-                                color = if (idx == 6) colors.bunkDanger else colors.textMuted,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Interactive Month Grid
-                val totalCells = firstDayOffset + daysInMonth
-                val rowCount = (totalCells + 6) / 7
-
-                for (r in 0 until rowCount) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        for (c in 0..6) {
-                            val cellIndex = r * 7 + c
-                            val dayNum = cellIndex - firstDayOffset + 1
-
-                            if (dayNum in 1..daysInMonth) {
-                                val cellDate = displayedMonth.atDay(dayNum)
-                                val dateStr = cellDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                                val isSelected = (selectedAuditDate == dateStr)
-                                val isToday = (dateStr == todayDateStr)
-
-                                val dayLogs = logs.filter { it.date == dateStr }
-                                val dayStatus = dayStatuses.find { it.date == dateStr }
-                                val isHoliday = holidayRanges.any { dateStr >= it.startDate && dateStr <= it.endDate }
-
-                                val attended = dayLogs.count { it.status == "attended" }
-                                val bunked = dayLogs.count { it.status == "bunked" }
-                                val cancelled = dayLogs.count { it.status == "cancelled_by_faculty" }
-
-                                // Full-Cell Glow Tint Calculation
-                                val isWeekend = (c == 6) // Sunday in 0..6 (Mon=0 .. Sun=6)
-                                val cellBackground = when {
-                                    isHoliday || dayStatus?.leaveCategory == "college_holiday" -> Color(0x33475569) // Slate tint
-                                    attended > 0 && bunked == 0 -> Color(0x2822C55E) // Sage Emerald tint
-                                    attended > 0 && bunked > 0 -> Color(0x28F59E0B) // Warm Amber tint
-                                    bunked > 0 -> Color(0x28EF4444) // Coral Red tint
-                                    isSelected -> colors.primaryAccent.copy(alpha = 0.20f)
-                                    isToday -> colors.primaryAccent.copy(alpha = 0.12f)
-                                    isWeekend -> Color.Transparent
-                                    else -> Color.Transparent
-                                }
-
-                                val isSlateHoliday = (isHoliday || dayStatus?.leaveCategory == "college_holiday")
-
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(2.dp)
-                                        .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(cellBackground)
-                                        .border(
-                                            width = if (isSelected) 1.2.dp else if (isToday) 0.8.dp else 0.5.dp,
-                                            color = if (isSelected) colors.primaryAccent else if (isToday) colors.primaryAccent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.05f),
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable {
-                                            CaliperSoundManager.playSnap()
-                                            CaliperHapticManager.tick(context)
-                                            selectedAuditDate = dateStr
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    // Subtle diagonal slash accent for holiday/off day
-                                    if (isSlateHoliday) {
-                                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                                            drawLine(
-                                                color = Color(0x6694A3B8),
-                                                start = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.85f),
-                                                end = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f),
-                                                strokeWidth = 1.2f
-                                            )
-                                        }
-                                    }
-
-                                    Text(
-                                        text = "$dayNum",
-                                        color = if (isSelected) colors.primaryAccent else if (isToday) Color.White else if (isWeekend && cellBackground == Color.Transparent) colors.textMuted.copy(alpha = 0.6f) else colors.textPrimary,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected || isToday || cellBackground != Color.Transparent) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f).padding(2.dp))
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(3.dp))
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Legend row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    CalendarLegendDot("Present", colors.safeZone)
-                    CalendarLegendDot("Partial", colors.deadlineWarning)
-                    CalendarLegendDot("Bunked", colors.bunkDanger)
-                    CalendarLegendDot("Off/Holiday", colors.textSecondary)
-                }
+                )
             }
         }
 
@@ -467,9 +261,12 @@ fun AuditScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             testsBySubject.forEach { (subId, records) ->
                                 val sub = subjects.find { it.id == subId }
-                                val avgPct = records.map {
-                                    if (it.maxMarks > 0) (it.marksObtained / it.maxMarks) * 100.0 else 0.0
-                                }.average()
+                                val evaluatedRecords = records.filter { it.marksObtained != null }
+                                val avgPct = if (evaluatedRecords.isNotEmpty()) {
+                                    evaluatedRecords.map {
+                                        if (it.maxMarks > 0) ((it.marksObtained ?: 0.0) / it.maxMarks) * 100.0 else 0.0
+                                    }.average()
+                                } else null
 
                                 Column(
                                     modifier = Modifier
@@ -502,15 +299,23 @@ fun AuditScreen(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .background(
-                                                    if (avgPct >= 75.0) colors.safeZone.copy(alpha = 0.2f)
-                                                    else if (avgPct >= 50.0) colors.deadlineWarning.copy(alpha = 0.2f)
-                                                    else colors.bunkDanger.copy(alpha = 0.2f)
+                                                    when {
+                                                        avgPct == null -> WarningAmber.copy(alpha = 0.15f)
+                                                        avgPct >= 75.0 -> colors.safeZone.copy(alpha = 0.2f)
+                                                        avgPct >= 50.0 -> colors.deadlineWarning.copy(alpha = 0.2f)
+                                                        else -> colors.bunkDanger.copy(alpha = 0.2f)
+                                                    }
                                                 )
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "Avg: ${String.format("%.1f", avgPct)}%",
-                                                color = if (avgPct >= 75.0) colors.safeZone else if (avgPct >= 50.0) colors.deadlineWarning else colors.bunkDanger,
+                                                text = if (avgPct != null) "Avg: ${String.format("%.1f", avgPct)}%" else "Pending",
+                                                color = when {
+                                                    avgPct == null -> WarningAmber
+                                                    avgPct >= 75.0 -> colors.safeZone
+                                                    avgPct >= 50.0 -> colors.deadlineWarning
+                                                    else -> colors.bunkDanger
+                                                },
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -520,7 +325,6 @@ fun AuditScreen(
                                     Spacer(modifier = Modifier.height(6.dp))
 
                                     records.forEach { record ->
-                                        val testPct = if (record.maxMarks > 0) (record.marksObtained / record.maxMarks) * 100.0 else 0.0
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -543,12 +347,52 @@ fun AuditScreen(
                                             }
 
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = "${record.marksObtained} / ${record.maxMarks} (${String.format("%.1f", testPct)}%)",
-                                                    fontSize = 11.5.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (testPct >= 75.0) colors.safeZone else colors.bunkDanger
-                                                )
+                                                if (record.marksObtained == null) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .background(WarningAmber.copy(alpha = 0.15f))
+                                                            .border(0.5.dp, WarningAmber.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "Pending Evaluation",
+                                                            color = WarningAmber,
+                                                            fontSize = 9.5.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    OutlinedButton(
+                                                        onClick = { enteringMarksRecord = record },
+                                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primaryAccent),
+                                                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.primaryAccent.copy(alpha = 0.5f)),
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                                        modifier = Modifier.height(24.dp)
+                                                    ) {
+                                                        Text("Enter Marks", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                } else {
+                                                    val testPct = if (record.maxMarks > 0) ((record.marksObtained ?: 0.0) / record.maxMarks) * 100.0 else 0.0
+                                                    Text(
+                                                        text = "${record.marksObtained} / ${record.maxMarks} (${String.format("%.1f", testPct)}%)",
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (testPct >= 75.0) colors.safeZone else colors.bunkDanger
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = "Edit",
+                                                        color = colors.primaryAccent,
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .clickable { enteringMarksRecord = record }
+                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    )
+                                                }
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 IconButton(
                                                     onClick = { viewModel.deleteTestRecord(record.id) },
@@ -1025,6 +869,19 @@ fun AuditScreen(
             onDismiss = { showHolidayDialog = false },
             onSaveHoliday = { range -> viewModel.saveHolidayRange(range) },
             onDeleteHoliday = { id -> viewModel.deleteHolidayRange(id) }
+        )
+    }
+
+    enteringMarksRecord?.let { record ->
+        val sub = subjects.find { it.id == record.subjectId }
+        com.example.ui.screens.today.EnterMarksDialog(
+            testRecord = record,
+            subjectName = sub?.name ?: "Subject",
+            onDismiss = { enteringMarksRecord = null },
+            onSaveMarks = { marks ->
+                viewModel.updateTestRecordMarks(record.id, marks)
+                enteringMarksRecord = null
+            }
         )
     }
 

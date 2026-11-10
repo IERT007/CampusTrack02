@@ -87,6 +87,8 @@ fun TodayScreen(
     var showSemesterDatesDialog by remember { mutableStateOf(false) }
     var editingSlot by remember { mutableStateOf<TimetableSlotEntity?>(null) }
     var showMarkedTray by remember { mutableStateOf(false) }
+    var reschedulingSlot by remember { mutableStateOf<SlotDisplayItem?>(null) }
+    var enteringMarksForTest by remember { mutableStateOf<Pair<TestRecordEntity, String>?>(null) }
 
     var showNotificationPermissionBanner by remember {
         mutableStateOf(
@@ -878,16 +880,29 @@ fun TodayScreen(
         if (!isPreSemester && !isPostSemester) {
             items(upcomingSlots, key = { it.slot.id }) { item ->
                 val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
-                val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true)
+                val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true) || item.isDateSpecificExtra
                 SlotCard(
                     item = item,
                     testRecord = slotTest,
                     selectedDate = selectedDateStr,
-                    onEditClick = { editingSlot = item.slot },
+                    onEditClick = if (!item.isDateSpecificExtra) { { editingSlot = item.slot } } else null,
                     onDeleteSlot = {
                         CaliperHardwareEngine.pulseHaptic(context)
                         CaliperSoundManager.playThud()
-                        viewModel.deleteSlot(item.slot.id)
+                        if (item.isDateSpecificExtra) {
+                            viewModel.deleteDateSpecificExtraSlot(item.extraSlotId ?: -item.slot.id)
+                        } else {
+                            viewModel.deleteSlot(item.slot.id)
+                        }
+                    },
+                    onRescheduleClick = {
+                        reschedulingSlot = item
+                    },
+                    onRevertReschedule = if (item.isRescheduled) {
+                        { viewModel.revertSlotReschedule(item.slot.id, selectedDateStr) }
+                    } else null,
+                    onEnterMarksClick = { record ->
+                        enteringMarksForTest = record to (item.subject?.name ?: "Class Test")
                     },
                     onStatusChange = { status, isProxy, notes ->
                         viewModel.setSlotAttendance(
@@ -960,16 +975,29 @@ fun TodayScreen(
             if (showMarkedTray) {
                 items(markedSlots, key = { "marked_${it.slot.id}" }) { item ->
                     val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
-                    val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true)
+                    val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true) || item.isDateSpecificExtra
                     MarkedSlotCard(
                         item = item,
                         testRecord = slotTest,
                         selectedDate = selectedDateStr,
-                        onEditClick = { editingSlot = item.slot },
+                        onEditClick = if (!item.isDateSpecificExtra) { { editingSlot = item.slot } } else null,
                         onDeleteSlot = {
                             CaliperHardwareEngine.pulseHaptic(context)
                             CaliperSoundManager.playThud()
-                            viewModel.deleteSlot(item.slot.id)
+                            if (item.isDateSpecificExtra) {
+                                viewModel.deleteDateSpecificExtraSlot(item.extraSlotId ?: -item.slot.id)
+                            } else {
+                                viewModel.deleteSlot(item.slot.id)
+                            }
+                        },
+                        onRescheduleClick = {
+                            reschedulingSlot = item
+                        },
+                        onRevertReschedule = if (item.isRescheduled) {
+                            { viewModel.revertSlotReschedule(item.slot.id, selectedDateStr) }
+                        } else null,
+                        onEnterMarksClick = { record ->
+                            enteringMarksForTest = record to (item.subject?.name ?: "Class Test")
                         },
                         onUndo = {
                             CaliperHardwareEngine.pulseHaptic(context)
@@ -1011,26 +1039,14 @@ fun TodayScreen(
             selectedDate = selectedDateStr,
             onDismiss = { showExtraClassDialog = false },
             onConfirmExtraClass = { subId, startTime, endTime, roomNo, tag ->
-                val parsedDayOfWeek = try {
-                    java.time.LocalDate.parse(selectedDateStr).dayOfWeek.value
-                } catch (_: Exception) {
-                    java.time.LocalDate.now().dayOfWeek.value
-                }
-                val roomDisplay = buildString {
-                    if (roomNo.isNotBlank()) append(roomNo) else append("LT-Extra")
-                    if (tag.isNotBlank()) append(" • $tag") else append(" • Extra Class")
-                }
-                viewModel.saveSlot(
-                    com.example.data.local.entity.TimetableSlotEntity(
-                        dayOfWeek = parsedDayOfWeek,
-                        startTime = startTime,
-                        endTime = endTime,
-                        roomNo = roomDisplay,
-                        subjectId = subId
-                    )
+                viewModel.saveDateSpecificExtraSlot(
+                    date = selectedDateStr,
+                    subjectId = subId,
+                    startTime = startTime,
+                    endTime = endTime,
+                    roomNo = roomNo.ifBlank { "LT-Extra" },
+                    tag = tag.ifBlank { "Extra Class" }
                 )
-                com.example.audio.CaliperSoundManager.playSnap()
-                com.example.audio.CaliperHapticManager.tick(context)
                 showExtraClassDialog = false
             },
             onConfirmCustomActivity = { title, startTime, endTime, loc, countAttendance ->
@@ -1092,6 +1108,36 @@ fun TodayScreen(
             onDeleteSlot = { slotId ->
                 viewModel.deleteTimetableSlot(slotId)
                 editingSlot = null
+            }
+        )
+    }
+
+    reschedulingSlot?.let { item ->
+        SingleDayRescheduleDialog(
+            item = item,
+            date = selectedDateStr,
+            onDismiss = { reschedulingSlot = null },
+            onConfirmReschedule = { newStartTime, newEndTime, newRoomNo ->
+                viewModel.rescheduleSlotForDay(
+                    slotId = item.slot.id,
+                    date = selectedDateStr,
+                    newStartTime = newStartTime,
+                    newEndTime = newEndTime,
+                    newRoomNo = newRoomNo
+                )
+                reschedulingSlot = null
+            }
+        )
+    }
+
+    enteringMarksForTest?.let { (testRecord, subName) ->
+        EnterMarksDialog(
+            testRecord = testRecord,
+            subjectName = subName,
+            onDismiss = { enteringMarksForTest = null },
+            onSaveMarks = { marks ->
+                viewModel.updateTestRecordMarks(testRecord.id, marks)
+                enteringMarksForTest = null
             }
         )
     }
@@ -1223,7 +1269,7 @@ fun CustomActivityCard(
 }
 
 /**
- * SlotCard with In-Slot Class Test System
+ * SlotCard with In-Slot Class Test System and Single-Day Reschedule Controls
  */
 @Composable
 fun SlotCard(
@@ -1232,15 +1278,18 @@ fun SlotCard(
     selectedDate: String,
     onEditClick: (() -> Unit)? = null,
     onDeleteSlot: (() -> Unit)? = null,
+    onRescheduleClick: (() -> Unit)? = null,
+    onRevertReschedule: (() -> Unit)? = null,
+    onEnterMarksClick: ((TestRecordEntity) -> Unit)? = null,
     onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit,
-    onSaveTest: (testName: String, marksObtained: Double, maxMarks: Double) -> Unit,
+    onSaveTest: (testName: String, marksObtained: Double?, maxMarks: Double) -> Unit,
     onDeleteTest: (testId: Long) -> Unit
 ) {
     val context = LocalContext.current
     val currentLog = item.currentLog
     val currentStatus = currentLog?.status
     val isProxy = currentLog?.isProxy ?: false
-    val isExtraClass = item.slot.roomNo.contains("Extra", ignoreCase = true)
+    val isExtraClass = item.slot.roomNo.contains("Extra", ignoreCase = true) || item.isDateSpecificExtra
 
     var isTestExpanded by remember { mutableStateOf(false) }
     var testNameInput by remember(testRecord) { mutableStateOf(testRecord?.testName ?: "Class Test") }
@@ -1249,6 +1298,7 @@ fun SlotCard(
 
     val borderColor = when {
         item.isOngoing -> NeonCyan
+        item.isRescheduled -> WarningAmber.copy(alpha = 0.7f)
         isExtraClass -> NeonCyan.copy(alpha = 0.5f)
         currentStatus == "attended" -> NeonEmerald.copy(alpha = 0.6f)
         currentStatus == "bunked" -> StrictRed.copy(alpha = 0.6f)
@@ -1260,7 +1310,7 @@ fun SlotCard(
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         borderColors = listOf(borderColor, GlassBorderBottom),
-        borderWidth = if (item.isOngoing) 1.5.dp else 1.dp,
+        borderWidth = if (item.isOngoing || item.isRescheduled) 1.5.dp else 1.dp,
         innerPadding = 11.dp
     ) {
         // Top Row: Time, Room, and Live Indicator
@@ -1272,7 +1322,7 @@ fun SlotCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "${item.slot.startTime} - ${item.slot.endTime}",
-                    color = if (item.isOngoing) NeonCyan else Color(0xFF94A3B8),
+                    color = if (item.isOngoing) NeonCyan else if (item.isRescheduled) WarningAmber else Color(0xFF94A3B8),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1284,6 +1334,37 @@ fun SlotCard(
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
                     Text(item.slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
+                }
+
+                if (item.isRescheduled) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(WarningAmber.copy(alpha = 0.2f))
+                            .border(0.5.dp, WarningAmber, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "SHIFTED (Was ${item.originalTime})",
+                            color = WarningAmber,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (onRevertReschedule != null) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Revert",
+                            color = NeonCyan,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { onRevertReschedule() }
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
                 }
             }
 
@@ -1313,6 +1394,22 @@ fun SlotCard(
                     Spacer(modifier = Modifier.width(4.dp))
                 }
                 item.subject?.type?.let { TypeBadge(it) }
+
+                if (onRescheduleClick != null) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onRescheduleClick,
+                        modifier = Modifier.size(22.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Shift Time",
+                            tint = if (item.isRescheduled) WarningAmber else TextMuted,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
                 if (onEditClick != null) {
                     Spacer(modifier = Modifier.width(4.dp))
                     IconButton(
@@ -1371,35 +1468,103 @@ fun SlotCard(
         // Test Score Display Badge (If test is already recorded)
         if (testRecord != null) {
             Spacer(modifier = Modifier.height(6.dp))
-            val pct = if (testRecord.maxMarks > 0) (testRecord.marksObtained / testRecord.maxMarks) * 100 else 0.0
-            val testColor = if (pct >= 75.0) NeonEmerald else if (pct >= 50.0) WarningAmber else StrictRed
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(testColor.copy(alpha = 0.15f))
-                    .border(0.5.dp, testColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("📝", fontSize = 12.sp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "${testRecord.testName}: ${testRecord.marksObtained}/${testRecord.maxMarks} (${String.format("%.1f", pct)}%)",
-                        color = testColor,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                IconButton(
-                    onClick = { onDeleteTest(testRecord.id) },
-                    modifier = Modifier.size(20.dp)
+            if (testRecord.marksObtained == null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(WarningAmber.copy(alpha = 0.15f))
+                        .border(0.5.dp, WarningAmber.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Delete Test", tint = testColor, modifier = Modifier.size(14.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("📝", fontSize = 12.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text(
+                                text = "${testRecord.testName} (Max: ${testRecord.maxMarks})",
+                                color = Color.White,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Pending Evaluation",
+                                color = WarningAmber,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (onEnterMarksClick != null) {
+                            Button(
+                                onClick = { onEnterMarksClick(testRecord) },
+                                colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(24.dp)
+                            ) {
+                                Text("Enter Marks", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        IconButton(
+                            onClick = { onDeleteTest(testRecord.id) },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Delete Test", tint = WarningAmber, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            } else {
+                val pct = if (testRecord.maxMarks > 0) ((testRecord.marksObtained ?: 0.0) / testRecord.maxMarks) * 100 else 0.0
+                val testColor = if (pct >= 75.0) NeonEmerald else if (pct >= 50.0) WarningAmber else StrictRed
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(testColor.copy(alpha = 0.15f))
+                        .border(0.5.dp, testColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("📝", fontSize = 12.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${testRecord.testName}: ${testRecord.marksObtained}/${testRecord.maxMarks} (${String.format("%.1f", pct)}%)",
+                            color = testColor,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (onEnterMarksClick != null) {
+                            Text(
+                                text = "Edit",
+                                color = testColor,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable { onEnterMarksClick(testRecord) }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        IconButton(
+                            onClick = { onDeleteTest(testRecord.id) },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Delete Test", tint = testColor, modifier = Modifier.size(14.dp))
+                        }
+                    }
                 }
             }
         }
@@ -1532,7 +1697,7 @@ fun SlotCard(
                     OutlinedTextField(
                         value = marksObtainedInput,
                         onValueChange = { marksObtainedInput = it },
-                        label = { Text("Marks Scored", fontSize = 10.sp) },
+                        label = { Text("Marks (blank = Pending)", fontSize = 10.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -1555,7 +1720,7 @@ fun SlotCard(
                 ) {
                     Button(
                         onClick = {
-                            val obt = marksObtainedInput.toDoubleOrNull() ?: 0.0
+                            val obt = marksObtainedInput.toDoubleOrNull()
                             val max = maxMarksInput.toDoubleOrNull() ?: 20.0
                             onSaveTest(testNameInput.ifBlank { "Class Test" }, obt, max)
                             isTestExpanded = false
@@ -1564,7 +1729,12 @@ fun SlotCard(
                         shape = RoundedCornerShape(6.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
                     ) {
-                        Text("Save Test Score", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (marksObtainedInput.isBlank()) "Log (Pending Result)" else "Save Test Score",
+                            color = Color.Black,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -1613,7 +1783,7 @@ fun SlotCard(
 }
 
 /**
- * MarkedSlotCard with test record info and undo action
+ * MarkedSlotCard with test record info, single-day time shifts, and undo action
  */
 @Composable
 fun MarkedSlotCard(
@@ -1622,14 +1792,17 @@ fun MarkedSlotCard(
     selectedDate: String,
     onEditClick: (() -> Unit)? = null,
     onDeleteSlot: (() -> Unit)? = null,
+    onRescheduleClick: (() -> Unit)? = null,
+    onRevertReschedule: (() -> Unit)? = null,
+    onEnterMarksClick: ((TestRecordEntity) -> Unit)? = null,
     onUndo: () -> Unit,
     onStatusChange: (status: String, isProxy: Boolean, notes: String?) -> Unit,
-    onSaveTest: (testName: String, marksObtained: Double, maxMarks: Double) -> Unit,
+    onSaveTest: (testName: String, marksObtained: Double?, maxMarks: Double) -> Unit,
     onDeleteTest: (testId: Long) -> Unit
 ) {
     val status = item.currentLog?.status ?: "attended"
     val isProxy = item.currentLog?.isProxy ?: false
-    val isExtraClass = item.slot.roomNo.contains("Extra", ignoreCase = true)
+    val isExtraClass = item.slot.roomNo.contains("Extra", ignoreCase = true) || item.isDateSpecificExtra
 
     val (badgeText, badgeColor) = when (status) {
         "attended" -> (if (isProxy) "PROXY PRESENT" else "PRESENT") to NeonEmerald
@@ -1674,9 +1847,22 @@ fun MarkedSlotCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "${item.slot.startTime} - ${item.slot.endTime}",
-                        color = TextSecondary,
+                        color = if (item.isRescheduled) WarningAmber else TextSecondary,
                         fontSize = 11.sp
                     )
+
+                    if (item.isRescheduled) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(WarningAmber.copy(alpha = 0.2f))
+                                .border(0.5.dp, WarningAmber, RoundedCornerShape(4.dp))
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        ) {
+                            Text("SHIFTED (Was ${item.originalTime})", color = WarningAmber, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1694,16 +1880,44 @@ fun MarkedSlotCard(
 
                 if (testRecord != null) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "📝 Test: ${testRecord.marksObtained}/${testRecord.maxMarks}",
-                        color = NeonCyan,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (testRecord.marksObtained == null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("📝 Test: Pending Evaluation", color = WarningAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            if (onEnterMarksClick != null) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Enter Marks",
+                                    color = NeonCyan,
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable { onEnterMarksClick(testRecord) }
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "📝 Test: ${testRecord.marksObtained}/${testRecord.maxMarks}",
+                            color = NeonCyan,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onRescheduleClick != null) {
+                    IconButton(
+                        onClick = onRescheduleClick,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = "Shift Time", tint = if (item.isRescheduled) WarningAmber else TextMuted, modifier = Modifier.size(15.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 if (onEditClick != null) {
                     IconButton(
                         onClick = onEditClick,
@@ -1738,6 +1952,159 @@ fun MarkedSlotCard(
             }
         }
     }
+}
+
+/**
+ * SingleDayRescheduleDialog — Shifts lecture start/end time for today only without touching recurring timetable.
+ */
+@Composable
+fun SingleDayRescheduleDialog(
+    item: SlotDisplayItem,
+    date: String,
+    onDismiss: () -> Unit,
+    onConfirmReschedule: (newStartTime: String, newEndTime: String, newRoomNo: String?) -> Unit
+) {
+    var startTime by remember { mutableStateOf(item.slot.startTime) }
+    var endTime by remember { mutableStateOf(item.slot.endTime) }
+    var roomNo by remember { mutableStateOf(item.slot.roomNo) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF0F172A),
+        title = {
+            Column {
+                Text("Reschedule / Shift Time", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Today Only ($date) • ${item.subject?.name ?: "Slot"}", color = Color(0xFF94A3B8), fontSize = 12.sp)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "This time shift will apply to $date only. Your master recurring weekly timetable will not be changed.",
+                    color = Color(0xFF94A3B8),
+                    fontSize = 11.5.sp
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = startTime,
+                        onValueChange = { startTime = it },
+                        label = { Text("Start Time") },
+                        placeholder = { Text("09:00") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = endTime,
+                        onValueChange = { endTime = it },
+                        label = { Text("End Time") },
+                        placeholder = { Text("10:00") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                OutlinedTextField(
+                    value = roomNo,
+                    onValueChange = { roomNo = it },
+                    label = { Text("Room / Location (Optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirmReschedule(startTime.trim(), endTime.trim(), roomNo.trim().ifBlank { null })
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+            ) {
+                Text("Apply (Today Only)", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFF94A3B8))
+            }
+        }
+    )
+}
+
+/**
+ * EnterMarksDialog — Records or updates marks obtained for a pending or graded class test.
+ */
+@Composable
+fun EnterMarksDialog(
+    testRecord: TestRecordEntity,
+    subjectName: String,
+    onDismiss: () -> Unit,
+    onSaveMarks: (Double?) -> Unit
+) {
+    var marksInput by remember { mutableStateOf(testRecord.marksObtained?.toString() ?: "") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF0F172A),
+        title = {
+            Column {
+                Text("Enter Test Marks", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("${testRecord.testName} • $subjectName", color = Color(0xFF94A3B8), fontSize = 12.sp)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Maximum Marks: ${testRecord.maxMarks}",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                OutlinedTextField(
+                    value = marksInput,
+                    onValueChange = {
+                        marksInput = it
+                        errorMsg = null
+                    },
+                    label = { Text("Marks Scored (leave blank for Pending)") },
+                    placeholder = { Text("e.g. 18.5") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    isError = errorMsg != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (errorMsg != null) {
+                    Text(errorMsg ?: "", color = Color(0xFFEF4444), fontSize = 11.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (marksInput.isBlank()) {
+                        onSaveMarks(null)
+                    } else {
+                        val parsed = marksInput.toDoubleOrNull()
+                        if (parsed == null || parsed < 0.0 || parsed > testRecord.maxMarks) {
+                            errorMsg = "Please enter a valid score between 0 and ${testRecord.maxMarks}"
+                            return@Button
+                        }
+                        onSaveMarks(parsed)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+            ) {
+                Text("Save Marks", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color(0xFF94A3B8))
+            }
+        }
+    )
 }
 
 /**

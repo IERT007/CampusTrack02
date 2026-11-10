@@ -29,6 +29,11 @@ class CampusRepository(
     val allTasks: Flow<List<AcademicTaskEntity>> = db.academicTaskDao().getAllTasks()
     val allNotes: Flow<List<QuickNoteEntity>> = db.quickNoteDao().getAllNotes()
     val allTestRecords: Flow<List<TestRecordEntity>> = db.testRecordDao().getAllTestRecords()
+    val allExtraSlots: Flow<List<ExtraSlotEntity>> = db.extraSlotDao().getAllExtraSlots()
+    val allOverrides: Flow<List<RescheduleOverrideEntity>> = db.rescheduleOverrideDao().getAllOverrides()
+
+    fun getExtraSlotsForDate(date: String): Flow<List<ExtraSlotEntity>> = db.extraSlotDao().getExtraSlotsForDate(date)
+    fun getOverridesForDate(date: String): Flow<List<RescheduleOverrideEntity>> = db.rescheduleOverrideDao().getOverridesForDate(date)
 
     fun getActivitiesForDate(date: String): Flow<List<CustomActivityEntity>> {
         return db.customActivityDao().getActivitiesForDate(date)
@@ -206,6 +211,33 @@ class CampusRepository(
 
     suspend fun deleteTestRecord(id: Long) = withContext(Dispatchers.IO) {
         db.testRecordDao().deleteTestRecordById(id)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun updateTestRecordMarks(id: Long, marks: Double?) = withContext(Dispatchers.IO) {
+        db.testRecordDao().updateMarksObtained(id, marks)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun addExtraSlot(slot: ExtraSlotEntity): Long = withContext(Dispatchers.IO) {
+        val id = db.extraSlotDao().insertExtraSlot(slot)
+        triggerSilentAutoBackup()
+        id
+    }
+
+    suspend fun deleteExtraSlot(id: Long) = withContext(Dispatchers.IO) {
+        db.extraSlotDao().deleteExtraSlotById(id)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun saveRescheduleOverride(override: RescheduleOverrideEntity): Long = withContext(Dispatchers.IO) {
+        val id = db.rescheduleOverrideDao().insertOverride(override)
+        triggerSilentAutoBackup()
+        id
+    }
+
+    suspend fun deleteRescheduleOverride(slotId: Long, date: String) = withContext(Dispatchers.IO) {
+        db.rescheduleOverrideDao().deleteOverrideForSlot(slotId, date)
         triggerSilentAutoBackup()
     }
 

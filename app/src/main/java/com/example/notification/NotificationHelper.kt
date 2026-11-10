@@ -55,11 +55,8 @@ object NotificationHelper {
 
     /**
      * Numbered 07:30 AM Morning Briefing using NotificationCompat.InboxStyle
-     * Formats strictly:
-     * Title: Caliper Schedule • Today (N Classes)
-     * Lines: 1. [StartTime] — [Subject Name] (Room [RoomNo])
      */
-    fun showMorningBriefingInbox(context: Context, title: String, lines: List<String>) {
+    fun showMorningBriefingInbox(context: Context, title: String, lines: List<String>, summaryText: String? = null) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -70,17 +67,21 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val inboxStyle = NotificationCompat.InboxStyle().setBigContentTitle(title)
+        val inboxStyle = NotificationCompat.InboxStyle()
+            .setBigContentTitle(title)
+        if (summaryText != null) {
+            inboxStyle.setSummaryText(summaryText)
+        }
         lines.forEach { line ->
             inboxStyle.addLine(line)
         }
 
-        val summaryText = if (lines.isNotEmpty()) lines.first() else "No scheduled lectures today"
+        val firstText = if (lines.isNotEmpty()) lines.first() else "No scheduled lectures today"
 
         val notification = NotificationCompat.Builder(context, CHANNEL_BRIEFING)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText(summaryText)
+            .setContentText(firstText)
             .setStyle(inboxStyle)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
@@ -89,6 +90,32 @@ object NotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(1001, notification)
+        } catch (_: SecurityException) {}
+    }
+
+    fun showHolidayAlert(context: Context, title: String, bodyText: String) {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            1002,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_BRIEFING)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(bodyText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(1002, notification)
         } catch (_: SecurityException) {}
     }
 

@@ -43,7 +43,11 @@ data class SlotDisplayItem(
     val slot: TimetableSlotEntity,
     val subject: SubjectEntity?,
     val currentLog: AttendanceLogEntity?,
-    val isOngoing: Boolean
+    val isOngoing: Boolean,
+    val isRescheduled: Boolean = false,
+    val originalTime: String? = null,
+    val isDateSpecificExtra: Boolean = false,
+    val extraSlotId: Long? = null
 )
 
 data class CiaAssessmentBreakdown(
@@ -121,6 +125,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val slots: StateFlow<List<TimetableSlotEntity>> = repository.allSlots
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val extraSlots: StateFlow<List<ExtraSlotEntity>> = repository.allExtraSlots
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val rescheduleOverrides: StateFlow<List<RescheduleOverrideEntity>> = repository.allOverrides
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val logs: StateFlow<List<AttendanceLogEntity>> = repository.allLogs
@@ -361,13 +371,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return streak
     }
 
-    // Today's display slots with live ongoing class indicator
+    private val extraAndOverrides = combine(extraSlots, rescheduleOverrides) { extras, overrides ->
+        extras to overrides
+    }
+
+    // Today's display slots with live ongoing class indicator, date-specific extra classes, and time shifts
     val currentDaySlots: StateFlow<List<SlotDisplayItem>> = combine(
         selectedDate,
         slots,
         subjects,
-        logs
-    ) { dateStr, slotList, subList, logList ->
+        logs,
+        extraAndOverrides
+    ) { dateStr, slotList, subList, logList, (extraList, overrideList) ->
         val localDate = try {
             LocalDate.parse(dateStr, dateFormatter)
         } catch (_: Exception) {
@@ -378,31 +393,82 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val isToday = (dateStr == LocalDate.now().format(dateFormatter))
         val nowTime = LocalTime.now()
 
-        val daySlots = slotList.filter { it.dayOfWeek == dayOfWeek }
-            .sortedBy { it.startTime }
-
         val dayLogs = logList.filter { it.date == dateStr }
 
-        daySlots.map { slot ->
+        // 1. Regular weekly slots for this day of week with potential single-day reschedule override
+        val regularItems = slotList.filter { it.dayOfWeek == dayOfWeek }.map { slot ->
             val sub = subList.find { it.id == slot.subjectId }
             val log = dayLogs.find { it.slotId == slot.id }
+
+            val override = overrideList.find { it.slotId == slot.id && it.date == dateStr }
+            val activeSlot = if (override != null) {
+                slot.copy(
+                    startTime = override.newStartTime,
+                    endTime = override.newEndTime,
+                    roomNo = override.newRoomNo ?: slot.roomNo
+                )
+            } else {
+                slot
+            }
 
             var isOngoing = false
             if (isToday) {
                 try {
-                    val sTime = LocalTime.parse(slot.startTime)
-                    val eTime = LocalTime.parse(slot.endTime)
+                    val sTime = LocalTime.parse(activeSlot.startTime)
+                    val eTime = LocalTime.parse(activeSlot.endTime)
                     isOngoing = (nowTime.isAfter(sTime) || nowTime == sTime) && nowTime.isBefore(eTime)
                 } catch (_: Exception) {}
             }
 
             SlotDisplayItem(
-                slot = slot,
+                slot = activeSlot,
                 subject = sub,
                 currentLog = log,
-                isOngoing = isOngoing
+                isOngoing = isOngoing,
+                isRescheduled = (override != null),
+                originalTime = if (override != null) "${slot.startTime} - ${slot.endTime}" else null,
+                isDateSpecificExtra = false,
+                extraSlotId = null
             )
         }
+
+        // 2. Strict Date-Locked Extra Classes for this exact ISO date
+        val dateExtraItems = extraList.filter { it.date == dateStr }.map { extra ->
+            val sub = subList.find { it.id == extra.subjectId }
+            val syntheticSlotId = -extra.id
+            val log = dayLogs.find { it.slotId == syntheticSlotId || (it.isExtraClass && it.subjectId == extra.subjectId && it.notes?.contains("extra_$syntheticSlotId") == true) }
+
+            val syntheticSlot = TimetableSlotEntity(
+                id = syntheticSlotId,
+                dayOfWeek = dayOfWeek,
+                startTime = extra.startTime,
+                endTime = extra.endTime,
+                roomNo = "${extra.roomNo} • ${extra.tag}",
+                subjectId = extra.subjectId
+            )
+
+            var isOngoing = false
+            if (isToday) {
+                try {
+                    val sTime = LocalTime.parse(extra.startTime)
+                    val eTime = LocalTime.parse(extra.endTime)
+                    isOngoing = (nowTime.isAfter(sTime) || nowTime == sTime) && nowTime.isBefore(eTime)
+                } catch (_: Exception) {}
+            }
+
+            SlotDisplayItem(
+                slot = syntheticSlot,
+                subject = sub,
+                currentLog = log,
+                isOngoing = isOngoing,
+                isRescheduled = false,
+                originalTime = null,
+                isDateSpecificExtra = true,
+                extraSlotId = extra.id
+            )
+        }
+
+        (regularItems + dateExtraItems).sortedBy { it.slot.startTime }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val todaySlots: StateFlow<List<SlotDisplayItem>> get() = currentDaySlots
@@ -937,7 +1003,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         date: String,
         slotId: Long?,
         testName: String,
-        marksObtained: Double,
+        marksObtained: Double?,
         maxMarks: Double
     ) {
         viewModelScope.launch {
@@ -952,6 +1018,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.saveTestRecord(record)
             com.example.audio.CaliperSoundManager.playSuccess()
             com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun updateTestRecordMarks(id: Long, marksObtained: Double?) {
+        viewModelScope.launch {
+            repository.updateTestRecordMarks(id, marksObtained)
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun saveDateSpecificExtraSlot(
+        date: String,
+        subjectId: Long,
+        startTime: String,
+        endTime: String,
+        roomNo: String,
+        tag: String
+    ) {
+        viewModelScope.launch {
+            repository.addExtraSlot(
+                ExtraSlotEntity(
+                    date = date,
+                    subjectId = subjectId,
+                    startTime = startTime,
+                    endTime = endTime,
+                    roomNo = roomNo,
+                    tag = tag
+                )
+            )
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun deleteDateSpecificExtraSlot(extraSlotId: Long) {
+        viewModelScope.launch {
+            repository.deleteExtraSlot(extraSlotId)
+            repository.deleteSlotAttendance(_selectedDate.value, -extraSlotId)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
+        }
+    }
+
+    fun rescheduleSlotForDay(
+        slotId: Long,
+        date: String,
+        newStartTime: String,
+        newEndTime: String,
+        newRoomNo: String? = null
+    ) {
+        viewModelScope.launch {
+            repository.saveRescheduleOverride(
+                RescheduleOverrideEntity(
+                    slotId = slotId,
+                    date = date,
+                    newStartTime = newStartTime,
+                    newEndTime = newEndTime,
+                    newRoomNo = newRoomNo
+                )
+            )
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun revertSlotReschedule(slotId: Long, date: String) {
+        viewModelScope.launch {
+            repository.deleteRescheduleOverride(slotId, date)
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
         }
     }
 
