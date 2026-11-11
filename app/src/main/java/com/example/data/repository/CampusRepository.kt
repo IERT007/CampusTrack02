@@ -49,7 +49,7 @@ class CampusRepository(
     suspend fun ensureDefaultDataLoaded() {
         val current = db.subjectDao().getAllSubjectsList()
         if (current.isEmpty()) {
-            seedDefaultData()
+            // seedDefaultData() bypassed
         }
     }
 
