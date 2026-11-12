@@ -108,7 +108,7 @@ fun RetroactiveDatePickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x221F293D))
+                        .background(CaliperTheme.colors.containerSurface)
                         .padding(horizontal = 6.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -173,7 +173,7 @@ fun RetroactiveDatePickerDialog(
                                             when {
                                                 isCellSelected -> NeonCyan.copy(alpha = 0.35f)
                                                 isCellToday -> NeonCyan.copy(alpha = 0.15f)
-                                                isCellPast -> Color(0x18FFFFFF)
+                                                isCellPast -> CaliperTheme.colors.containerSurface
                                                 else -> Color.Transparent
                                             }
                                         )

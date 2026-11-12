@@ -272,7 +272,7 @@ fun AuditScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFF0F172A))
+                                        .background(CaliperTheme.colors.cardFill)
                                         .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                                         .padding(10.dp)
                                 ) {
@@ -336,7 +336,7 @@ fun AuditScreen(
                                                 Text(
                                                     text = "• ${record.testName}",
                                                     fontSize = 11.5.sp,
-                                                    color = Color(0xFFE2E8F0)
+                                                    color = CaliperTheme.colors.textPrimary
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
@@ -892,7 +892,7 @@ fun AuditScreen(
         }
         ModalBottomSheet(
             onDismissRequest = { showCancelledClassesSheet = false },
-            containerColor = Color(0xFF0F141C),
+            containerColor = CaliperTheme.colors.cardFill,
             scrimColor = Color.Black.copy(alpha = 0.75f)
         ) {
             Column(
@@ -926,7 +926,7 @@ fun AuditScreen(
                             )
                             Text(
                                 text = "${cancelledLogs.size} Historical Cancellations by Faculty",
-                                color = Color(0xFF94A3B8),
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -949,7 +949,7 @@ fun AuditScreen(
                     ) {
                         Text(
                             text = "No faculty cancellations recorded in academic history.",
-                            color = Color(0xFF94A3B8),
+                            color = CaliperTheme.colors.textSecondary,
                             fontSize = 12.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -968,7 +968,7 @@ fun AuditScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF141A26))
+                                    .background(CaliperTheme.colors.cardFill)
                                     .border(0.5.dp, colors.deadlineWarning.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                                     .padding(12.dp)
                             ) {
@@ -986,7 +986,7 @@ fun AuditScreen(
                                         )
                                         Text(
                                             text = "Faculty: ${sub?.facultyName ?: "Instructor"} • Slot: ${slot?.startTime ?: "Period"} (${slot?.roomNo ?: "LT-TBD"})",
-                                            color = Color(0xFF94A3B8),
+                                            color = CaliperTheme.colors.textSecondary,
                                             fontSize = 11.sp
                                         )
                                         if (!log.notes.isNullOrBlank()) {
@@ -1025,7 +1025,7 @@ fun AuditScreen(
 
         ModalBottomSheet(
             onDismissRequest = { showCollegeOffSheet = false },
-            containerColor = Color(0xFF0F141C),
+            containerColor = CaliperTheme.colors.cardFill,
             scrimColor = Color.Black.copy(alpha = 0.75f)
         ) {
             Column(
@@ -1059,7 +1059,7 @@ fun AuditScreen(
                             )
                             Text(
                                 text = "${holidayRanges.size} Declared Ranges • ${offDayStatuses.size + collegeOffLogs.size} Event Logs",
-                                color = Color(0xFF94A3B8),
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -1081,7 +1081,7 @@ fun AuditScreen(
                         item {
                             Text(
                                 text = "INSTITUTIONAL HOLIDAY RANGES",
-                                color = Color(0xFF94A3B8),
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
@@ -1092,7 +1092,7 @@ fun AuditScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF141A26))
+                                    .background(CaliperTheme.colors.cardFill)
                                     .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                                     .padding(12.dp)
                             ) {
@@ -1103,7 +1103,7 @@ fun AuditScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(range.title, color = CaliperTheme.colors.textPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-                                        Text("Period: ${range.startDate} to ${range.endDate}", color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                        Text("Period: ${range.startDate} to ${range.endDate}", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                                         if (!range.notes.isNullOrBlank()) {
                                             Text(range.notes, color = Color(0xFFCBD5E1), fontSize = 10.sp)
                                         }
@@ -1126,7 +1126,7 @@ fun AuditScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = "LOGGED DAILY OFF EVENTS",
-                                color = Color(0xFF94A3B8),
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
@@ -1137,7 +1137,7 @@ fun AuditScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF141A26))
+                                    .background(CaliperTheme.colors.cardFill)
                                     .border(0.5.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
                                     .padding(10.dp)
                             ) {
@@ -1156,7 +1156,7 @@ fun AuditScreen(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         if (!status.notes.isNullOrBlank()) {
-                                            Text(status.notes, color = Color(0xFF94A3B8), fontSize = 10.5.sp)
+                                            Text(status.notes, color = CaliperTheme.colors.textSecondary, fontSize = 10.5.sp)
                                         }
                                     }
                                     Text(status.date, color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1175,7 +1175,7 @@ fun AuditScreen(
                                     .padding(24.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("No holidays or institutional off days recorded.", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                                Text("No holidays or institutional off days recorded.", color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
                             }
                         }
                     }

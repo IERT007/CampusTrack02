@@ -132,7 +132,7 @@ fun WeeklyTimetableEditorDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0x221F293D))
+                            .background(CaliperTheme.colors.containerSurface)
                             .horizontalScroll(androidx.compose.foundation.rememberScrollState())
                             .padding(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -264,7 +264,7 @@ fun WeeklyTimetableEditorDialog(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .clip(RoundedCornerShape(8.dp))
-                                                        .background(if (isChosen) NeonCyan.copy(alpha = 0.18f) else Color(0x1AFFFFFF))
+                                                        .background(if (isChosen) NeonCyan.copy(alpha = 0.18f) else CaliperTheme.colors.containerSurface)
                                                         .border(0.5.dp, if (isChosen) NeonCyan else Color.Transparent, RoundedCornerShape(8.dp))
                                                         .clickable { formSubjectId = sub.id }
                                                         .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -340,7 +340,7 @@ fun WeeklyTimetableEditorDialog(
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(6.dp))
-                                                    .background(Color(0x22FFFFFF))
+                                                    .background(CaliperTheme.colors.containerSurface)
                                                     .clickable {
                                                         formStartTime = st
                                                         formEndTime = et
@@ -450,7 +450,7 @@ fun WeeklyTimetableEditorDialog(
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(6.dp))
-                                                    .background(Color(0x22FFFFFF))
+                                                    .background(CaliperTheme.colors.containerSurface)
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
                                                 Text(slot.roomNo, color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
@@ -494,7 +494,7 @@ fun WeeklyTimetableEditorDialog(
                     // Bottom Done Button
                     Button(
                         onClick = onDismiss,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
+                        colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.containerSurface),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {

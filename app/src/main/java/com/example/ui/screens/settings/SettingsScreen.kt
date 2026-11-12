@@ -146,6 +146,7 @@ fun SettingsScreen(
                     Text(
                         text = "Caliper Settings & Controls",
                         color = CaliperTheme.colors.textPrimary,
+                        color = CaliperTheme.colors.textPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )

@@ -81,7 +81,7 @@ fun SlimVernierPrecisionBar(
                 text = "STATUTORY 75% CUTOFF",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF94A3B8),
+                color = CaliperTheme.colors.textSecondary,
                 letterSpacing = 0.5.sp
             )
         }

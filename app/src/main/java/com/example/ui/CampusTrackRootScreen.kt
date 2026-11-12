@@ -121,7 +121,7 @@ fun CampusHeader(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0x18FFFFFF))
+                    .background(CaliperTheme.colors.containerSurface)
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,

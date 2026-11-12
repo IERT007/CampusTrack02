@@ -46,7 +46,7 @@ fun EditSlotDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            backgroundColor = Color(0xF20C0E14),
+            backgroundColor = CaliperTheme.colors.cardFill,
             borderColors = listOf(IceBlue.copy(alpha = 0.6f), GlassBorderBottom)
         ) {
             Column(
@@ -77,7 +77,7 @@ fun EditSlotDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(
-                                    if (isSelected) IceBlue.copy(alpha = 0.18f) else Color(0x0DFFFFFF),
+                                    if (isSelected) IceBlue.copy(alpha = 0.18f) else CaliperTheme.colors.containerSurface,
                                     RoundedCornerShape(8.dp)
                                 )
                                 .border(
@@ -117,7 +117,7 @@ fun EditSlotDialog(
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = IceBlue,
-                            unfocusedBorderColor = Color(0x33FFFFFF),
+                            unfocusedBorderColor = CaliperTheme.colors.containerSurface,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         )
@@ -131,7 +131,7 @@ fun EditSlotDialog(
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = IceBlue,
-                            unfocusedBorderColor = Color(0x33FFFFFF),
+                            unfocusedBorderColor = CaliperTheme.colors.containerSurface,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         )
@@ -147,7 +147,7 @@ fun EditSlotDialog(
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = IceBlue,
-                        unfocusedBorderColor = Color(0x33FFFFFF),
+                        unfocusedBorderColor = CaliperTheme.colors.containerSurface,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
                     )
@@ -184,7 +184,7 @@ fun EditSlotDialog(
                         }
                         Button(
                             onClick = { showDeleteConfirm = false },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
+                            colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.containerSurface),
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp)
                         ) {

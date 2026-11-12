@@ -208,7 +208,7 @@ fun HolidayManagerDialog(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) WarningAmber.copy(alpha = 0.25f) else Color(0x1AFFFFFF))
+                                            .background(if (isSelected) WarningAmber.copy(alpha = 0.25f) else CaliperTheme.colors.containerSurface)
                                             .border(1.dp, if (isSelected) WarningAmber else Color.Transparent, RoundedCornerShape(8.dp))
                                             .clickable { selectedType = typeId }
                                             .padding(vertical = 6.dp),

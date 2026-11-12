@@ -100,7 +100,7 @@ fun SettingsHubDialog(
                     .fillMaxWidth()
                     .fillMaxHeight(0.9f)
                     .testTag("settings_hub_dialog"),
-                backgroundColor = Color(0xF20C0E14),
+                backgroundColor = CaliperTheme.colors.cardFill,
                 borderColors = listOf(IceBlue.copy(alpha = 0.5f), GlassBorderBottom)
             ) {
                 Column(
@@ -177,7 +177,7 @@ fun SettingsHubDialog(
 
                         GlassCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = Color(0x0AFFFFFF),
+                            backgroundColor = CaliperTheme.colors.containerSurface,
                             borderColors = listOf(GlassBorderTop, GlassBorderBottom)
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -207,7 +207,7 @@ fun SettingsHubDialog(
                                             checkedThumbColor = Color.Black,
                                             checkedTrackColor = SageMint,
                                             uncheckedThumbColor = TextMuted,
-                                            uncheckedTrackColor = Color(0x22FFFFFF)
+                                            uncheckedTrackColor = CaliperTheme.colors.containerSurface
                                         )
                                     )
                                 }
@@ -256,7 +256,7 @@ fun SettingsHubDialog(
                                     }
                                 }
 
-                                HorizontalDivider(color = Color(0x1AFFFFFF))
+                                HorizontalDivider(color = CaliperTheme.colors.containerSurface)
 
                                 // Tactile Vernier Haptic Feedback Toggle
                                 Row(
@@ -284,7 +284,7 @@ fun SettingsHubDialog(
                                             checkedThumbColor = Color.Black,
                                             checkedTrackColor = SageMint,
                                             uncheckedThumbColor = TextMuted,
-                                            uncheckedTrackColor = Color(0x22FFFFFF)
+                                            uncheckedTrackColor = CaliperTheme.colors.containerSurface
                                         )
                                     )
                                 }
@@ -302,7 +302,7 @@ fun SettingsHubDialog(
 
                         GlassCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = Color(0x0AFFFFFF),
+                            backgroundColor = CaliperTheme.colors.containerSurface,
                             borderColors = listOf(GlassBorderTop, GlassBorderBottom)
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -332,12 +332,12 @@ fun SettingsHubDialog(
                                             checkedThumbColor = Color.Black,
                                             checkedTrackColor = IceBlue,
                                             uncheckedThumbColor = TextMuted,
-                                            uncheckedTrackColor = Color(0x22FFFFFF)
+                                            uncheckedTrackColor = CaliperTheme.colors.containerSurface
                                         )
                                     )
                                 }
 
-                                HorizontalDivider(color = Color(0x1AFFFFFF))
+                                HorizontalDivider(color = CaliperTheme.colors.containerSurface)
 
                                 // Visual Theme Selection
                                 Column {
@@ -359,7 +359,7 @@ fun SettingsHubDialog(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .clip(RoundedCornerShape(8.dp))
-                                                    .background(if (isSelected) IceBlue.copy(alpha = 0.2f) else Color(0x12FFFFFF))
+                                                    .background(if (isSelected) IceBlue.copy(alpha = 0.2f) else CaliperTheme.colors.containerSurface)
                                                     .border(
                                                         1.dp,
                                                         if (isSelected) IceBlue else Color.Transparent,
@@ -393,7 +393,7 @@ fun SettingsHubDialog(
 
                         GlassCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = Color(0x0AFFFFFF),
+                            backgroundColor = CaliperTheme.colors.containerSurface,
                             borderColors = listOf(GlassBorderTop, GlassBorderBottom)
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -460,7 +460,7 @@ fun SettingsHubDialog(
 
                         GlassCard(
                             modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = Color(0x0AFFFFFF),
+                            backgroundColor = CaliperTheme.colors.containerSurface,
                             borderColors = listOf(GlassBorderTop, GlassBorderBottom)
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -523,7 +523,7 @@ fun SettingsHubDialog(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x18FFFFFF))
+                                    colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.containerSurface)
                                 ) {
                                     Icon(Icons.Default.ContentCopy, contentDescription = null, tint = CaliperTheme.colors.textPrimary, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -594,7 +594,7 @@ fun SettingsHubDialog(
                                         Button(
                                             onClick = { showResetConfirmation = false },
                                             modifier = Modifier.weight(1f),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
+                                            colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.containerSurface),
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
                                             Text("Cancel", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)

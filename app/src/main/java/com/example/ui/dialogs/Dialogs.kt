@@ -80,7 +80,7 @@ fun ExtraClassDialog(
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) NeonCyan.copy(alpha = 0.15f) else Color(0x1AFFFFFF))
+                            .background(if (isSelected) NeonCyan.copy(alpha = 0.15f) else CaliperTheme.colors.containerSurface)
                             .border(
                                 1.dp,
                                 if (isSelected) NeonCyan else Color.Transparent,
@@ -116,12 +116,12 @@ fun ExtraClassDialog(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isChosen) {
                                     if (st == "attended") NeonEmerald else DangerRed
-                                } else Color(0x22FFFFFF)
+                                } else CaliperTheme.colors.containerSurface
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(label, color = if (isChosen) Color.Black else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(label, color = if (isChosen) Color.Black else TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -367,7 +367,7 @@ fun AddEditSubjectDialog(
                         Button(
                             onClick = { type = tp },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isChosen) NeonCyan else Color(0x22FFFFFF)
+                                containerColor = if (isChosen) NeonCyan else CaliperTheme.colors.containerSurface
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
@@ -388,7 +388,7 @@ fun AddEditSubjectDialog(
                         Button(
                             onClick = { strictness = st },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isChosen) color else Color(0x22FFFFFF)
+                                containerColor = if (isChosen) color else CaliperTheme.colors.containerSurface
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
@@ -494,7 +494,7 @@ fun AddAssessmentDialog(
                                 Button(
                                     onClick = { type = tp },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isChosen) NeonCyan else Color(0x22FFFFFF)
+                                        containerColor = if (isChosen) NeonCyan else CaliperTheme.colors.containerSurface
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.weight(1f)

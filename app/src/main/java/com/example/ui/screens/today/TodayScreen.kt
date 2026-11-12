@@ -161,7 +161,7 @@ fun TodayScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 130.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Auto-Vault Restore Banner
@@ -351,7 +351,7 @@ fun TodayScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x12FFFFFF))
+                        .background(CaliperTheme.colors.containerSurface)
                         .padding(vertical = 3.dp, horizontal = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
@@ -618,7 +618,7 @@ fun TodayScreen(
                                 CaliperHapticManager.tick(context)
                                 viewModel.markMassBunkOrOff("strike")
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x18FFFFFF)),
+                            colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.containerSurface),
                             shape = RoundedCornerShape(8.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderTop),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
@@ -938,7 +938,7 @@ fun TodayScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x12FFFFFF))
+                        .background(CaliperTheme.colors.containerSurface)
                         .clickable { showMarkedTray = !showMarkedTray }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
@@ -1233,7 +1233,7 @@ fun CustomActivityCard(
                         Icon(
                             imageVector = Icons.Default.Place,
                             contentDescription = null,
-                            tint = Color(0xFF94A3B8),
+                            tint = CaliperTheme.colors.textSecondary,
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
@@ -1322,7 +1322,7 @@ fun SlotCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "${item.slot.startTime} - ${item.slot.endTime}",
-                    color = if (item.isOngoing) NeonCyan else if (item.isRescheduled) WarningAmber else Color(0xFF94A3B8),
+                    color = if (item.isOngoing) NeonCyan else if (item.isRescheduled) WarningAmber else CaliperTheme.colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1330,7 +1330,7 @@ fun SlotCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0x22FFFFFF))
+                        .background(CaliperTheme.colors.containerSurface)
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
                     Text(item.slot.roomNo, color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
@@ -1638,7 +1638,7 @@ fun SlotCard(
                     onStatusChange("college_off", false, "College closure")
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isOff) TextSecondary else Color(0x1AFFFFFF)
+                    containerColor = if (isOff) TextSecondary else CaliperTheme.colors.containerSurface
                 ),
                 shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, if (isOff) TextSecondary else GlassBorderTop),
@@ -1666,7 +1666,7 @@ fun SlotCard(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (testRecord != null) "Update Class Test Score" else "Mark as Class Test",
-                    color = if (isTestExpanded) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                    color = if (isTestExpanded) Color(0xFF38BDF8) else CaliperTheme.colors.textSecondary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -1674,7 +1674,7 @@ fun SlotCard(
             Icon(
                 imageVector = if (isTestExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 contentDescription = null,
-                tint = if (isTestExpanded) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                tint = if (isTestExpanded) Color(0xFF38BDF8) else CaliperTheme.colors.textSecondary,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -1686,7 +1686,7 @@ fun SlotCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF0F172A))
+                    .background(CaliperTheme.colors.cardFill)
                     .border(0.5.dp, Color(0x3338BDF8), RoundedCornerShape(8.dp))
                     .padding(8.dp)
             ) {
@@ -1970,7 +1970,7 @@ fun SingleDayRescheduleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0F172A),
+        containerColor = CaliperTheme.colors.cardFill,
         title = {
             Column {
                 Text("Reschedule / Shift Time", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -2026,7 +2026,7 @@ fun SingleDayRescheduleDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color(0xFF94A3B8))
+                Text("Cancel", color = CaliperTheme.colors.textSecondary)
             }
         }
     )
@@ -2047,7 +2047,7 @@ fun EnterMarksDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0F172A),
+        containerColor = CaliperTheme.colors.cardFill,
         title = {
             Column {
                 Text("Enter Test Marks", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -2101,7 +2101,7 @@ fun EnterMarksDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color(0xFF94A3B8))
+                Text("Cancel", color = CaliperTheme.colors.textSecondary)
             }
         }
     )
@@ -2171,7 +2171,7 @@ fun AddExtraEventDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0x22FFFFFF))
+                        .background(CaliperTheme.colors.containerSurface)
                         .padding(2.dp)
                 ) {
                     Box(
@@ -2213,7 +2213,7 @@ fun AddExtraEventDialog(
 
                 if (selectedPath == 0) {
                     // Path 0: Curriculum Extra Class Slot
-                    Text("Select Subject:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    Text("Select Subject:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CaliperTheme.colors.textSecondary)
                     Spacer(modifier = Modifier.height(6.dp))
 
                     if (subjects.isEmpty()) {
@@ -2259,7 +2259,7 @@ fun AddExtraEventDialog(
                                         Text(
                                             text = sub.facultyName,
                                             fontSize = 10.sp,
-                                            color = Color(0xFF94A3B8)
+                                            color = CaliperTheme.colors.textSecondary
                                         )
                                     }
                                 }
@@ -2270,7 +2270,7 @@ fun AddExtraEventDialog(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Time Presets
-                    Text("Lecture Time:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    Text("Lecture Time:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CaliperTheme.colors.textSecondary)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier
@@ -2283,7 +2283,7 @@ fun AddExtraEventDialog(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isPresetSelected) NeonCyan.copy(alpha = 0.25f) else Color(0x22FFFFFF))
+                                    .background(if (isPresetSelected) NeonCyan.copy(alpha = 0.25f) else CaliperTheme.colors.containerSurface)
                                     .border(0.5.dp, if (isPresetSelected) NeonCyan else Color.Transparent, RoundedCornerShape(6.dp))
                                     .clickable {
                                         slotStartTime = start
@@ -2336,7 +2336,7 @@ fun AddExtraEventDialog(
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Type Tag:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    Text("Type Tag:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CaliperTheme.colors.textSecondary)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier
@@ -2349,7 +2349,7 @@ fun AddExtraEventDialog(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isTagSelected) NeonCyan.copy(alpha = 0.25f) else Color(0x22FFFFFF))
+                                    .background(if (isTagSelected) NeonCyan.copy(alpha = 0.25f) else CaliperTheme.colors.containerSurface)
                                     .border(0.5.dp, if (isTagSelected) NeonCyan else Color.Transparent, RoundedCornerShape(6.dp))
                                     .clickable { selectedTag = tag }
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -2433,7 +2433,7 @@ fun AddExtraEventDialog(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = NeonEmerald,
-                                uncheckedThumbColor = Color(0xFF94A3B8),
+                                uncheckedThumbColor = CaliperTheme.colors.textSecondary,
                                 uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
                             )
                         )
@@ -2499,7 +2499,7 @@ fun SemesterDatesDialog(
                 Text(
                     text = "Configure start and end dates of current semester. Slots will be suspended outside these bounds.",
                     fontSize = 12.sp,
-                    color = Color(0xFF94A3B8)
+                    color = CaliperTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(

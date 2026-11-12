@@ -416,7 +416,7 @@ fun DaySummaryModal(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0F172A),
+        containerColor = CaliperTheme.colors.cardFill,
         shape = RoundedCornerShape(20.dp),
         title = {
             Row(

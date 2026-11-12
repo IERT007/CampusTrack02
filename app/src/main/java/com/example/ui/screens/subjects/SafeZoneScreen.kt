@@ -312,7 +312,7 @@ fun SafeZoneScreen(
                         colors = SliderDefaults.colors(
                             thumbColor = if (simulatedPct >= 75.0) IceBlue else SoftCoral,
                             activeTrackColor = if (simulatedPct >= 75.0) IceBlue else SoftCoral,
-                            inactiveTrackColor = Color(0x22FFFFFF)
+                            inactiveTrackColor = CaliperTheme.colors.containerSurface
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -780,7 +780,7 @@ fun SubjectCardWithMenu(
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
-                        containerColor = Color(0xFF0F172A)
+                        containerColor = CaliperTheme.colors.cardFill
                     ) {
                         DropdownMenuItem(
                             text = { Text("Edit Details", color = CaliperTheme.colors.textPrimary, fontSize = 12.sp) },
