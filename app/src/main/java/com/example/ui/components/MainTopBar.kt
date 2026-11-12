@@ -195,6 +195,7 @@ fun MainTopBar(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
+                val isDarkMode = colors.isMonochrome
                 // 3A. Instant Dark / Light Theme Toggle Pill
                 Box(
                     modifier = Modifier
@@ -206,7 +207,7 @@ fun MainTopBar(
                         .clickable {
                             CaliperSoundManager.playSnap()
                             CaliperHapticManager.tick(context)
-                            viewModel.setMonochromeMode(!CaliperTheme.colors.isMonochrome)
+                            viewModel.setMonochromeMode(!isDarkMode)
                         },
                     contentAlignment = Alignment.Center
                 ) {
