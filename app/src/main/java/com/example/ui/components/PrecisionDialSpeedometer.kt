@@ -239,7 +239,7 @@ fun PrecisionDialSpeedometer(
                         text = String.format("%.1f", animatedPercentage),
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
+                        color = CaliperTheme.colors.textPrimary,
                         letterSpacing = (-1).sp
                     )
                     Text(

@@ -286,7 +286,7 @@ fun AuditScreen(
                                                 text = "${sub?.code ?: "SUB"} — ${sub?.name ?: "Subject"}",
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color.White
+                                                color = CaliperTheme.colors.textPrimary
                                             )
                                             Text(
                                                 text = "${records.size} Evaluation${if (records.size == 1) "" else "s"}",
@@ -920,7 +920,7 @@ fun AuditScreen(
                         Column {
                             Text(
                                 text = "Faculty Cancelled Classes",
-                                color = Color.White,
+                                color = CaliperTheme.colors.textPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -932,7 +932,7 @@ fun AuditScreen(
                         }
                     }
                     IconButton(onClick = { showCancelledClassesSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textPrimary)
                     }
                 }
 
@@ -980,7 +980,7 @@ fun AuditScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "${sub?.code ?: "SUB"} — ${sub?.name ?: "Curriculum Lecture"}",
-                                            color = Color.White,
+                                            color = CaliperTheme.colors.textPrimary,
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -1053,7 +1053,7 @@ fun AuditScreen(
                         Column {
                             Text(
                                 text = "Recorded Holidays & College Off Days",
-                                color = Color.White,
+                                color = CaliperTheme.colors.textPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1065,7 +1065,7 @@ fun AuditScreen(
                         }
                     }
                     IconButton(onClick = { showCollegeOffSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textPrimary)
                     }
                 }
 
@@ -1102,7 +1102,7 @@ fun AuditScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(range.title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                                        Text(range.title, color = CaliperTheme.colors.textPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
                                         Text("Period: ${range.startDate} to ${range.endDate}", color = Color(0xFF94A3B8), fontSize = 11.sp)
                                         if (!range.notes.isNullOrBlank()) {
                                             Text(range.notes, color = Color(0xFFCBD5E1), fontSize = 10.sp)
@@ -1114,7 +1114,7 @@ fun AuditScreen(
                                             .background(Color.White.copy(alpha = 0.08f))
                                             .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
-                                        Text(range.type.uppercase(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                        Text(range.type.uppercase(), color = CaliperTheme.colors.textPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -1151,7 +1151,7 @@ fun AuditScreen(
                                             text = if (status.leaveCategory == "mass_bunk") "Mass Bunk Declared"
                                                    else if (status.leaveCategory == "college_holiday") "College Holiday"
                                                    else "College Off",
-                                            color = Color.White,
+                                            color = CaliperTheme.colors.textPrimary,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.SemiBold
                                         )

@@ -131,7 +131,7 @@ fun ActiveSlotCard(
 
             Text(
                 text = slot.subjectName,
-                color = Color.White,
+                color = CaliperTheme.colors.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -239,7 +239,7 @@ fun CompletedTrayHeader(
     ) {
         Text(
             text = "Completed Today ($count / $total)",
-            color = Color.White,
+            color = CaliperTheme.colors.textPrimary,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold
         )
@@ -264,7 +264,7 @@ fun HistoricalSlotRow(record: ProcessedSlotRecord) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(record.subjectName, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(record.subjectName, color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             Text("${record.time} • ${record.roomNo}", color = Color(0xFF94A3B8), fontSize = 10.sp)
         }
         Box(
@@ -273,7 +273,7 @@ fun HistoricalSlotRow(record: ProcessedSlotRecord) {
                 .background(Color.White.copy(alpha = 0.1f))
                 .padding(horizontal = 6.dp, vertical = 2.dp)
         ) {
-            Text(record.status.uppercase(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(record.status.uppercase(), color = CaliperTheme.colors.textPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

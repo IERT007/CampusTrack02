@@ -145,7 +145,7 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Caliper Settings & Controls",
-                        color = Color.White,
+                        color = CaliperTheme.colors.textPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -399,7 +399,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Statutory Attendance Threshold", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Statutory Attendance Threshold", color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Text("IERT Prayagraj Academic Ordinance Rule", color = ArchitecturalTitanium, fontSize = 11.sp)
                         }
                         Box(
@@ -435,7 +435,7 @@ fun SettingsScreen(
                                         .background(if (hasAutoVault) VelvetSageEmerald else ArchitecturalTitanium)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Silent Background Auto-Vault", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Silent Background Auto-Vault", color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             }
                             Text(
                                 text = "Serializes to context.filesDir/caliper_vault_snapshot.json on every commit",
@@ -514,7 +514,7 @@ fun SettingsScreen(
                     Column {
                         Text(
                             text = "IERT Prayagraj 3rd Semester",
-                            color = Color.White,
+                            color = CaliperTheme.colors.textPrimary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -585,7 +585,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showResetConfirmation = false },
             containerColor = Color(0xFF10141D),
-            title = { Text("Reload IERT Curriculum?", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("Reload IERT Curriculum?", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold) },
             text = { Text("This will re-initialize the 7 official IERT 3rd semester subjects and recurring weekly slots with a clean slate.", color = TextSecondary, fontSize = 13.sp) },
             confirmButton = {
                 Button(
@@ -626,7 +626,7 @@ fun SettingsScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SoftCoralRose)
                 ) {
-                    Text("Wipe", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Wipe", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -660,7 +660,7 @@ private fun SettingsToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
         }
         Switch(
@@ -698,7 +698,7 @@ private fun NotificationSettingItem(
         }
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = CaliperTheme.colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             Text(description, color = ArchitecturalTitanium, fontSize = 10.sp)
         }
         Text("Active", color = VelvetSageEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -752,7 +752,7 @@ private fun SemesterDatePickerRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = CaliperTheme.colors.textPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
         }
 

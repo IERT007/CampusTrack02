@@ -285,7 +285,7 @@ fun TodayScreen(
                             text = formattedDate,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = CaliperTheme.colors.textPrimary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
@@ -451,7 +451,7 @@ fun TodayScreen(
                             Column {
                                 Text(
                                     text = "Pre-Semester / Session Not Started",
-                                    color = Color.White,
+                                    color = CaliperTheme.colors.textPrimary,
                                     fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -493,7 +493,7 @@ fun TodayScreen(
                             Column {
                                 Text(
                                     text = "Semester Concluded / Preparation Leave",
-                                    color = Color.White,
+                                    color = CaliperTheme.colors.textPrimary,
                                     fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -544,7 +544,7 @@ fun TodayScreen(
                                 text = "$dayName • ${slotItems.size} Classes",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = CaliperTheme.colors.textPrimary
                             )
                         }
 
@@ -1222,7 +1222,7 @@ fun CustomActivityCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = activity.title,
-                    color = Color.White,
+                    color = CaliperTheme.colors.textPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1485,7 +1485,7 @@ fun SlotCard(
                         Column {
                             Text(
                                 text = "${testRecord.testName} (Max: ${testRecord.maxMarks})",
-                                color = Color.White,
+                                color = CaliperTheme.colors.textPrimary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1973,7 +1973,7 @@ fun SingleDayRescheduleDialog(
         containerColor = Color(0xFF0F172A),
         title = {
             Column {
-                Text("Reschedule / Shift Time", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Reschedule / Shift Time", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text("Today Only ($date) • ${item.subject?.name ?: "Slot"}", color = Color(0xFF94A3B8), fontSize = 12.sp)
             }
         },
@@ -2050,7 +2050,7 @@ fun EnterMarksDialog(
         containerColor = Color(0xFF0F172A),
         title = {
             Column {
-                Text("Enter Test Marks", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Enter Test Marks", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text("${testRecord.testName} • $subjectName", color = Color(0xFF94A3B8), fontSize = 12.sp)
             }
         },
@@ -2058,7 +2058,7 @@ fun EnterMarksDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = "Maximum Marks: ${testRecord.maxMarks}",
-                    color = Color.White,
+                    color = CaliperTheme.colors.textPrimary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -2157,7 +2157,7 @@ fun AddExtraEventDialog(
                 text = "Schedule Event for $selectedDate",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                color = Color.White
+                color = CaliperTheme.colors.textPrimary
             )
         },
         text = {
@@ -2417,7 +2417,7 @@ fun AddExtraEventDialog(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Count towards overall attendance?",
-                                color = Color.White,
+                                color = CaliperTheme.colors.textPrimary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -2472,7 +2472,7 @@ fun AddExtraEventDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.White)
+                Text("Cancel", color = CaliperTheme.colors.textPrimary)
             }
         }
     )
@@ -2529,7 +2529,7 @@ fun SemesterDatesDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.White)
+                Text("Cancel", color = CaliperTheme.colors.textPrimary)
             }
         }
     )

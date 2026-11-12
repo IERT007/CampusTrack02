@@ -15,9 +15,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ripple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -60,23 +60,32 @@ fun triggerHapticFeedback(context: Context, isHeavy: Boolean = false) {
             vibrator?.vibrate(if (isHeavy) 40L else 20L)
         }
     } catch (_: Exception) {
-        // Safe fallback if permission or hardware unavailable
     }
 }
 
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(18.dp),
-    backgroundColor: Color = GlassFill,
-    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
-    borderWidth: Dp = 0.5.dp,
+    shape: Shape = RoundedCornerShape(20.dp),
+    backgroundColor: Color = Color.Unspecified,
+    borderColors: List<Color> = emptyList(),
+    borderWidth: Dp = 1.dp,
     innerPadding: Dp = 16.dp,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val context = LocalContext.current
     val colors = CaliperTheme.colors
+    val resolvedBg = if (backgroundColor == Color.Unspecified || backgroundColor == GlassFill) {
+        colors.cardFill
+    } else {
+        backgroundColor
+    }
+    val resolvedBorders = if (borderColors.isEmpty()) {
+        listOf(colors.cardBorderTop, colors.cardBorderBottom)
+    } else {
+        borderColors
+    }
 
     val interactiveModifier = if (onClick != null) {
         Modifier.tactilePressEffect(context) {
@@ -86,19 +95,17 @@ fun GlassCard(
 
     Box(
         modifier = modifier
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.045f),
-                        Color.White.copy(alpha = 0.015f),
-                        colors.containerSurface.copy(alpha = 0.85f)
-                    )
-                )
+            .shadow(
+                elevation = if (colors.isMonochrome) 0.dp else 6.dp,
+                shape = shape,
+                ambientColor = CalmShadowDark.copy(alpha = 0.55f),
+                spotColor = CalmShadowDark.copy(alpha = 0.65f)
             )
+            .clip(shape)
+            .background(resolvedBg)
             .border(
                 width = borderWidth,
-                brush = Brush.verticalGradient(colors = borderColors),
+                brush = Brush.verticalGradient(colors = resolvedBorders),
                 shape = shape
             )
             .then(interactiveModifier)
@@ -111,25 +118,30 @@ fun GlassCard(
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp),
-    borderColors: List<Color> = listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
+    shape: Shape = RoundedCornerShape(22.dp),
+    borderColors: List<Color> = emptyList(),
     content: @Composable BoxScope.() -> Unit
 ) {
     val colors = CaliperTheme.colors
+    val resolvedBorders = if (borderColors.isEmpty()) {
+        listOf(colors.cardBorderTop, colors.cardBorderBottom)
+    } else {
+        borderColors
+    }
+
     Box(
         modifier = modifier
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.04f),
-                        colors.containerSurface.copy(alpha = 0.90f)
-                    )
-                )
+            .shadow(
+                elevation = if (colors.isMonochrome) 0.dp else 8.dp,
+                shape = shape,
+                ambientColor = CalmShadowDark.copy(alpha = 0.60f),
+                spotColor = CalmShadowDark.copy(alpha = 0.70f)
             )
+            .clip(shape)
+            .background(colors.cardFill)
             .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(borderColors),
+                width = 1.dp,
+                brush = Brush.verticalGradient(resolvedBorders),
                 shape = shape
             ),
         content = content
@@ -143,57 +155,51 @@ fun MetricRadialRing(
     strokeWidth: Dp = 12.dp,
     modifier: Modifier = Modifier
 ) {
+    val colors = CaliperTheme.colors
     val animatedPercentage by animateFloatAsState(
         targetValue = percentage.toFloat(),
         animationSpec = tween(durationMillis = 700),
         label = "radial_pct"
     )
 
-    val color = when {
-        percentage >= 75.0 -> NeonEmerald
-        percentage >= 65.0 -> WarningAmber
-        else -> DangerRed
+    val ringColor = when {
+        percentage >= 75.0 -> colors.primaryAccent
+        percentage >= 65.0 -> colors.deadlineWarning
+        else -> colors.bunkDanger
     }
+
+    val trackColor = if (colors.isMonochrome) Color(0x22FFFFFF) else CalmMist
 
     Box(
         modifier = modifier.size(size),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize().padding(strokeWidth / 2)) {
-            // Background track
             drawCircle(
-                color = Color(0x22FFFFFF),
+                color = trackColor,
                 style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
             )
-            // Active arc
             val sweep = (animatedPercentage.coerceIn(0f, 100f) / 100f) * 360f
             drawArc(
-                brush = Brush.sweepGradient(
-                    listOf(
-                        color.copy(alpha = 0.6f),
-                        color,
-                        color
-                    )
-                ),
+                color = ringColor,
                 startAngle = -90f,
                 sweepAngle = sweep,
                 useCenter = false,
                 style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
             )
         }
-
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = String.format("%.1f%%", percentage),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = colors.textPrimary
             )
             Text(
                 text = if (percentage >= 75.0) "SAFE ZONE" else if (percentage >= 65.0) "WARNING" else "CRITICAL",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = color,
+                color = ringColor,
                 letterSpacing = 1.sp
             )
         }
@@ -203,17 +209,16 @@ fun MetricRadialRing(
 @Composable
 fun StrictnessBadge(strictness: String) {
     val (label, bg, fg) = when (strictness.lowercase()) {
-        "strict" -> Triple("Strict", Color(0x33EF4444), StrictRed)
-        "moderate" -> Triple("Moderate", Color(0x33F59E0B), ModerateAmber)
-        else -> Triple("Chill", Color(0x3310B981), ChillEmerald)
+        "strict" -> Triple("Strict", PsychologyRed.copy(alpha = 0.14f), PsychologyRed)
+        "moderate" -> Triple("Moderate", PsychologyAmber.copy(alpha = 0.16f), PsychologyAmber)
+        else -> Triple("Chill", CalmSagePrimary.copy(alpha = 0.16f), CalmSagePrimary)
     }
-
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(50))
             .background(bg)
-            .border(0.5.dp, fg.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .border(0.8.dp, fg.copy(alpha = 0.35f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
@@ -227,17 +232,16 @@ fun StrictnessBadge(strictness: String) {
 @Composable
 fun TypeBadge(type: String) {
     val (label, bg, fg) = when (type.lowercase()) {
-        "lab" -> Triple("LAB", Color(0x33A855F7), Color(0xFFC084FC))
-        "workshop" -> Triple("WORKSHOP", Color(0x33F43F5E), Color(0xFFFB7185))
-        else -> Triple("THEORY", Color(0x3300E5FF), NeonCyan)
+        "lab" -> Triple("LAB", ElectricViolet.copy(alpha = 0.14f), ElectricViolet)
+        "workshop" -> Triple("WORKSHOP", PsychologyOrange.copy(alpha = 0.14f), PsychologyOrange)
+        else -> Triple("THEORY", PsychologyBlue.copy(alpha = 0.14f), PsychologyBlue)
     }
-
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(50))
             .background(bg)
-            .border(0.5.dp, fg.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .border(0.8.dp, fg.copy(alpha = 0.35f), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
@@ -254,19 +258,29 @@ fun GlassIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = TextPrimary,
-    containerColor: Color = Color(0x26FFFFFF)
+    tint: Color = Color.Unspecified,
+    containerColor: Color = Color.Unspecified
 ) {
     val context = LocalContext.current
+    val colors = CaliperTheme.colors
+    val resolvedTint = if (tint == Color.Unspecified) colors.textPrimary else tint
+    val resolvedBg = if (containerColor == Color.Unspecified) colors.cardFill else containerColor
+
     Box(
         modifier = modifier
             .size(44.dp)
+            .shadow(
+                elevation = if (colors.isMonochrome) 0.dp else 4.dp,
+                shape = CircleShape,
+                ambientColor = CalmShadowDark.copy(alpha = 0.5f),
+                spotColor = CalmShadowDark.copy(alpha = 0.6f)
+            )
             .clip(CircleShape)
-            .background(containerColor)
-            .border(1.dp, GlassBorderTop, CircleShape)
+            .background(resolvedBg)
+            .border(1.dp, colors.cardBorderTop, CircleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(color = tint),
+                indication = ripple(color = resolvedTint),
                 onClick = {
                     triggerHapticFeedback(context, false)
                     onClick()
@@ -277,7 +291,7 @@ fun GlassIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = tint,
+            tint = resolvedTint,
             modifier = Modifier.size(20.dp)
         )
     }

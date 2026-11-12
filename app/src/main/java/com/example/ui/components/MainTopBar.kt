@@ -108,7 +108,7 @@ fun MainTopBar(
                         style = TextStyle(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = CaliperTheme.colors.textPrimary
                         )
                     )
                     Text(
@@ -153,7 +153,7 @@ fun MainTopBar(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle = TextStyle(
-                                color = Color.White,
+                                color = CaliperTheme.colors.textPrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Normal
                             ),
@@ -288,7 +288,7 @@ fun MainTopBar(
                                         Column {
                                             Text(
                                                 text = "${sub.code} — ${sub.name}",
-                                                color = Color.White,
+                                                color = CaliperTheme.colors.textPrimary,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
@@ -457,7 +457,7 @@ fun SubjectTelemetryDialog(
                                 text = subject.name,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = CaliperTheme.colors.textPrimary
                             )
                             Text(
                                 text = "${subject.facultyName} • ${subject.type.uppercase()}",
@@ -467,7 +467,7 @@ fun SubjectTelemetryDialog(
                         }
 
                         IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = CaliperTheme.colors.textPrimary)
                         }
                     }
 
@@ -511,7 +511,7 @@ fun SubjectTelemetryDialog(
                                 text = nextSlotInfo,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                color = CaliperTheme.colors.textPrimary
                             )
                         }
                     }
@@ -598,7 +598,7 @@ fun SubjectTelemetryDialog(
                                 },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = Color.White
+                                color = CaliperTheme.colors.textPrimary
                             )
                             Text(
                                 text = "Formula: B = ⌊(Attended - 0.75×Total) / 0.75⌋",
@@ -672,7 +672,7 @@ fun MainTopBar(
         Column(modifier = Modifier.widthIn(min = 90.dp, max = 110.dp)) {
             Text(
                 text = "Caliper",
-                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CaliperTheme.colors.textPrimary)
             )
             Text(
                 text = "IERT Prayagraj",

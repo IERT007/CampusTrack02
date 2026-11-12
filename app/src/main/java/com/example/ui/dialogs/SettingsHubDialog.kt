@@ -588,7 +588,7 @@ fun SettingsHubDialog(
                                             colors = ButtonDefaults.buttonColors(containerColor = SoftCoral),
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
-                                            Text("Confirm Reset", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Text("Confirm Reset", color = CaliperTheme.colors.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         }
 
                                         Button(

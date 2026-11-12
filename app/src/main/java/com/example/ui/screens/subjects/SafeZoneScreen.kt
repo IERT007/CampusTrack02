@@ -174,7 +174,7 @@ fun SafeZoneScreen(
                             text = "${summary.totalAttended} / ${summary.totalConducted}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = CaliperTheme.colors.textPrimary
                         )
                     }
 
@@ -429,7 +429,7 @@ fun SafeZoneScreen(
                             text = "Timetable Slot Editor",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = CaliperTheme.colors.textPrimary
                         )
                         Text(
                             text = "Manage weekly slots and room mappings",
@@ -555,7 +555,7 @@ fun SafeZoneScreen(
                                         text = sub?.name ?: "Unknown Subject",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = CaliperTheme.colors.textPrimary
                                     )
                                     Text(
                                         text = "${sub?.code ?: ""} • ${sub?.facultyName ?: ""}",
@@ -630,7 +630,7 @@ fun SafeZoneScreen(
                 Text(
                     text = "Are you sure you want to delete ${sub.name}?\n\nWarning: This will permanently remove all associated timetable slots, attendance records, and test marks for this subject. This action cannot be undone.",
                     fontSize = 13.sp,
-                    color = Color.White
+                    color = CaliperTheme.colors.textPrimary
                 )
             },
             confirmButton = {
@@ -641,12 +641,12 @@ fun SafeZoneScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = StrictRed)
                 ) {
-                    Text("Delete Subject", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Delete Subject", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { subjectToDelete = null }) {
-                    Text("Cancel", color = Color.White)
+                    Text("Cancel", color = CaliperTheme.colors.textPrimary)
                 }
             }
         )
@@ -747,7 +747,7 @@ fun SubjectCardWithMenu(
                     text = stat.subject.name,
                     fontSize = 14.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = CaliperTheme.colors.textPrimary
                 )
                 Text(
                     text = stat.subject.facultyName,
@@ -783,7 +783,7 @@ fun SubjectCardWithMenu(
                         containerColor = Color(0xFF0F172A)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Edit Details", color = Color.White, fontSize = 12.sp) },
+                            text = { Text("Edit Details", color = CaliperTheme.colors.textPrimary, fontSize = 12.sp) },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 menuExpanded = false
@@ -831,7 +831,7 @@ fun SubjectCardWithMenu(
                     text = "${stat.totalConducted} Classes",
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = CaliperTheme.colors.textPrimary
                 )
             }
 

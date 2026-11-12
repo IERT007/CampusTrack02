@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -156,61 +158,93 @@ fun CompactFloatingGlassNavBar(
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = CaliperTheme.colors
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(Color(0xFF0A0D14).copy(alpha = 0.85f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .height(64.dp)
+            .shadow(
+                elevation = if (colors.isMonochrome) 0.dp else 10.dp,
+                shape = CircleShape,
+                ambientColor = CalmShadowDark.copy(alpha = 0.65f),
+                spotColor = CalmShadowDark.copy(alpha = 0.75f)
+            )
+            .clip(CircleShape)
+            .background(colors.cardFill)
+            .border(1.dp, colors.cardBorderTop, CircleShape)
             .testTag("floating_glass_nav_bar"),
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             AppTab.values().forEach { tab ->
                 val isSelected = (selectedTab == tab)
+                val pillBg = when {
+                    isSelected && colors.isMonochrome -> Color.White.copy(alpha = 0.14f)
+                    isSelected -> colors.primaryAccent
+                    else -> colors.containerSurface.copy(alpha = 0.75f)
+                }
+                val contentTint = when {
+                    isSelected && colors.isMonochrome -> Color.White
+                    isSelected -> Color.White
+                    else -> colors.textSecondary
+                }
 
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(42.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent
+                        .then(if (isSelected) Modifier.weight(1.4f) else Modifier.size(48.dp))
+                        .height(48.dp)
+                        .padding(horizontal = 3.dp)
+                        .clip(CircleShape)
+                        .background(pillBg)
+                        .border(
+                            width = 0.8.dp,
+                            color = if (isSelected) Color.Transparent else colors.divider,
+                            shape = CircleShape
                         )
                         .fluidTouchFeedback {
                             onTabSelected(tab)
                         }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(color = Color.White.copy(alpha = 0.2f)),
+                            indication = ripple(color = colors.primaryAccent.copy(alpha = 0.25f)),
                             onClick = { onTabSelected(tab) }
                         )
                         .testTag(tab.testTag),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
+                    if (isSelected) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = tab.selectedIcon,
+                                contentDescription = tab.title,
+                                tint = contentTint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = tab.title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = contentTint,
+                                maxLines = 1
+                            )
+                        }
+                    } else {
                         Icon(
-                            imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                            imageVector = tab.unselectedIcon,
                             contentDescription = tab.title,
-                            tint = if (isSelected) Color.White else Color(0xFF94A3B8),
+                            tint = contentTint,
                             modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = tab.title,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSelected) Color.White else Color(0xFF94A3B8)
                         )
                     }
                 }

@@ -67,7 +67,7 @@ fun TelemetrySafeZoneGauge(
             (centerOffset.y + (radius + strokeWidth) * Math.sin(markerAngleRad)).toFloat()
         )
         drawLine(
-            color = Color.White,
+            color = CaliperTheme.colors.textPrimary,
             start = innerMarker,
             end = outerMarker,
             strokeWidth = 2.dp.toPx(),
@@ -83,13 +83,13 @@ fun TelemetrySafeZoneGauge(
         )
 
         drawLine(
-            color = Color.White,
+            color = CaliperTheme.colors.textPrimary,
             start = centerOffset,
             end = needleTip,
             strokeWidth = 2.5.dp.toPx(),
             cap = StrokeCap.Round
         )
-        drawCircle(color = Color.White, radius = 5.dp.toPx(), center = centerOffset)
+        drawCircle(color = CaliperTheme.colors.textPrimary, radius = 5.dp.toPx(), center = centerOffset)
         drawCircle(color = Color(0xFF080A0F), radius = 2.5.dp.toPx(), center = centerOffset)
     }
 }

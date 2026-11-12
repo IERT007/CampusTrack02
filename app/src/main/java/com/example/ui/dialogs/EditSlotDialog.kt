@@ -180,7 +180,7 @@ fun EditSlotDialog(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Confirm Delete", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Confirm Delete", color = CaliperTheme.colors.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                         Button(
                             onClick = { showDeleteConfirm = false },

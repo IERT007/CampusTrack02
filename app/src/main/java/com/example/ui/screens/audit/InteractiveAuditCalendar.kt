@@ -79,14 +79,14 @@ fun InteractiveAuditCalendar(
                     }
                 }
             ) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = Color.White)
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = CaliperTheme.colors.textPrimary)
             }
 
             Text(
                 text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = CaliperTheme.colors.textPrimary
                 ),
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -101,7 +101,7 @@ fun InteractiveAuditCalendar(
                     }
                 }
             ) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = Color.White)
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = CaliperTheme.colors.textPrimary)
             }
         }
 
@@ -154,7 +154,7 @@ fun InteractiveAuditCalendar(
         AlertDialog(
             onDismissRequest = { showMonthPicker = false },
             containerColor = Color(0xFF111622),
-            title = { Text("Select Semester Month", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("Select Semester Month", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     semesterMonths.forEach { ym ->
@@ -184,7 +184,7 @@ fun InteractiveAuditCalendar(
             },
             confirmButton = {
                 TextButton(onClick = { showMonthPicker = false }) {
-                    Text("Close", color = Color.White)
+                    Text("Close", color = CaliperTheme.colors.textPrimary)
                 }
             }
         )
@@ -436,7 +436,7 @@ fun DaySummaryModal(
                         text = "Day Summary • ${date.format(DateTimeFormatter.ofPattern("dd MMM"))}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = Color.White
+                        color = CaliperTheme.colors.textPrimary
                     )
                 }
 
@@ -528,7 +528,7 @@ fun DaySummaryModal(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = sub?.name ?: "Subject #${log.subjectId}",
-                                        color = Color.White,
+                                        color = CaliperTheme.colors.textPrimary,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -572,7 +572,7 @@ fun DaySummaryModal(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = Color.White)
+                Text("Close", color = CaliperTheme.colors.textPrimary)
             }
         }
     )

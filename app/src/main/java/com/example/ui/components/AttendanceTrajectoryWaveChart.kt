@@ -104,7 +104,7 @@ fun AttendanceTrajectoryWaveChart(
                     text = "Cumulative Progression Trend",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = CaliperTheme.colors.textPrimary
                 )
             }
 
@@ -224,7 +224,7 @@ fun AttendanceTrajectoryWaveChart(
                     center = Offset(lastX, lastY)
                 )
                 drawCircle(
-                    color = Color.White,
+                    color = CaliperTheme.colors.textPrimary,
                     radius = 2.dp.toPx(),
                     center = Offset(lastX, lastY)
                 )

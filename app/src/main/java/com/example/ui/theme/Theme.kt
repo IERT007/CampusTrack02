@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -28,14 +29,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.core.view.WindowCompat
 import com.example.audio.CaliperHapticManager
 
-/**
- * Caliper OS Flagship Color Palette & System
- * Features:
- * - Canvas: True Pitch Black (#000000)
- * - Card Surfaces: Deep Obsidian Glass (#0E121B @ 85% alpha)
- * - Luminous Top-Edge Border: Hairline 0.5.dp specular highlight (0.16f alpha to Transparent)
- * - Universal unified palette: High clarity, zero ambient blue-navy wash
- */
 @Immutable
 data class CaliperColors(
     val isMonochrome: Boolean,
@@ -47,7 +40,6 @@ data class CaliperColors(
     val textPrimary: Color,
     val textSecondary: Color,
     val textMuted: Color,
-    // Semantic Tokens
     val primaryAccent: Color,
     val safeZone: Color,
     val safeZoneContainer: Color,
@@ -58,47 +50,47 @@ data class CaliperColors(
     val divider: Color
 )
 
-val FlagshipObsidianColors = CaliperColors(
+val CalmKitIvoryColors = CaliperColors(
     isMonochrome = false,
-    baseSurface = Color(0xFF000000), // True Pitch Black canvas background
-    containerSurface = Color(0xFF07090E),
-    cardFill = Color(0xFF0E121B).copy(alpha = 0.85f), // Deep Obsidian Glass
-    cardBorderTop = Color.White.copy(alpha = 0.16f), // Luminous specular top border
-    cardBorderBottom = Color.Transparent,
-    textPrimary = Color(0xFFFFFFFF), // Pure Crisp White
-    textSecondary = Color(0xFFCBD5E1), // Soft silver secondary labels
-    textMuted = Color(0xFF94A3B8),
-    primaryAccent = PsychologyBlue,
+    baseSurface = CalmIvoryCanvas,
+    containerSurface = CalmIvorySurface,
+    cardFill = CalmCardRaised,
+    cardBorderTop = Color.White.copy(alpha = 0.90f),
+    cardBorderBottom = CalmShadowDark.copy(alpha = 0.55f),
+    textPrimary = CalmInkPrimary,
+    textSecondary = CalmInkSecondary,
+    textMuted = CalmInkMuted,
+    primaryAccent = CalmSagePrimary,
     safeZone = PsychologyGreen,
-    safeZoneContainer = PsychologyGreen.copy(alpha = 0.15f),
+    safeZoneContainer = CalmMist,
     scheduledLecture = PsychologyBlue,
     deadlineWarning = PsychologyOrange,
     bunkDanger = PsychologyRed,
     streakGold = PsychologyGold,
-    divider = Color.White.copy(alpha = 0.08f)
+    divider = CalmShadowDark.copy(alpha = 0.45f)
 )
 
-val MonochromeObsidianColors = CaliperColors(
+val FlagshipObsidianColors = CaliperColors(
     isMonochrome = true,
     baseSurface = Color(0xFF000000),
-    containerSurface = Color(0xFF0A0A0A),
-    cardFill = Color(0xFF121212).copy(alpha = 0.88f),
-    cardBorderTop = Color.White.copy(alpha = 0.22f),
+    containerSurface = Color(0xFF0A0D14),
+    cardFill = Color(0xFF111622).copy(alpha = 0.90f),
+    cardBorderTop = Color.White.copy(alpha = 0.16f),
     cardBorderBottom = Color.Transparent,
-    textPrimary = Color(0xFFFFFFFF),
-    textSecondary = Color(0xFFD4D4D8),
-    textMuted = Color(0xFF71717A),
-    primaryAccent = Color(0xFFFFFFFF),
-    safeZone = Color(0xFFE4E4E7),
-    safeZoneContainer = Color.White.copy(alpha = 0.12f),
-    scheduledLecture = Color(0xFFD4D4D8),
-    deadlineWarning = Color(0xFFA1A1AA),
-    bunkDanger = Color(0xFF71717A),
-    streakGold = Color(0xFFFFFFFF),
-    divider = Color.White.copy(alpha = 0.12f)
+    textPrimary = Color(0xFFF8FAFC),
+    textSecondary = Color(0xFFCBD5E1),
+    textMuted = Color(0xFF94A3B8),
+    primaryAccent = Color(0xFF7FA389),
+    safeZone = Color(0xFF34D399),
+    safeZoneContainer = Color(0xFF34D399).copy(alpha = 0.15f),
+    scheduledLecture = Color(0xFF60A5FA),
+    deadlineWarning = Color(0xFFFB923C),
+    bunkDanger = Color(0xFFF87171),
+    streakGold = Color(0xFFFBBF24),
+    divider = Color.White.copy(alpha = 0.10f)
 )
 
-val LocalCaliperColors = staticCompositionLocalOf { FlagshipObsidianColors }
+val LocalCaliperColors = staticCompositionLocalOf { CalmKitIvoryColors }
 
 object CaliperTheme {
     val colors: CaliperColors
@@ -106,12 +98,6 @@ object CaliperTheme {
         get() = LocalCaliperColors.current
 }
 
-/**
- * Living Fluid Touch Feedback Modifier
- * ColorOS/OxygenOS fluid dynamics spring compression:
- * - On Press: Animates scale smoothly down to 0.965f with immediate tactile micro-tick
- * - On Release/Cancel: Snaps back to 1.0f using spring physics (dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
- */
 fun Modifier.fluidTouchFeedback(
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null
@@ -123,7 +109,7 @@ fun Modifier.fluidTouchFeedback(
     var isPressed by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.965f else 1.0f,
+        targetValue = if (isPressed) 0.968f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -138,7 +124,7 @@ fun Modifier.fluidTouchFeedback(
         }
         .pointerInput(Unit) {
             awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false)
+                awaitFirstDown(requireUnconsumed = false)
                 isPressed = true
                 try {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -146,7 +132,6 @@ fun Modifier.fluidTouchFeedback(
                     CaliperHapticManager.tick(context)
                 }
 
-                // Wait for up or cancel
                 val up = try {
                     waitForUpOrCancellation()
                 } catch (_: Exception) {
@@ -160,10 +145,6 @@ fun Modifier.fluidTouchFeedback(
         }
 }
 
-/**
- * Tactile Pressed & Inset Mechanics
- * Scales button to 0.965f on press with haptic feedback
- */
 fun Modifier.tactilePressEffect(
     context: Context? = null,
     onClick: () -> Unit
@@ -171,7 +152,7 @@ fun Modifier.tactilePressEffect(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.965f else 1f,
+        targetValue = if (isPressed) 0.968f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -186,7 +167,7 @@ fun Modifier.tactilePressEffect(
         }
         .clickable(
             interactionSource = interactionSource,
-            indication = ripple(color = Color.White.copy(alpha = 0.18f))
+            indication = ripple(color = CalmSagePrimary.copy(alpha = 0.18f))
         ) {
             if (context != null) {
                 CaliperHapticManager.tick(context)
@@ -200,17 +181,31 @@ fun MyApplicationTheme(
     isMonochrome: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val caliperColors = if (isMonochrome) MonochromeObsidianColors else FlagshipObsidianColors
+    val caliperColors = if (isMonochrome) FlagshipObsidianColors else CalmKitIvoryColors
 
-    val materialColorScheme = darkColorScheme(
-        primary = caliperColors.primaryAccent,
-        background = caliperColors.baseSurface,
-        surface = caliperColors.containerSurface,
-        onPrimary = Color.Black,
-        onBackground = caliperColors.textPrimary,
-        onSurface = caliperColors.textPrimary,
-        error = caliperColors.bunkDanger
-    )
+    val materialColorScheme = if (isMonochrome) {
+        darkColorScheme(
+            primary = caliperColors.primaryAccent,
+            background = caliperColors.baseSurface,
+            surface = caliperColors.containerSurface,
+            onPrimary = Color.Black,
+            onBackground = caliperColors.textPrimary,
+            onSurface = caliperColors.textPrimary,
+            error = caliperColors.bunkDanger
+        )
+    } else {
+        lightColorScheme(
+            primary = caliperColors.primaryAccent,
+            background = caliperColors.baseSurface,
+            surface = caliperColors.cardFill,
+            surfaceVariant = caliperColors.containerSurface,
+            onPrimary = Color.White,
+            onBackground = caliperColors.textPrimary,
+            onSurface = caliperColors.textPrimary,
+            onSurfaceVariant = caliperColors.textSecondary,
+            error = caliperColors.bunkDanger
+        )
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -219,8 +214,9 @@ fun MyApplicationTheme(
             if (window != null) {
                 window.statusBarColor = caliperColors.baseSurface.toArgb()
                 window.navigationBarColor = caliperColors.baseSurface.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+                val useDarkIcons = !isMonochrome
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = useDarkIcons
+                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = useDarkIcons
             }
         }
     }
