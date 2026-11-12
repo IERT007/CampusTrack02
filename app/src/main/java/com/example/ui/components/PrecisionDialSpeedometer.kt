@@ -216,7 +216,7 @@ fun PrecisionDialSpeedometer(
 
                 // Center Pivot Hub
                 drawCircle(
-                    color = CaliperTheme.colors.cardFill,
+                    color = Color(0xFF161C1F),
                     radius = 9.dp.toPx(),
                     center = Offset(centerX, centerY)
                 )
