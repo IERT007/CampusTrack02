@@ -1,4 +1,5 @@
 package com.example.ui.components
+import com.example.ui.theme.CaliperTheme
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
