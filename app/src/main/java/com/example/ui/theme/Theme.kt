@@ -78,6 +78,26 @@ val FlagshipObsidianColors = CaliperColors(
     divider = Color.White.copy(alpha = 0.08f)
 )
 
+val MonochromeObsidianColors = CaliperColors(
+    isMonochrome = true,
+    baseSurface = Color(0xFF000000),
+    containerSurface = Color(0xFF0A0A0A),
+    cardFill = Color(0xFF121212).copy(alpha = 0.88f),
+    cardBorderTop = Color.White.copy(alpha = 0.22f),
+    cardBorderBottom = Color.Transparent,
+    textPrimary = Color(0xFFFFFFFF),
+    textSecondary = Color(0xFFD4D4D8),
+    textMuted = Color(0xFF71717A),
+    primaryAccent = Color(0xFFFFFFFF),
+    safeZone = Color(0xFFE4E4E7),
+    safeZoneContainer = Color.White.copy(alpha = 0.12f),
+    scheduledLecture = Color(0xFFD4D4D8),
+    deadlineWarning = Color(0xFFA1A1AA),
+    bunkDanger = Color(0xFF71717A),
+    streakGold = Color(0xFFFFFFFF),
+    divider = Color.White.copy(alpha = 0.12f)
+)
+
 val LocalCaliperColors = staticCompositionLocalOf { FlagshipObsidianColors }
 
 object CaliperTheme {
@@ -180,7 +200,7 @@ fun MyApplicationTheme(
     isMonochrome: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val caliperColors = FlagshipObsidianColors
+    val caliperColors = if (isMonochrome) MonochromeObsidianColors else FlagshipObsidianColors
 
     val materialColorScheme = darkColorScheme(
         primary = caliperColors.primaryAccent,
