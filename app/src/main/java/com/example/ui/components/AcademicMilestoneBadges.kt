@@ -47,7 +47,7 @@ fun AcademicMilestoneBadges(
             )
             Text(
                 text = "Academic Milestones",
-                color = TextSecondary,
+                color = CaliperTheme.colors.textSecondary,
                 fontSize = 11.sp
             )
         }

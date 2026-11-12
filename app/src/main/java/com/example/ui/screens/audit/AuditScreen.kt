@@ -273,7 +273,7 @@ fun AuditScreen(
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(Color(0xFF0F172A))
-                                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                        .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                                         .padding(10.dp)
                                 ) {
                                     Row(
@@ -1093,7 +1093,7 @@ fun AuditScreen(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(Color(0xFF141A26))
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                    .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                                     .padding(12.dp)
                             ) {
                                 Row(
@@ -1111,7 +1111,7 @@ fun AuditScreen(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
+                                            .background(CaliperTheme.colors.containerSurface)
                                             .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
                                         Text(range.type.uppercase(), color = CaliperTheme.colors.textPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)

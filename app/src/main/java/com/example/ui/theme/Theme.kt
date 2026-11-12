@@ -21,11 +21,11 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.core.view.WindowCompat
 import com.example.audio.CaliperHapticManager
 
@@ -35,12 +35,16 @@ data class CaliperColors(
     val baseSurface: Color,
     val containerSurface: Color,
     val cardFill: Color,
+    val pressedFill: Color,
+    val shadowDark: Color,
+    val highlightLight: Color,
     val cardBorderTop: Color,
     val cardBorderBottom: Color,
     val textPrimary: Color,
     val textSecondary: Color,
     val textMuted: Color,
     val primaryAccent: Color,
+    val onPrimaryAccent: Color,
     val safeZone: Color,
     val safeZoneContainer: Color,
     val scheduledLecture: Color,
@@ -55,39 +59,47 @@ val CalmKitIvoryColors = CaliperColors(
     baseSurface = CalmIvoryCanvas,
     containerSurface = CalmIvorySurface,
     cardFill = CalmCardRaised,
-    cardBorderTop = Color.White.copy(alpha = 0.90f),
-    cardBorderBottom = CalmShadowDark.copy(alpha = 0.55f),
+    pressedFill = CalmCardPressed,
+    shadowDark = CalmShadowDark,
+    highlightLight = CalmHighlightLight,
+    cardBorderTop = Color.White.copy(alpha = 0.95f),
+    cardBorderBottom = CalmShadowDark.copy(alpha = 0.70f),
     textPrimary = CalmInkPrimary,
     textSecondary = CalmInkSecondary,
     textMuted = CalmInkMuted,
     primaryAccent = CalmSagePrimary,
+    onPrimaryAccent = Color.White,
     safeZone = PsychologyGreen,
     safeZoneContainer = CalmMist,
     scheduledLecture = PsychologyBlue,
     deadlineWarning = PsychologyOrange,
     bunkDanger = PsychologyRed,
     streakGold = PsychologyGold,
-    divider = CalmShadowDark.copy(alpha = 0.45f)
+    divider = CalmShadowDark.copy(alpha = 0.65f)
 )
 
 val FlagshipObsidianColors = CaliperColors(
     isMonochrome = true,
-    baseSurface = Color(0xFF000000),
-    containerSurface = Color(0xFF0A0D14),
-    cardFill = Color(0xFF111622).copy(alpha = 0.90f),
-    cardBorderTop = Color.White.copy(alpha = 0.16f),
-    cardBorderBottom = Color.Transparent,
-    textPrimary = Color(0xFFF8FAFC),
+    baseSurface = DarkBaseCanvas,
+    containerSurface = DarkInsetSurface,
+    cardFill = DarkRaisedCard,
+    pressedFill = DarkPressedCard,
+    shadowDark = DarkShadowDeep,
+    highlightLight = DarkHighlightRim,
+    cardBorderTop = DarkHighlightRim,
+    cardBorderBottom = DarkShadowDeep,
+    textPrimary = Color(0xFFF1F5F9),
     textSecondary = Color(0xFFCBD5E1),
     textMuted = Color(0xFF94A3B8),
-    primaryAccent = Color(0xFF7FA389),
+    primaryAccent = DarkTealAccent,
+    onPrimaryAccent = Color(0xFF061E1C),
     safeZone = Color(0xFF34D399),
-    safeZoneContainer = Color(0xFF34D399).copy(alpha = 0.15f),
+    safeZoneContainer = Color(0xFF34D399).copy(alpha = 0.18f),
     scheduledLecture = Color(0xFF60A5FA),
     deadlineWarning = Color(0xFFFB923C),
     bunkDanger = Color(0xFFF87171),
     streakGold = Color(0xFFFBBF24),
-    divider = Color.White.copy(alpha = 0.10f)
+    divider = Color.White.copy(alpha = 0.14f)
 )
 
 val LocalCaliperColors = staticCompositionLocalOf { CalmKitIvoryColors }
@@ -109,10 +121,10 @@ fun Modifier.fluidTouchFeedback(
     var isPressed by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.968f else 1.0f,
+        targetValue = if (isPressed) 0.962f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "fluid_touch_scale"
     )
@@ -131,7 +143,6 @@ fun Modifier.fluidTouchFeedback(
                 } catch (_: Exception) {
                     CaliperHapticManager.tick(context)
                 }
-
                 val up = try {
                     waitForUpOrCancellation()
                 } catch (_: Exception) {
@@ -152,10 +163,10 @@ fun Modifier.tactilePressEffect(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.968f else 1f,
+        targetValue = if (isPressed) 0.962f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "tactile_inset_scale"
     )
@@ -187,10 +198,12 @@ fun MyApplicationTheme(
         darkColorScheme(
             primary = caliperColors.primaryAccent,
             background = caliperColors.baseSurface,
-            surface = caliperColors.containerSurface,
-            onPrimary = Color.Black,
+            surface = caliperColors.cardFill,
+            surfaceVariant = caliperColors.containerSurface,
+            onPrimary = caliperColors.onPrimaryAccent,
             onBackground = caliperColors.textPrimary,
             onSurface = caliperColors.textPrimary,
+            onSurfaceVariant = caliperColors.textSecondary,
             error = caliperColors.bunkDanger
         )
     } else {
@@ -199,7 +212,7 @@ fun MyApplicationTheme(
             background = caliperColors.baseSurface,
             surface = caliperColors.cardFill,
             surfaceVariant = caliperColors.containerSurface,
-            onPrimary = Color.White,
+            onPrimary = caliperColors.onPrimaryAccent,
             onBackground = caliperColors.textPrimary,
             onSurface = caliperColors.textPrimary,
             onSurfaceVariant = caliperColors.textSecondary,

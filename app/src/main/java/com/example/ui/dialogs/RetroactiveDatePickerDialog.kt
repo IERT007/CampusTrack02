@@ -86,18 +86,18 @@ fun RetroactiveDatePickerDialog(
                                 text = "Retroactive Calendar",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = CaliperTheme.colors.textPrimary
                             )
                             Text(
                                 text = "Tap any past date to log attendance",
                                 fontSize = 11.sp,
-                                color = TextSecondary
+                                color = CaliperTheme.colors.textSecondary
                             )
                         }
                     }
 
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textSecondary)
                     }
                 }
 
@@ -121,7 +121,7 @@ fun RetroactiveDatePickerDialog(
                         text = viewingMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = CaliperTheme.colors.textPrimary
                     )
 
                     IconButton(onClick = { viewingMonth = viewingMonth.plusMonths(1) }) {
@@ -136,7 +136,7 @@ fun RetroactiveDatePickerDialog(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     dayHeaders.forEach { h ->
                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            Text(h, color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(h, color = CaliperTheme.colors.textMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -239,7 +239,7 @@ fun RetroactiveDatePickerDialog(
 
                     Text(
                         text = "Past dates are fully editable",
-                        color = TextMuted,
+                        color = CaliperTheme.colors.textMuted,
                         fontSize = 11.sp
                     )
                 }

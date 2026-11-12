@@ -136,12 +136,12 @@ fun SettingsHubDialog(
                                     text = "CALIPER SETTINGS",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = TextPrimary
+                                    color = CaliperTheme.colors.textPrimary
                                 )
                                 Text(
                                     text = "Tactile Engine & OS Preferences",
                                     fontSize = 11.sp,
-                                    color = TextSecondary
+                                    color = CaliperTheme.colors.textSecondary
                                 )
                             }
                         }
@@ -192,12 +192,12 @@ fun SettingsHubDialog(
                                             text = "Procedural Audio Tones",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = CaliperTheme.colors.textPrimary
                                         )
                                         Text(
                                             text = "In-memory PCM synthesis for snaps, chimes, and thuds",
                                             fontSize = 11.sp,
-                                            color = TextSecondary
+                                            color = CaliperTheme.colors.textSecondary
                                         )
                                     }
                                     Switch(
@@ -269,12 +269,12 @@ fun SettingsHubDialog(
                                             text = "Tactile Vernier Haptics",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = CaliperTheme.colors.textPrimary
                                         )
                                         Text(
                                             text = "Micro tick pulses and resistance feedback",
                                             fontSize = 11.sp,
-                                            color = TextSecondary
+                                            color = CaliperTheme.colors.textSecondary
                                         )
                                     }
                                     Switch(
@@ -317,12 +317,12 @@ fun SettingsHubDialog(
                                             text = "24-Hour Time Format",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = CaliperTheme.colors.textPrimary
                                         )
                                         Text(
                                             text = if (is24HourFormat) "Displaying military time (e.g. 14:00)" else "Displaying 12-hour clock (e.g. 02:00 PM)",
                                             fontSize = 11.sp,
-                                            color = TextSecondary
+                                            color = CaliperTheme.colors.textSecondary
                                         )
                                     }
                                     Switch(
@@ -345,7 +345,7 @@ fun SettingsHubDialog(
                                         text = "Interface Theme",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
+                                        color = CaliperTheme.colors.textPrimary
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Row(
@@ -404,8 +404,8 @@ fun SettingsHubDialog(
                                     Icon(Icons.Default.Alarm, contentDescription = null, tint = SageMint, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column {
-                                        Text("07:30 AM Daily Schedule Briefing", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                        Text("Sends morning lecture and room numbers summary", fontSize = 10.sp, color = TextSecondary)
+                                        Text("07:30 AM Daily Schedule Briefing", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CaliperTheme.colors.textPrimary)
+                                        Text("Sends morning lecture and room numbers summary", fontSize = 10.sp, color = CaliperTheme.colors.textSecondary)
                                     }
                                 }
 
@@ -416,8 +416,8 @@ fun SettingsHubDialog(
                                     Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = IceBlue, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column {
-                                        Text("10-Minute Pre-Lecture Heads-Up", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                        Text("Vibrates and informs class before start time", fontSize = 10.sp, color = TextSecondary)
+                                        Text("10-Minute Pre-Lecture Heads-Up", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CaliperTheme.colors.textPrimary)
+                                        Text("Vibrates and informs class before start time", fontSize = 10.sp, color = CaliperTheme.colors.textSecondary)
                                     }
                                 }
 
@@ -428,8 +428,8 @@ fun SettingsHubDialog(
                                     Icon(Icons.Default.AssignmentLate, contentDescription = null, tint = MutedAmber, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column {
-                                        Text("24h & 2h Submission Countdown Alerts", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                        Text("Persistent alarms for Drawing Sheets & Lab files", fontSize = 10.sp, color = TextSecondary)
+                                        Text("24h & 2h Submission Countdown Alerts", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CaliperTheme.colors.textPrimary)
+                                        Text("Persistent alarms for Drawing Sheets & Lab files", fontSize = 10.sp, color = CaliperTheme.colors.textSecondary)
                                     }
                                 }
 
@@ -473,7 +473,7 @@ fun SettingsHubDialog(
                                 Text(
                                     text = "Every attendance change automatically synchronizes to context.filesDir/caliper_vault_snapshot.json without user friction.",
                                     fontSize = 11.sp,
-                                    color = TextSecondary
+                                    color = CaliperTheme.colors.textSecondary
                                 )
 
                                 Row(
@@ -525,9 +525,9 @@ fun SettingsHubDialog(
                                     shape = RoundedCornerShape(8.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0x18FFFFFF))
                                 ) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = CaliperTheme.colors.textPrimary, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Copy Full JSON to Clipboard", color = TextPrimary, fontSize = 11.sp)
+                                    Text("Copy Full JSON to Clipboard", color = CaliperTheme.colors.textPrimary, fontSize = 11.sp)
                                 }
                             }
                         }
@@ -556,7 +556,7 @@ fun SettingsHubDialog(
                                 Text(
                                     text = "Injects the standard 7 subjects for IERT Mechanical (Tool Engg) 3rd Sem (ME-301, ME-302, ME-303W, ED-301, CS-301, ME-304, ME-305L) with clean 0-attendance.",
                                     fontSize = 11.sp,
-                                    color = TextSecondary
+                                    color = CaliperTheme.colors.textSecondary
                                 )
 
                                 if (!showResetConfirmation) {
@@ -597,7 +597,7 @@ fun SettingsHubDialog(
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FFFFFF)),
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
-                                            Text("Cancel", color = TextSecondary, fontSize = 11.sp)
+                                            Text("Cancel", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                                         }
                                     }
                                 }
@@ -621,7 +621,7 @@ fun SettingsHubDialog(
                             Text(
                                 text = "Version 2.0 • Offline-First • Room & Glance Engine",
                                 fontSize = 10.sp,
-                                color = TextMuted
+                                color = CaliperTheme.colors.textMuted
                             )
                         }
                     }

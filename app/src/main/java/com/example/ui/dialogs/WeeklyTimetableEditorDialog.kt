@@ -110,18 +110,18 @@ fun WeeklyTimetableEditorDialog(
                                     text = "Weekly Timetable Manager",
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
+                                    color = CaliperTheme.colors.textPrimary
                                 )
                                 Text(
                                     text = "Configure recurring slots for Mon–Sat",
                                     fontSize = 11.sp,
-                                    color = TextSecondary
+                                    color = CaliperTheme.colors.textSecondary
                                 )
                             }
                         }
 
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textSecondary)
                         }
                     }
 
@@ -176,7 +176,7 @@ fun WeeklyTimetableEditorDialog(
                     ) {
                         Text(
                             text = "${daysList.find { it.first == selectedDayOfWeek }?.second} Schedule (${currentDaySlots.size} slots)",
-                            color = TextMuted,
+                            color = CaliperTheme.colors.textMuted,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
@@ -245,7 +245,7 @@ fun WeeklyTimetableEditorDialog(
                                     Spacer(modifier = Modifier.height(10.dp))
 
                                     // Subject selection
-                                    Text("Select Subject", fontSize = 11.sp, color = TextSecondary)
+                                    Text("Select Subject", fontSize = 11.sp, color = CaliperTheme.colors.textSecondary)
                                     Spacer(modifier = Modifier.height(4.dp))
 
                                     if (subjects.isEmpty()) {
@@ -277,8 +277,8 @@ fun WeeklyTimetableEditorDialog(
                                                     )
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     Column {
-                                                        Text(sub.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                                        Text("${sub.code} • ${sub.facultyName}", color = TextSecondary, fontSize = 10.sp)
+                                                        Text(sub.name, color = CaliperTheme.colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                        Text("${sub.code} • ${sub.facultyName}", color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
                                                     }
                                                 }
                                             }
@@ -288,7 +288,7 @@ fun WeeklyTimetableEditorDialog(
                                     Spacer(modifier = Modifier.height(10.dp))
 
                                     // Quick Time Presets
-                                    Text("Start & End Time (24h or HH:mm)", fontSize = 11.sp, color = TextSecondary)
+                                    Text("Start & End Time (24h or HH:mm)", fontSize = 11.sp, color = CaliperTheme.colors.textSecondary)
                                     Spacer(modifier = Modifier.height(4.dp))
 
                                     Row(
@@ -298,7 +298,7 @@ fun WeeklyTimetableEditorDialog(
                                         OutlinedTextField(
                                             value = formStartTime,
                                             onValueChange = { formStartTime = it },
-                                            label = { Text("Start Time", color = TextSecondary, fontSize = 11.sp) },
+                                            label = { Text("Start Time", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp) },
                                             colors = OutlinedTextFieldDefaults.colors(
                                                 focusedTextColor = TextPrimary,
                                                 unfocusedTextColor = TextPrimary,
@@ -311,7 +311,7 @@ fun WeeklyTimetableEditorDialog(
                                         OutlinedTextField(
                                             value = formEndTime,
                                             onValueChange = { formEndTime = it },
-                                            label = { Text("End Time", color = TextSecondary, fontSize = 11.sp) },
+                                            label = { Text("End Time", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp) },
                                             colors = OutlinedTextFieldDefaults.colors(
                                                 focusedTextColor = TextPrimary,
                                                 unfocusedTextColor = TextPrimary,
@@ -358,7 +358,7 @@ fun WeeklyTimetableEditorDialog(
                                     OutlinedTextField(
                                         value = formRoomNo,
                                         onValueChange = { formRoomNo = it },
-                                        label = { Text("Room No / Venue (e.g. LT-4, CAD Lab)", color = TextSecondary, fontSize = 11.sp) },
+                                        label = { Text("Room No / Venue (e.g. LT-4, CAD Lab)", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp) },
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedTextColor = TextPrimary,
                                             unfocusedTextColor = TextPrimary,
@@ -414,13 +414,13 @@ fun WeeklyTimetableEditorDialog(
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
                                             text = "No Slots on ${daysList.find { it.first == selectedDayOfWeek }?.second}",
-                                            color = TextPrimary,
+                                            color = CaliperTheme.colors.textPrimary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
                                         )
                                         Text(
                                             text = "Tap '+ Add Slot' to configure a lecture or lab period for this day.",
-                                            color = TextSecondary,
+                                            color = CaliperTheme.colors.textSecondary,
                                             fontSize = 11.sp,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                         )
@@ -453,20 +453,20 @@ fun WeeklyTimetableEditorDialog(
                                                     .background(Color(0x22FFFFFF))
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
-                                                Text(slot.roomNo, color = TextSecondary, fontSize = 10.sp)
+                                                Text(slot.roomNo, color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
                                             }
                                         }
 
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = sub?.name ?: "Subject #${slot.subjectId}",
-                                            color = TextPrimary,
+                                            color = CaliperTheme.colors.textPrimary,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
                                             text = "${sub?.code ?: ""} • ${sub?.facultyName ?: ""}",
-                                            color = TextSecondary,
+                                            color = CaliperTheme.colors.textSecondary,
                                             fontSize = 11.sp
                                         )
                                     }
@@ -498,7 +498,7 @@ fun WeeklyTimetableEditorDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Done / Close", color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text("Done / Close", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
             }

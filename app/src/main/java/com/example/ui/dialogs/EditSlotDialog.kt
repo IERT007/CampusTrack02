@@ -60,12 +60,12 @@ fun EditSlotDialog(
                     text = "Edit Period Slot",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = CaliperTheme.colors.textPrimary
                 )
                 Text(
                     text = "Modify timing, room number, or reassign course",
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = CaliperTheme.colors.textSecondary
                 )
 
                 // Select Subject
@@ -188,7 +188,7 @@ fun EditSlotDialog(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Cancel", color = TextSecondary, fontSize = 11.sp)
+                            Text("Cancel", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                         }
                     }
                 }
@@ -199,7 +199,7 @@ fun EditSlotDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismissRequest) {
-                        Text("Cancel", color = TextSecondary)
+                        Text("Cancel", color = CaliperTheme.colors.textSecondary)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(

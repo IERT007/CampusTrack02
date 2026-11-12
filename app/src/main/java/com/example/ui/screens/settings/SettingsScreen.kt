@@ -367,12 +367,12 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color.White.copy(alpha = 0.03f))
-                            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                            .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                             .padding(10.dp)
                     ) {
                         Text(
                             text = "Universal Flagship Palette: True Pitch Black (#000000) canvas with Deep Obsidian Glass cards (#0E121B @ 85% alpha) and 0.5.dp specular luminous top borders. 120 FPS fluid physics active.",
-                            color = TextSecondary,
+                            color = CaliperTheme.colors.textSecondary,
                             fontSize = 11.sp,
                             lineHeight = 15.sp
                         )
@@ -528,7 +528,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "• ME-301 Manufacturing Process (Theory)\n• ME-302 Thermal Engineering (Theory)\n• ME-303W Workshop Practice (Workshop)\n• ED-301 M/C Drawing 1 (Drafting/Lab)\n• CS-301 Computer Lecture (Theory)\n• ME-304 Material Science (Theory)\n• ME-305L Computer / Thermal Lab (Lab)",
-                        color = TextSecondary,
+                        color = CaliperTheme.colors.textSecondary,
                         fontSize = 10.sp,
                         lineHeight = 15.sp
                     )
@@ -574,7 +574,7 @@ fun SettingsScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("CALIPER ACADEMIC OS • V2.0", color = ArchitecturalTitanium, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Text("IERT Mechanical & Tool Engineering • Offline-First", color = TextMuted, fontSize = 9.sp)
+                        Text("IERT Mechanical & Tool Engineering • Offline-First", color = CaliperTheme.colors.textMuted, fontSize = 9.sp)
                     }
                 }
             }
@@ -586,7 +586,7 @@ fun SettingsScreen(
             onDismissRequest = { showResetConfirmation = false },
             containerColor = Color(0xFF10141D),
             title = { Text("Reload IERT Curriculum?", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("This will re-initialize the 7 official IERT 3rd semester subjects and recurring weekly slots with a clean slate.", color = TextSecondary, fontSize = 13.sp) },
+            text = { Text("This will re-initialize the 7 official IERT 3rd semester subjects and recurring weekly slots with a clean slate.", color = CaliperTheme.colors.textSecondary, fontSize = 13.sp) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -614,7 +614,7 @@ fun SettingsScreen(
             onDismissRequest = { showWipeConfirmation = false },
             containerColor = Color(0xFF10141D),
             title = { Text("Wipe Attendance Logs?", color = SoftCoralRose, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to clear all marked attendance logs and reset back to 0%? Timetable slots will remain intact.", color = TextSecondary, fontSize = 13.sp) },
+            text = { Text("Are you sure you want to clear all marked attendance logs and reset back to 0%? Timetable slots will remain intact.", color = CaliperTheme.colors.textSecondary, fontSize = 13.sp) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -670,7 +670,7 @@ private fun SettingsToggleRow(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = IceBlue,
                 uncheckedThumbColor = ArchitecturalTitanium,
-                uncheckedTrackColor = Color.White.copy(alpha = 0.08f)
+                uncheckedTrackColor = CaliperTheme.colors.containerSurface
             )
         )
     }

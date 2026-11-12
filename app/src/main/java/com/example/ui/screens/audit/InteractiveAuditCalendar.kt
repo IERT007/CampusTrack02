@@ -163,7 +163,7 @@ fun InteractiveAuditCalendar(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isChosen) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                                .background(if (isChosen) CaliperTheme.colors.primaryAccent else CaliperTheme.colors.containerSurface)
                                 .clickable {
                                     val targetPage = initialPage + ((ym.year - YearMonth.now().year) * 12 + (ym.monthValue - YearMonth.now().monthValue))
                                     coroutineScope.launch {
@@ -175,7 +175,7 @@ fun InteractiveAuditCalendar(
                         ) {
                             Text(
                                 text = ym.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                                color = if (isChosen) Color.White else CaliperTheme.colors.textSecondary,
+                                color = if (isChosen) CaliperTheme.colors.onPrimaryAccent else CaliperTheme.colors.textPrimary,
                                 fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -257,7 +257,7 @@ fun MonthGrid(
                             DayAttendanceState.ALL_CANCELLED -> Color(0x26F87171)
                             DayAttendanceState.COLLEGE_OFF_HOLIDAY -> Color(0x33475569)
                             DayAttendanceState.BUNKED -> Color(0x28EF4444)
-                            DayAttendanceState.UNRECORDED -> if (isToday) colors.primaryAccent.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.03f)
+                            DayAttendanceState.UNRECORDED -> if (isToday) colors.primaryAccent else colors.containerSurface
                         }
 
                         val dotColor = when (state) {
@@ -313,7 +313,7 @@ fun MonthGrid(
                             ) {
                                 Text(
                                     text = "$dayNum",
-                                    color = if (isToday) Color.White else Color(0xFFF8FAFC),
+                                    color = if (isToday) colors.onPrimaryAccent else colors.textPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = if (isToday || dotColor != Color.Transparent) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -519,7 +519,7 @@ fun DaySummaryModal(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.White.copy(alpha = 0.03f))
+                                    .background(CaliperTheme.colors.containerSurface)
                                     .border(0.5.dp, CaliperTheme.colors.divider, RoundedCornerShape(8.dp))
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,

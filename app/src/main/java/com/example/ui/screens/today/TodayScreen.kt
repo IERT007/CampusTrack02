@@ -191,7 +191,7 @@ fun TodayScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text("AUTO-BACKUP VAULT FOUND", color = NeonCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text("Restore previous semester timetable", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Restore previous semester timetable", color = CaliperTheme.colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -235,7 +235,7 @@ fun TodayScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text("PRE-CLASS ALERTS DISABLED", color = WarningAmber, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text("Enable reminders 5m prior to lab / lecture", color = TextPrimary, fontSize = 11.5.sp)
+                                Text("Enable reminders 5m prior to lab / lecture", color = CaliperTheme.colors.textPrimary, fontSize = 11.5.sp)
                             }
                         }
 
@@ -627,9 +627,9 @@ fun TodayScreen(
                                 .height(34.dp)
                                 .testTag("bulk_off_btn")
                         ) {
-                            Icon(Icons.Default.Block, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Block, contentDescription = null, tint = CaliperTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("College Off", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("College Off", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -673,7 +673,7 @@ fun TodayScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text("OFFICIAL INSTITUTIONAL CLOSURE", color = WarningAmber, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(currentHoliday?.title ?: "Holiday", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(currentHoliday?.title ?: "Holiday", color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -705,7 +705,7 @@ fun TodayScreen(
                         text = "SCHEDULE & ACTIVITIES",
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextMuted,
+                        color = CaliperTheme.colors.textMuted,
                         letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -773,7 +773,7 @@ fun TodayScreen(
                             text = if (isPreSemester) "Session Not Yet Active" else "Term Completed",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = CaliperTheme.colors.textPrimary
                         )
                         Text(
                             text = if (isPreSemester)
@@ -781,7 +781,7 @@ fun TodayScreen(
                             else
                                 "Semester concluded on $semesterEndDate.",
                             fontSize = 11.5.sp,
-                            color = TextSecondary,
+                            color = CaliperTheme.colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -807,7 +807,7 @@ fun TodayScreen(
                             text = "No Scheduled Classes for $dayName",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = CaliperTheme.colors.textPrimary
                         )
                         Text(
                             text = if (dayName.equals("Sunday", ignoreCase = true)) {
@@ -816,7 +816,7 @@ fun TodayScreen(
                                 "No recurring slots set for $dayName. Tap below to configure schedule."
                             },
                             fontSize = 11.5.sp,
-                            color = TextSecondary,
+                            color = CaliperTheme.colors.textSecondary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(10.dp))
@@ -861,13 +861,13 @@ fun TodayScreen(
                         Column {
                             Text(
                                 text = "All Periods Logged For Today!",
-                                color = TextPrimary,
+                                color = CaliperTheme.colors.textPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "${markedSlots.size} of ${slotItems.size} recorded. Expand tray below to review or undo.",
-                                color = TextSecondary,
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 10.5.sp
                             )
                         }
@@ -959,14 +959,14 @@ fun TodayScreen(
                                 text = "Marked Periods (${markedSlots.size} / ${slotItems.size})",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = CaliperTheme.colors.textPrimary
                             )
                         }
 
                         Text(
                             text = if (showMarkedTray) "Tap to Collapse" else "Tap to Inspect / Undo",
                             fontSize = 10.5.sp,
-                            color = TextSecondary
+                            color = CaliperTheme.colors.textSecondary
                         )
                     }
                 }
@@ -1147,7 +1147,7 @@ fun TodayScreen(
  * 1-Day Single-Day Custom Activity Card
  * Claymorphic Matching Card Design:
  * - Background: Color(0xFF111622).copy(alpha = 0.75f)
- * - Border: 0.5.dp subtle vertical gradient (Color.White.copy(alpha = 0.15f) to Transparent)
+ * - Border: 0.5.dp subtle vertical gradient (CaliperTheme.colors.divider to Transparent)
  * - Corner radius: 16.dp
  * - Displays Event Title, Time Range, Location, Attendance tag (if enabled), and 1-tap delete trash icon
  */
@@ -1172,7 +1172,7 @@ fun CustomActivityCard(
                 0.5.dp,
                 Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.16f),
+                        CaliperTheme.colors.divider,
                         Color.Transparent
                     )
                 ),
@@ -1448,7 +1448,7 @@ fun SlotCard(
         // Subject Title & Faculty
         Text(
             text = item.subject?.name ?: "Unknown Subject",
-            color = TextPrimary,
+            color = CaliperTheme.colors.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold
         )
@@ -1868,13 +1868,13 @@ fun MarkedSlotCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = item.subject?.name ?: "Subject",
-                    color = TextPrimary,
+                    color = CaliperTheme.colors.textPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "${item.subject?.code} • ${item.slot.roomNo}",
-                    color = TextMuted,
+                    color = CaliperTheme.colors.textMuted,
                     fontSize = 11.sp
                 )
 

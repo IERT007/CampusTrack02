@@ -59,14 +59,14 @@ fun triggerHapticFeedback(context: Context, isHeavy: Boolean = false) {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val effect = if (isHeavy) {
-                VibrationEffect.createOneShot(32, 140)
+                VibrationEffect.createOneShot(30, 130)
             } else {
-                VibrationEffect.createOneShot(14, 90)
+                VibrationEffect.createOneShot(12, 85)
             }
             vibrator?.vibrate(effect)
         } else {
             @Suppress("DEPRECATION")
-            vibrator?.vibrate(if (isHeavy) 32L else 14L)
+            vibrator?.vibrate(if (isHeavy) 30L else 12L)
         }
     } catch (_: Exception) {
     }
@@ -75,7 +75,7 @@ fun triggerHapticFeedback(context: Context, isHeavy: Boolean = false) {
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(22.dp),
+    shape: Shape = RoundedCornerShape(20.dp),
     backgroundColor: Color = Color.Unspecified,
     borderColors: List<Color> = emptyList(),
     borderWidth: Dp = 1.2.dp,
@@ -89,7 +89,7 @@ fun GlassCard(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (onClick != null && isPressed) 0.968f else 1f,
+        targetValue = if (onClick != null && isPressed) 0.965f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -98,27 +98,19 @@ fun GlassCard(
     )
 
     val dynamicElevation by animateDpAsState(
-        targetValue = when {
-            colors.isMonochrome -> 0.dp
-            onClick != null && isPressed -> 1.dp
-            else -> 8.dp
-        },
-        animationSpec = tween(140),
+        targetValue = if (onClick != null && isPressed) 1.dp else 9.dp,
+        animationSpec = tween(130),
         label = "neumorphic_elevation"
     )
 
     val resolvedBg = when {
         backgroundColor != Color.Unspecified && backgroundColor != GlassFill -> backgroundColor
-        onClick != null && isPressed && !colors.isMonochrome -> CalmIvorySurface
+        onClick != null && isPressed -> colors.pressedFill
         else -> colors.cardFill
     }
 
     val resolvedBorders = if (borderColors.isEmpty()) {
-        if (colors.isMonochrome) {
-            listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.04f))
-        } else {
-            listOf(Color.White.copy(alpha = 0.95f), CalmShadowDark.copy(alpha = 0.70f))
-        }
+        listOf(colors.cardBorderTop, colors.cardBorderBottom)
     } else {
         borderColors
     }
@@ -144,26 +136,24 @@ fun GlassCard(
             .shadow(
                 elevation = dynamicElevation,
                 shape = shape,
-                ambientColor = CalmShadowDark.copy(alpha = 0.75f),
-                spotColor = CalmShadowDark.copy(alpha = 0.85f)
+                ambientColor = colors.shadowDark.copy(alpha = 0.85f),
+                spotColor = colors.shadowDark.copy(alpha = 0.90f)
             )
             .clip(shape)
             .background(resolvedBg)
             .drawBehind {
-                if (!colors.isMonochrome) {
-                    // Subtle top-left inner light bevel for tactile 3D cushion effect
-                    drawRoundRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = if (isPressed) 0.15f else 0.65f),
-                                Color.Transparent
-                            ),
-                            start = Offset.Zero,
-                            end = Offset(size.width * 0.6f, size.height * 0.6f)
+                // 3D Neumorphic Top-Left Inner Highlight Bevel
+                drawRoundRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            colors.highlightLight.copy(alpha = if (isPressed) 0.10f else 0.55f),
+                            Color.Transparent
                         ),
-                        cornerRadius = CornerRadius(22.dp.toPx(), 22.dp.toPx())
-                    )
-                }
+                        start = Offset.Zero,
+                        end = Offset(size.width * 0.65f, size.height * 0.65f)
+                    ),
+                    cornerRadius = CornerRadius(20.dp.toPx(), 20.dp.toPx())
+                )
             }
             .border(
                 width = borderWidth,
@@ -186,11 +176,7 @@ fun GlassSurface(
 ) {
     val colors = CaliperTheme.colors
     val resolvedBorders = if (borderColors.isEmpty()) {
-        if (colors.isMonochrome) {
-            listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.04f))
-        } else {
-            listOf(Color.White.copy(alpha = 0.95f), CalmShadowDark.copy(alpha = 0.70f))
-        }
+        listOf(colors.cardBorderTop, colors.cardBorderBottom)
     } else {
         borderColors
     }
@@ -198,10 +184,10 @@ fun GlassSurface(
     Box(
         modifier = modifier
             .shadow(
-                elevation = if (colors.isMonochrome) 0.dp else 9.dp,
+                elevation = 10.dp,
                 shape = shape,
-                ambientColor = CalmShadowDark.copy(alpha = 0.75f),
-                spotColor = CalmShadowDark.copy(alpha = 0.85f)
+                ambientColor = colors.shadowDark.copy(alpha = 0.85f),
+                spotColor = colors.shadowDark.copy(alpha = 0.90f)
             )
             .clip(shape)
             .background(colors.cardFill)
@@ -237,7 +223,7 @@ fun MetricRadialRing(
         else -> colors.bunkDanger
     }
 
-    val trackColor = if (colors.isMonochrome) Color(0x28FFFFFF) else CalmMist
+    val trackColor = colors.containerSurface
 
     Box(
         modifier = modifier.size(size),
@@ -352,14 +338,14 @@ fun GlassIconButton(
             }
             .size(42.dp)
             .shadow(
-                elevation = if (colors.isMonochrome || isPressed) 0.dp else 5.dp,
+                elevation = if (isPressed) 1.dp else 6.dp,
                 shape = CircleShape,
-                ambientColor = CalmShadowDark.copy(alpha = 0.7f),
-                spotColor = CalmShadowDark.copy(alpha = 0.8f)
+                ambientColor = colors.shadowDark.copy(alpha = 0.85f),
+                spotColor = colors.shadowDark.copy(alpha = 0.90f)
             )
             .clip(CircleShape)
             .background(resolvedBg)
-            .border(1.dp, colors.divider, CircleShape)
+            .border(1.dp, colors.cardBorderTop, CircleShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(color = resolvedTint),

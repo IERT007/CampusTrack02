@@ -3,65 +3,65 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
-// 1. CALM-KIT WARM IVORY & SAGE NEUMORPHIC PALETTE (PRIMARY)
+// 1. REFERENCE SHEET NEUMORPHIC PALETTE (LIGHT MODE - WARM SAND & DEEP TEAL)
 // ============================================================================
-val CalmIvoryCanvas = Color(0xFFF4EFE8)          // Warm Stone Ivory Background
-val CalmIvorySurface = Color(0xFFEBE4DA)         // Recessed / Inset Surface
-val CalmCardRaised = Color(0xFFF9F7F3)           // Elevated Tactile Card
-val CalmCardGlass = Color(0xFFF9F7F3).copy(alpha = 0.88f)
-val CalmShadowDark = Color(0xFFD5CEC2)           // Soft Warm Drop Shadow
+val CalmIvoryCanvas = Color(0xFFEFECE6)          // Base Layer
+val CalmIvorySurface = Color(0xFFE5DFD5)         // Inset Layer (Recessed)
+val CalmCardRaised = Color(0xFFF7F4EE)           // Raised Layer (Elevated)
+val CalmCardPressed = Color(0xFFDDD5C8)          // Pressed Layer
+val CalmCardGlass = Color(0xFFF7F4EE).copy(alpha = 0.94f)
+val CalmShadowDark = Color(0xFFC9C0B1)           // Warm Drop Shadow
 val CalmHighlightLight = Color(0xFFFFFFFF)       // Top-Left Specular Bevel
 
-val CalmSagePrimary = Color(0xFF5F7464)          // Primary Sage Green Accent
-val CalmSageDark = Color(0xFF47594B)             // Pressed Sage State
-val CalmMoss = Color(0xFFA7B8A7)                 // Secondary Soft Sage
-val CalmMist = Color(0xFFD9E1D9)                 // Subtle Track / Pill Fill
+val CalmSagePrimary = Color(0xFF174E4F)          // Deep Teal-Slate Primary Accent
+val CalmSageDark = Color(0xFF0F3839)             // Pressed Deep Teal
+val CalmMoss = Color(0xFF5F7464)                 // Secondary Sage
+val CalmMist = Color(0xFFD8DDD8)                 // Track / Subtle Pill Fill
 val CalmSand = Color(0xFFC9BDAF)                 // Warm Sand Neutral
 
-val CalmInkPrimary = Color(0xFF1E2420)           // Deep Charcoal-Olive Ink
-val CalmInkSecondary = Color(0xFF5A635D)         // Muted Slate-Sage Label
-val CalmInkMuted = Color(0xFF8A928C)             // Subtle Timestamp / Hint
+val CalmInkPrimary = Color(0xFF162423)           // High-Contrast Deep Charcoal-Teal Ink
+val CalmInkSecondary = Color(0xFF475755)         // Crisp Slate-Teal Label
+val CalmInkMuted = Color(0xFF73807E)             // Muted Timestamp / Hint
 
 // ============================================================================
-// 2. MONOCHROME / OBSIDIAN DARK MODE PALETTE
+// 2. DARK NEUMORPHIC OBSIDIAN PALETTE (DARK MODE)
 // ============================================================================
-val MonochromePureBlack = Color(0xFF000000)
-val MonochromeObsidian = Color(0xFF05070A)
-val MonochromeSurface = Color(0xFF080B10)
-val MonochromeCardFill = Color(0xFF0E121B).copy(alpha = 0.85f)
-val MonochromeCardBorder = Color.White.copy(alpha = 0.14f)
-val MonochromePureWhite = Color(0xFFFFFFFF)
-val MonochromeSilverGray = Color(0xFFCBD5E1)
-val MonochromeMutedGray = Color(0xFF94A3B8)
+val DarkBaseCanvas = Color(0xFF111517)           // Deep Charcoal-Obsidian Base
+val DarkInsetSurface = Color(0xFF0B0E10)         // Recessed Dark Inset
+val DarkRaisedCard = Color(0xFF191F22)           // Elevated Dark Card
+val DarkPressedCard = Color(0xFF13181B)          // Pressed Dark State
+val DarkShadowDeep = Color(0xFF060809)           // Deep Drop Shadow
+val DarkHighlightRim = Color(0xFF283136)         // Subtle Top-Left Rim Light
+val DarkTealAccent = Color(0xFF2DD4BF)           // Luminous Teal Accent for Dark Mode
 
 // ============================================================================
-// 3. SEMANTIC & PSYCHOLOGY TOKENS (CALIBRATED FOR WARM IVORY CONTRAST)
+// 3. SEMANTIC & PSYCHOLOGY TOKENS
 // ============================================================================
 val PsychologyDarkSlate = CalmIvoryCanvas
 val PsychologySurface = CalmIvorySurface
 val PsychologyCardSurface = CalmCardGlass
-val PsychologyGreen = Color(0xFF2E7D5B)            // Deep Botanical Emerald
-val PsychologyGreenDark = Color(0xFF1F5C42)
-val PsychologyBlue = Color(0xFF3B6E8C)             // Muted Slate Blue
-val PsychologyTeal = Color(0xFF2A7B76)
-val PsychologyOrange = Color(0xFFC86D3B)           // Warm Terracotta Warning
-val PsychologyAmber = Color(0xFFB87D28)            // Warm Ochre
-val PsychologyRed = Color(0xFFC44545)              // Muted Crimson Alert
-val PsychologyGold = Color(0xFFB5892E)             // Warm Brass Streak
+val PsychologyGreen = Color(0xFF1E7A56)
+val PsychologyGreenDark = Color(0xFF14573D)
+val PsychologyBlue = Color(0xFF25638A)
+val PsychologyTeal = Color(0xFF174E4F)
+val PsychologyOrange = Color(0xFFC86428)
+val PsychologyAmber = Color(0xFFB4781E)
+val PsychologyRed = Color(0xFFC23B3B)
+val PsychologyGold = Color(0xFFB08222)
 
 // ============================================================================
-// 4. FOUNDATION SURFACE & GLASS TOKENS (COMPATIBILITY ALIASES)
+// 4. COMPATIBILITY ALIASES
 // ============================================================================
 val AmoledBackground = CalmIvoryCanvas
 val AmoledSurface = CalmIvorySurface
 val AmoledCardSurface = CalmCardGlass
 val AmoledCardSurfaceElevated = CalmCardRaised
 
-val GlassBorderTop = Color.White.copy(alpha = 0.85f)
-val GlassBorderBottom = CalmShadowDark.copy(alpha = 0.45f)
+val GlassBorderTop = Color.White.copy(alpha = 0.90f)
+val GlassBorderBottom = CalmShadowDark.copy(alpha = 0.65f)
 val GlassFill = CalmCardGlass
 val GlassFillStrong = CalmCardRaised
-val GlassFillLight = CalmIvorySurface.copy(alpha = 0.65f)
+val GlassFillLight = CalmIvorySurface
 
 val VelvetSageEmerald = PsychologyGreen
 val SageMint = CalmMoss
@@ -76,7 +76,7 @@ val SlateAccent = CalmInkSecondary
 
 val NeonCyan = CalmSagePrimary
 val NeonEmerald = PsychologyGreen
-val ElectricViolet = Color(0xFF6B638C)
+val ElectricViolet = Color(0xFF5E548E)
 val IceSky = PsychologyBlue
 val WarningAmber = PsychologyAmber
 val DangerRed = PsychologyRed

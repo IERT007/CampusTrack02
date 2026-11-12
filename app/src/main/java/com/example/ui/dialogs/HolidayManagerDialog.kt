@@ -93,13 +93,13 @@ fun HolidayManagerDialog(
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
-                                Text("Institutional Holiday Manager", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Text("Automates 'College Off' periods across calendar ranges", color = TextSecondary, fontSize = 11.sp)
+                                Text("Institutional Holiday Manager", color = CaliperTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text("Automates 'College Off' periods across calendar ranges", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                             }
                         }
 
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textSecondary)
                         }
                     }
 
@@ -130,8 +130,8 @@ fun HolidayManagerDialog(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Default.BeachAccess, contentDescription = null, tint = TextMuted, modifier = Modifier.size(48.dp))
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text("No Holiday Ranges Configured", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                    Text("Add Mid-Sem breaks, Diwali vacation, or strikes to automatically suppress scheduled slots.", color = TextSecondary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    Text("No Holiday Ranges Configured", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text("Add Mid-Sem breaks, Diwali vacation, or strikes to automatically suppress scheduled slots.", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                 }
                             }
                         } else {
@@ -157,12 +157,12 @@ fun HolidayManagerDialog(
                                                         Text(h.type.uppercase().replace("_", " "), color = WarningAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                                     }
                                                     Spacer(modifier = Modifier.width(8.dp))
-                                                    Text(h.title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                                    Text(h.title, color = CaliperTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                                 }
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text("Range: ${h.startDate} to ${h.endDate}", color = IceSky, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                                                 if (!h.notes.isNullOrBlank()) {
-                                                    Text(h.notes, color = TextMuted, fontSize = 11.sp)
+                                                    Text(h.notes, color = CaliperTheme.colors.textMuted, fontSize = 11.sp)
                                                 }
                                             }
 
@@ -182,11 +182,11 @@ fun HolidayManagerDialog(
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text("Event / Holiday Title", color = TextSecondary, fontSize = 12.sp)
+                            Text("Event / Holiday Title", color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
                             OutlinedTextField(
                                 value = title,
                                 onValueChange = { title = it },
-                                placeholder = { Text("e.g. Mid-Sem Break / Diwali Vacation", color = TextMuted) },
+                                placeholder = { Text("e.g. Mid-Sem Break / Diwali Vacation", color = CaliperTheme.colors.textMuted) },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextPrimary,
                                     unfocusedTextColor = TextPrimary,
@@ -197,7 +197,7 @@ fun HolidayManagerDialog(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            Text("Category / Type", color = TextSecondary, fontSize = 12.sp)
+                            Text("Category / Type", color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -224,7 +224,7 @@ fun HolidayManagerDialog(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Start Date (YYYY-MM-DD)", color = TextSecondary, fontSize = 11.sp)
+                                    Text("Start Date (YYYY-MM-DD)", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                                     OutlinedTextField(
                                         value = startDate,
                                         onValueChange = { startDate = it },
@@ -240,7 +240,7 @@ fun HolidayManagerDialog(
                                 }
 
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("End Date (YYYY-MM-DD)", color = TextSecondary, fontSize = 11.sp)
+                                    Text("End Date (YYYY-MM-DD)", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                                     OutlinedTextField(
                                         value = endDate,
                                         onValueChange = { endDate = it },
@@ -256,11 +256,11 @@ fun HolidayManagerDialog(
                                 }
                             }
 
-                            Text("Official Order / Remarks (Optional)", color = TextSecondary, fontSize = 11.sp)
+                            Text("Official Order / Remarks (Optional)", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                             OutlinedTextField(
                                 value = notes,
                                 onValueChange = { notes = it },
-                                placeholder = { Text("e.g. Director Order No. 412 / Registrar Notification", color = TextMuted) },
+                                placeholder = { Text("e.g. Director Order No. 412 / Registrar Notification", color = CaliperTheme.colors.textMuted) },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextPrimary,
                                     unfocusedTextColor = TextPrimary,
@@ -282,7 +282,7 @@ fun HolidayManagerDialog(
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text("Cancel", color = TextSecondary)
+                                    Text("Cancel", color = CaliperTheme.colors.textSecondary)
                                 }
 
                                 Button(

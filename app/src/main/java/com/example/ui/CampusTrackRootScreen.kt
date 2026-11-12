@@ -80,7 +80,7 @@ fun CampusHeader(
                         text = "Caliper",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        color = TextPrimary
+                        color = CaliperTheme.colors.textPrimary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -93,7 +93,7 @@ fun CampusHeader(
                 Text(
                     text = "Prayagraj • Mechanical & Tool Engg",
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = CaliperTheme.colors.textSecondary
                 )
             }
         }

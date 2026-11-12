@@ -257,7 +257,7 @@ fun MainTopBar(
                         .padding(top = 8.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF0F141C).copy(alpha = 0.95f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                        .border(0.5.dp, CaliperTheme.colors.divider, RoundedCornerShape(16.dp))
                         .padding(12.dp)
                 ) {
                     if (matchingSubjects.isEmpty()) {

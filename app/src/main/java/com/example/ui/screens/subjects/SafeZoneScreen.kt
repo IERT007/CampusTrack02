@@ -163,13 +163,13 @@ fun SafeZoneScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color.White.copy(alpha = 0.03f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                        .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Classes Attended", fontSize = 9.sp, color = TextMuted)
+                        Text("Classes Attended", fontSize = 9.sp, color = CaliperTheme.colors.textMuted)
                         Text(
                             text = "${summary.totalAttended} / ${summary.totalConducted}",
                             fontSize = 13.sp,
@@ -179,7 +179,7 @@ fun SafeZoneScreen(
                     }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Safe Bunk Margin", fontSize = 9.sp, color = TextMuted)
+                        Text("Safe Bunk Margin", fontSize = 9.sp, color = CaliperTheme.colors.textMuted)
                         Text(
                             text = if (totalSafeBunks > 0) "+$totalSafeBunks Safe Bunks" else "0 Bunks Remaining",
                             fontSize = 13.sp,
@@ -189,7 +189,7 @@ fun SafeZoneScreen(
                     }
 
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Aggregate Status", fontSize = 9.sp, color = TextMuted)
+                        Text("Aggregate Status", fontSize = 9.sp, color = CaliperTheme.colors.textMuted)
                         Text(
                             text = if (summary.overallPercentage >= 75.0) "SAFE ZONE" else "DEBAR RISK",
                             fontSize = 13.sp,
@@ -242,7 +242,7 @@ fun SafeZoneScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color.White.copy(alpha = 0.08f))
+                                .background(CaliperTheme.colors.containerSurface)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -262,7 +262,7 @@ fun SafeZoneScreen(
                         verticalAlignment = Alignment.Bottom
                     ) {
                         Column {
-                            Text("Projected Aggregate", fontSize = 9.sp, color = TextSecondary)
+                            Text("Projected Aggregate", fontSize = 9.sp, color = CaliperTheme.colors.textSecondary)
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     text = String.format("%.1f%%", simulatedPct),
@@ -293,7 +293,7 @@ fun SafeZoneScreen(
                             Text(
                                 text = "$simulatedAttended / $simulatedConducted total",
                                 fontSize = 9.5.sp,
-                                color = TextMuted
+                                color = CaliperTheme.colors.textMuted
                             )
                         }
                     }
@@ -323,9 +323,9 @@ fun SafeZoneScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("0 Bunks", fontSize = 8.5.sp, color = TextMuted)
-                        Text("+7 Buffer", fontSize = 8.5.sp, color = TextMuted)
-                        Text("+15 Max", fontSize = 8.5.sp, color = TextMuted)
+                        Text("0 Bunks", fontSize = 8.5.sp, color = CaliperTheme.colors.textMuted)
+                        Text("+7 Buffer", fontSize = 8.5.sp, color = CaliperTheme.colors.textMuted)
+                        Text("+15 Max", fontSize = 8.5.sp, color = CaliperTheme.colors.textMuted)
                     }
                 }
             }
@@ -544,7 +544,7 @@ fun SafeZoneScreen(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(Color.White.copy(alpha = 0.08f))
+                                                .background(CaliperTheme.colors.containerSurface)
                                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                                         ) {
                                             Text(slot.roomNo, fontSize = 10.sp, color = Color(0xFF94A3B8))
@@ -732,7 +732,7 @@ fun SubjectCardWithMenu(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(CaliperTheme.colors.containerSurface)
                             .padding(horizontal = 5.dp, vertical = 1.dp)
                     ) {
                         Text(
@@ -816,7 +816,7 @@ fun SubjectCardWithMenu(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Attended", fontSize = 9.sp, color = TextMuted)
+                Text("Attended", fontSize = 9.sp, color = CaliperTheme.colors.textMuted)
                 Text(
                     text = "${stat.attended} Classes",
                     fontSize = 11.5.sp,
@@ -826,7 +826,7 @@ fun SubjectCardWithMenu(
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Total Conducted", fontSize = 9.sp, color = TextMuted)
+                Text("Total Conducted", fontSize = 9.sp, color = CaliperTheme.colors.textMuted)
                 Text(
                     text = "${stat.totalConducted} Classes",
                     fontSize = 11.5.sp,
@@ -836,7 +836,7 @@ fun SubjectCardWithMenu(
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Text("Safe Buffer", fontSize = 9.sp, color = TextMuted)
+                Text("Safe Buffer", fontSize = 9.sp, color = CaliperTheme.colors.textMuted)
                 Text(
                     text = if (stat.bunksAvailable > 0) "+${stat.bunksAvailable} Bunks Safe" else "Need ${stat.classesNeeded} Classes",
                     fontSize = 11.5.sp,

@@ -97,7 +97,7 @@ fun SlimVernierPrecisionBar(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(CaliperTheme.colors.containerSurface)
             )
 
             // Animated Progress Fill

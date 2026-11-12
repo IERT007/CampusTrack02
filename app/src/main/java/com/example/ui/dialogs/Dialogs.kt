@@ -61,16 +61,16 @@ fun ExtraClassDialog(
                         text = "Log Extra / Ad-Hoc Class",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = CaliperTheme.colors.textPrimary
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textSecondary)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                Text("Select Subject", fontSize = 12.sp, color = TextSecondary)
+                Text("Select Subject", fontSize = 12.sp, color = CaliperTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
 
                 subjects.forEach { sub ->
@@ -97,14 +97,14 @@ fun ExtraClassDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text(sub.name, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            Text("${sub.code} • ${sub.facultyName}", color = TextSecondary, fontSize = 11.sp)
+                            Text(sub.name, color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text("${sub.code} • ${sub.facultyName}", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Text("Attendance Status", fontSize = 12.sp, color = TextSecondary)
+                Text("Attendance Status", fontSize = 12.sp, color = CaliperTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -144,7 +144,7 @@ fun ExtraClassDialog(
                         Spacer(modifier = Modifier.width(6.dp))
                         Column {
                             Text("Marked by Proxy", color = NeonCyan, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("Maintains roll sync while tracking physical presence", color = TextSecondary, fontSize = 10.sp)
+                            Text("Maintains roll sync while tracking physical presence", color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
                         }
                     }
                 }
@@ -153,7 +153,7 @@ fun ExtraClassDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes (e.g. Compensatory Lecture)", color = TextSecondary, fontSize = 12.sp) },
+                    label = { Text("Notes (e.g. Compensatory Lecture)", color = CaliperTheme.colors.textSecondary, fontSize = 12.sp) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -203,7 +203,7 @@ fun ReconciliationDialog(
                     text = "Sync with Professor's Register",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = CaliperTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -216,7 +216,7 @@ fun ReconciliationDialog(
                 Text(
                     text = "If teacher announced official roll totals, enter them below. The app will calculate the exact reconciliation offset instantly without losing daily logs.",
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = CaliperTheme.colors.textSecondary,
                     lineHeight = 16.sp
                 )
 
@@ -225,7 +225,7 @@ fun ReconciliationDialog(
                 OutlinedTextField(
                     value = officialAttendedText,
                     onValueChange = { officialAttendedText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Teacher's Roll: Present Count", color = TextSecondary) },
+                    label = { Text("Teacher's Roll: Present Count", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -240,7 +240,7 @@ fun ReconciliationDialog(
                 OutlinedTextField(
                     value = officialTotalText,
                     onValueChange = { officialTotalText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Teacher's Roll: Total Classes Conducted", color = TextSecondary) },
+                    label = { Text("Teacher's Roll: Total Classes Conducted", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -310,14 +310,14 @@ fun AddEditSubjectDialog(
                     text = if (initialSubject == null) "Add Engineering Subject" else "Edit Subject",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = CaliperTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(14.dp))
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Subject Name (e.g. Thermodynamics)", color = TextSecondary) },
+                    label = { Text("Subject Name (e.g. Thermodynamics)", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -332,7 +332,7 @@ fun AddEditSubjectDialog(
                 OutlinedTextField(
                     value = code,
                     onValueChange = { code = it },
-                    label = { Text("Code (e.g. ME-301)", color = TextSecondary) },
+                    label = { Text("Code (e.g. ME-301)", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -347,7 +347,7 @@ fun AddEditSubjectDialog(
                 OutlinedTextField(
                     value = facultyName,
                     onValueChange = { facultyName = it },
-                    label = { Text("Faculty In-Charge", color = TextSecondary) },
+                    label = { Text("Faculty In-Charge", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -358,7 +358,7 @@ fun AddEditSubjectDialog(
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Text("Subject Type", fontSize = 12.sp, color = TextSecondary)
+                Text("Subject Type", fontSize = 12.sp, color = CaliperTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -378,7 +378,7 @@ fun AddEditSubjectDialog(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Text("Faculty Strictness", fontSize = 12.sp, color = TextSecondary)
+                Text("Faculty Strictness", fontSize = 12.sp, color = CaliperTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -458,13 +458,13 @@ fun AddAssessmentDialog(
                     .padding(22.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Text("Add Academic Assessment", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Add Academic Assessment", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CaliperTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(14.dp))
 
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title (e.g. Sessional 2 or Sheet 5)", color = TextSecondary) },
+                    label = { Text("Title (e.g. Sessional 2 or Sheet 5)", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -475,7 +475,7 @@ fun AddAssessmentDialog(
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("Category", fontSize = 12.sp, color = TextSecondary)
+                Text("Category", fontSize = 12.sp, color = CaliperTheme.colors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
 
                 val types = listOf(
@@ -512,7 +512,7 @@ fun AddAssessmentDialog(
                     OutlinedTextField(
                         value = maxMarks,
                         onValueChange = { maxMarks = it },
-                        label = { Text("Max Marks", color = TextSecondary) },
+                        label = { Text("Max Marks", color = CaliperTheme.colors.textSecondary) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
@@ -525,7 +525,7 @@ fun AddAssessmentDialog(
                     OutlinedTextField(
                         value = obtainedMarks,
                         onValueChange = { obtainedMarks = it },
-                        label = { Text("Scored (Optional)", color = TextSecondary) },
+                        label = { Text("Scored (Optional)", color = CaliperTheme.colors.textSecondary) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
@@ -589,13 +589,13 @@ fun AddMedicalLeaveDialog(
                     .padding(22.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Text("Log Medical / HOD Leave Slip", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Log Medical / HOD Leave Slip", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CaliperTheme.colors.textPrimary)
                 Spacer(modifier = Modifier.height(14.dp))
 
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it },
-                    label = { Text("Diagnosis / Reason (e.g. Viral Fever)", color = TextSecondary) },
+                    label = { Text("Diagnosis / Reason (e.g. Viral Fever)", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -610,7 +610,7 @@ fun AddMedicalLeaveDialog(
                 OutlinedTextField(
                     value = doctorName,
                     onValueChange = { doctorName = it },
-                    label = { Text("Doctor / Hospital (e.g. Beli Hospital)", color = TextSecondary) },
+                    label = { Text("Doctor / Hospital (e.g. Beli Hospital)", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -625,7 +625,7 @@ fun AddMedicalLeaveDialog(
                 OutlinedTextField(
                     value = refNo,
                     onValueChange = { refNo = it },
-                    label = { Text("Application / Slip No. (e.g. IERT/MED/092)", color = TextSecondary) },
+                    label = { Text("Application / Slip No. (e.g. IERT/MED/092)", color = CaliperTheme.colors.textSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,

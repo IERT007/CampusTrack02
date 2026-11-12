@@ -149,7 +149,7 @@ fun MainScaffold(
  * - Container height: 54.dp
  * - Internal padding: icon-to-label spacing 2.dp, icon size 20.dp
  * - Tab labels: 11.sp Medium typography
- * - Selected indicator: subtle translucent pill (Color.White.copy(alpha = 0.08f))
+ * - Selected indicator: subtle translucent pill (CaliperTheme.colors.containerSurface)
  * - Styling: Translucent frosted obsidian (Color(0xFF0A0D14).copy(alpha = 0.85f)) with 0.5.dp border
  */
 @Composable
