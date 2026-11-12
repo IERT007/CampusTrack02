@@ -80,26 +80,26 @@ val CalmKitIvoryColors = CaliperColors(
 
 val FlagshipObsidianColors = CaliperColors(
     isMonochrome = true,
-    baseSurface = DarkBaseCanvas,
-    containerSurface = DarkInsetSurface,
-    cardFill = DarkRaisedCard,
-    pressedFill = DarkPressedCard,
-    shadowDark = DarkShadowDeep,
-    highlightLight = DarkHighlightRim,
-    cardBorderTop = DarkHighlightRim,
-    cardBorderBottom = DarkShadowDeep,
-    textPrimary = Color(0xFFF1F5F9),
-    textSecondary = Color(0xFFCBD5E1),
+    baseSurface = Color(0xFF0E1214),
+    containerSurface = Color(0xFF1C2327),
+    cardFill = Color(0xFF161C1F),
+    pressedFill = Color(0xFF101417),
+    shadowDark = Color(0xFF050708),
+    highlightLight = Color(0xFF2E383D),
+    cardBorderTop = Color(0xFF2E383D),
+    cardBorderBottom = Color(0xFF080A0C),
+    textPrimary = Color(0xFFF8FAFC),
+    textSecondary = Color(0xFFE2E8F0),
     textMuted = Color(0xFF94A3B8),
-    primaryAccent = DarkTealAccent,
-    onPrimaryAccent = Color(0xFF061E1C),
+    primaryAccent = Color(0xFF2DD4BF),
+    onPrimaryAccent = Color(0xFF041A18),
     safeZone = Color(0xFF34D399),
-    safeZoneContainer = Color(0xFF34D399).copy(alpha = 0.18f),
+    safeZoneContainer = Color(0xFF1E3A34),
     scheduledLecture = Color(0xFF60A5FA),
     deadlineWarning = Color(0xFFFB923C),
     bunkDanger = Color(0xFFF87171),
     streakGold = Color(0xFFFBBF24),
-    divider = Color.White.copy(alpha = 0.14f)
+    divider = Color.White.copy(alpha = 0.18f)
 )
 
 val LocalCaliperColors = staticCompositionLocalOf { CalmKitIvoryColors }

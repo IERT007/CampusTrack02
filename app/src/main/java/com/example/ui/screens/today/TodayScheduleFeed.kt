@@ -123,7 +123,7 @@ fun ActiveSlotCard(
                         .background(CaliperTheme.colors.divider)
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(slot.roomNo, color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
+                    Text(slot.roomNo, color = CaliperTheme.colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -207,7 +207,7 @@ fun ActiveSlotCard(
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Off", color = CaliperTheme.colors.textSecondary, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                    Text("Off", color = CaliperTheme.colors.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

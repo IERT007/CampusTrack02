@@ -161,7 +161,7 @@ fun TodayScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Auto-Vault Restore Banner
@@ -1167,7 +1167,7 @@ fun CustomActivityCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF0E121B).copy(alpha = 0.85f))
+            .background(CaliperTheme.colors.cardFill.copy(alpha = 0.85f))
             .border(
                 0.5.dp,
                 Brush.verticalGradient(
@@ -2150,7 +2150,7 @@ fun AddExtraEventDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0E121B),
+        containerColor = CaliperTheme.colors.cardFill,
         shape = RoundedCornerShape(18.dp),
         title = {
             Text(

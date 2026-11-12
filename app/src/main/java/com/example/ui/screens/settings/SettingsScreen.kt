@@ -371,7 +371,7 @@ fun SettingsScreen(
                             .padding(10.dp)
                     ) {
                         Text(
-                            text = "Universal Flagship Palette: True Pitch Black (#000000) canvas with Deep Obsidian Glass cards (#0E121B @ 85% alpha) and 0.5.dp specular luminous top borders. 120 FPS fluid physics active.",
+                            text = "Dual-Theme Tactile Engine: Warm Sand-Ivory 4-Layer Neumorphism (#EFECE6) with Deep Teal accents (#174E4F) for daylight clarity, and High-Contrast Obsidian Slate (#0E1214) for night comfort.",
                             color = CaliperTheme.colors.textSecondary,
                             fontSize = 11.sp,
                             lineHeight = 15.sp
