@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import com.example.ui.theme.CaliperTheme
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
