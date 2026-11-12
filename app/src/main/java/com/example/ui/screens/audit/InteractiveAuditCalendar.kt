@@ -153,7 +153,7 @@ fun InteractiveAuditCalendar(
         )
         AlertDialog(
             onDismissRequest = { showMonthPicker = false },
-            containerColor = Color(0xFF111622),
+            containerColor = CaliperTheme.colors.cardFill,
             title = { Text("Select Semester Month", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

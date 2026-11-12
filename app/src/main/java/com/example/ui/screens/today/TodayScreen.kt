@@ -1146,7 +1146,7 @@ fun TodayScreen(
 /**
  * 1-Day Single-Day Custom Activity Card
  * Claymorphic Matching Card Design:
- * - Background: Color(0xFF111622).copy(alpha = 0.75f)
+ * - Background: CaliperTheme.colors.cardFill.copy(alpha = 0.75f)
  * - Border: 0.5.dp subtle vertical gradient (CaliperTheme.colors.divider to Transparent)
  * - Corner radius: 16.dp
  * - Displays Event Title, Time Range, Location, Attendance tag (if enabled), and 1-tap delete trash icon
