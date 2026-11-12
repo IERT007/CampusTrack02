@@ -95,7 +95,7 @@ fun Modifier.claymorphicSurface(
             .border(
                 width = 0.5.dp,
                 brush = Brush.verticalGradient(
-                    listOf(CaliperTheme.colors.containerSurface, Color.Transparent)
+                    listOf(Color.White.copy(alpha = 0.08f), Color.Transparent)
                 ),
                 shape = shape
             )
@@ -116,14 +116,14 @@ fun Modifier.claymorphicSurface(
                 shadow = Shadow(
                     radius = 2.dp,
                     spread = 0.5.dp,
-                    color = CaliperTheme.colors.containerSurface,
+                    color = Color.White.copy(alpha = 0.08f),
                     offset = DpOffset(0.dp, 1.dp)
                 )
             )
             .border(
                 width = 0.5.dp,
                 brush = Brush.verticalGradient(
-                    listOf(CaliperTheme.colors.divider, Color.White.copy(alpha = 0.02f))
+                    listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.02f))
                 ),
                 shape = shape
             )
