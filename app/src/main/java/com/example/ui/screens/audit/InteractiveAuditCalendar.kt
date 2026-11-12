@@ -136,7 +136,7 @@ fun InteractiveAuditCalendar(
             AuditLegendChip("● Partial Cancel", Color(0xFFF59E0B))
             AuditLegendChip("● All Cancelled", Color(0xFFF87171))
             AuditLegendChip("● Bunked", Color(0xFFEF4444))
-            AuditLegendChip("○ Off/Holiday", Color(0xFF94A3B8))
+            AuditLegendChip("○ Off/Holiday", CaliperTheme.colors.textSecondary)
         }
     }
 
@@ -175,7 +175,7 @@ fun InteractiveAuditCalendar(
                         ) {
                             Text(
                                 text = ym.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                                color = if (isChosen) Color.White else Color(0xFF94A3B8),
+                                color = if (isChosen) Color.White else CaliperTheme.colors.textSecondary,
                                 fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -228,7 +228,7 @@ fun MonthGrid(
         ) {
             dayHeaders.forEach { d ->
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text(d, color = Color(0xFF94A3B8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(d, color = CaliperTheme.colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -264,7 +264,7 @@ fun MonthGrid(
                             DayAttendanceState.FULL_PRESENT -> Color(0xFF22C55E)
                             DayAttendanceState.PARTIAL_CANCELLED -> Color(0xFFF59E0B)
                             DayAttendanceState.ALL_CANCELLED -> Color(0xFFF87171)
-                            DayAttendanceState.COLLEGE_OFF_HOLIDAY -> Color(0xFF94A3B8)
+                            DayAttendanceState.COLLEGE_OFF_HOLIDAY -> CaliperTheme.colors.textSecondary
                             DayAttendanceState.BUNKED -> Color(0xFFEF4444)
                             DayAttendanceState.UNRECORDED -> Color.Transparent
                         }
@@ -273,7 +273,7 @@ fun MonthGrid(
                             isToday -> colors.primaryAccent
                             state == DayAttendanceState.COLLEGE_OFF_HOLIDAY -> Color(0x4464748B)
                             dotColor != Color.Transparent -> dotColor.copy(alpha = 0.35f)
-                            else -> Color.White.copy(alpha = 0.05f)
+                            else -> CaliperTheme.colors.containerSurface
                         }
 
                         Box(
@@ -441,7 +441,7 @@ fun DaySummaryModal(
                 }
 
                 IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = CaliperTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                 }
             }
         },
@@ -461,9 +461,9 @@ fun DaySummaryModal(
                     DayAttendanceState.FULL_PRESENT -> "100% Attended (Full Present)" to Color(0xFF22C55E)
                     DayAttendanceState.PARTIAL_CANCELLED -> "Partial Faculty Cancellation" to Color(0xFFF59E0B)
                     DayAttendanceState.ALL_CANCELLED -> "All Scheduled Classes Cancelled" to Color(0xFFF87171)
-                    DayAttendanceState.COLLEGE_OFF_HOLIDAY -> (if (isSunday) "Sunday Break" else "Institutional Holiday (${holidayObj?.title ?: "Closed"})") to Color(0xFF94A3B8)
+                    DayAttendanceState.COLLEGE_OFF_HOLIDAY -> (if (isSunday) "Sunday Break" else "Institutional Holiday (${holidayObj?.title ?: "Closed"})") to CaliperTheme.colors.textSecondary
                     DayAttendanceState.BUNKED -> "Missed Lectures (Bunked)" to Color(0xFFEF4444)
-                    DayAttendanceState.UNRECORDED -> "No Period Attendance Recorded" to Color(0xFF64748B)
+                    DayAttendanceState.UNRECORDED -> "No Period Attendance Recorded" to CaliperTheme.colors.textSecondary
                 }
 
                 Box(
@@ -489,7 +489,7 @@ fun DaySummaryModal(
                         text = if (isSunday) "Sunday / Institutional Break. No recurring periods."
                                else if (isHoliday) "Declared gazetted holiday: ${holidayObj?.title ?: "Off"}."
                                else "No period logs recorded for this day in Caliper DB.",
-                        color = Color(0xFF94A3B8),
+                        color = CaliperTheme.colors.textSecondary,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
@@ -498,7 +498,7 @@ fun DaySummaryModal(
                         text = "RECORDED LECTURES (${dayLogs.size}):",
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B),
+                        color = CaliperTheme.colors.textSecondary,
                         letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -511,7 +511,7 @@ fun DaySummaryModal(
                                 "attended" -> (if (log.isProxy) "PROXY PRESENT" else "PRESENT") to Color(0xFF22C55E)
                                 "bunked" -> "BUNKED" to Color(0xFFEF4444)
                                 "cancelled_by_faculty" -> "CANCELLED BY FACULTY" to Color(0xFFF59E0B)
-                                "college_off" -> "COLLEGE OFF" to Color(0xFF94A3B8)
+                                "college_off" -> "COLLEGE OFF" to CaliperTheme.colors.textSecondary
                                 else -> log.status.uppercase() to Color(0xFF38BDF8)
                             }
 
@@ -520,7 +520,7 @@ fun DaySummaryModal(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.White.copy(alpha = 0.03f))
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                    .border(0.5.dp, CaliperTheme.colors.divider, RoundedCornerShape(8.dp))
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -535,7 +535,7 @@ fun DaySummaryModal(
                                     val timeSpan = if (slot != null) "${slot.startTime} - ${slot.endTime} • " else ""
                                     Text(
                                         text = "$timeSpan${sub?.code ?: ""} ${if (log.isExtraClass) "• Extra Class" else ""}",
-                                        color = Color(0xFF94A3B8),
+                                        color = CaliperTheme.colors.textSecondary,
                                         fontSize = 10.5.sp
                                     )
                                 }

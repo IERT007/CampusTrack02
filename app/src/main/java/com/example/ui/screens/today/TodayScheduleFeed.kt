@@ -120,10 +120,10 @@ fun ActiveSlotCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(CaliperTheme.colors.divider)
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
+                    Text(slot.roomNo, color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
                 }
             }
 
@@ -138,7 +138,7 @@ fun ActiveSlotCard(
             if (slot.subjectCode.isNotEmpty()) {
                 Text(
                     text = slot.subjectCode,
-                    color = Color(0xFF94A3B8),
+                    color = CaliperTheme.colors.textSecondary,
                     fontSize = 11.5.sp
                 )
             }
@@ -207,7 +207,7 @@ fun ActiveSlotCard(
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Off", color = Color(0xFF94A3B8), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                    Text("Off", color = CaliperTheme.colors.textSecondary, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -226,8 +226,8 @@ fun CompletedTrayHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+            .background(CaliperTheme.colors.containerSurface)
+            .border(0.5.dp, CaliperTheme.colors.divider, RoundedCornerShape(12.dp))
             .clickable {
                 CaliperSoundManager.playSnap()
                 CaliperHapticManager.tick(context)
@@ -246,7 +246,7 @@ fun CompletedTrayHeader(
         Icon(
             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
             contentDescription = null,
-            tint = Color(0xFF94A3B8)
+            tint = CaliperTheme.colors.textSecondary
         )
     }
 }
@@ -258,14 +258,14 @@ fun HistoricalSlotRow(record: ProcessedSlotRecord) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White.copy(alpha = 0.02f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))
+            .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
             Text(record.subjectName, color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text("${record.time} • ${record.roomNo}", color = Color(0xFF94A3B8), fontSize = 10.sp)
+            Text("${record.time} • ${record.roomNo}", color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
         }
         Box(
             modifier = Modifier

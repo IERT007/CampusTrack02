@@ -17,6 +17,9 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -116,7 +119,7 @@ fun MainTopBar(
                         style = TextStyle(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF94A3B8)
+                            color = colors.textSecondary
                         )
                     )
                 }
@@ -129,8 +132,8 @@ fun MainTopBar(
                         .weight(1f)
                         .height(42.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                        .background(colors.cardFill)
+                        .border(1.dp, colors.divider, RoundedCornerShape(24.dp))
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
@@ -141,7 +144,7 @@ fun MainTopBar(
                         Icon(
                             imageVector = Icons.Rounded.Search,
                             contentDescription = "Search",
-                            tint = Color(0xFF94A3B8),
+                            tint = colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
 
@@ -163,7 +166,7 @@ fun MainTopBar(
                                     Text(
                                         text = "Search subject, room...",
                                         style = TextStyle(
-                                            color = Color(0xFF64748B),
+                                            color = colors.textMuted,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Normal
                                         )
@@ -182,7 +185,7 @@ fun MainTopBar(
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = "Clear",
-                                    tint = Color(0xFF94A3B8),
+                                    tint = colors.textSecondary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -192,11 +195,39 @@ fun MainTopBar(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // 3. Right Component (Width: ~40.dp) - Embedded 20.dp Settings Icon
+                // 3A. Instant Dark / Light Theme Toggle Pill
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(38.dp)
+                        .shadow(if (colors.isMonochrome) 0.dp else 4.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(colors.cardFill)
+                        .border(1.dp, colors.divider, CircleShape)
+                        .clickable {
+                            CaliperSoundManager.playSnap()
+                            CaliperHapticManager.tick(context)
+                            viewModel.setMonochromeMode(!colors.isMonochrome)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (colors.isMonochrome) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                        contentDescription = "Toggle Dark Mode",
+                        tint = colors.primaryAccent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // 3B. High-Contrast Neumorphic Settings Button
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .shadow(if (colors.isMonochrome) 0.dp else 4.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(colors.cardFill)
+                        .border(1.dp, colors.divider, CircleShape)
                         .clickable {
                             CaliperSoundManager.playSnap()
                             CaliperHapticManager.tick(context)
@@ -207,8 +238,8 @@ fun MainTopBar(
                     Icon(
                         imageVector = Icons.Rounded.Settings,
                         contentDescription = "System Settings",
-                        tint = Color(0xFFE2E8F0),
-                        modifier = Modifier.size(20.dp)
+                        tint = colors.textPrimary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -238,7 +269,7 @@ fun MainTopBar(
                         ) {
                             Text(
                                 text = "No academic record matching \"$searchQuery\"",
-                                color = Color(0xFF94A3B8),
+                                color = colors.textSecondary,
                                 fontSize = 12.sp
                             )
                         }
@@ -248,7 +279,7 @@ fun MainTopBar(
                                 text = "MATCHING SUBJECTS & LABS (${matchingSubjects.size})",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF64748B),
+                                color = colors.textMuted,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
 
@@ -294,7 +325,7 @@ fun MainTopBar(
                                             )
                                             Text(
                                                 text = "${sub.facultyName} • Room: $roomLabel",
-                                                color = Color(0xFF94A3B8),
+                                                color = colors.textSecondary,
                                                 fontSize = 11.sp
                                             )
                                         }
@@ -462,7 +493,7 @@ fun SubjectTelemetryDialog(
                             Text(
                                 text = "${subject.facultyName} • ${subject.type.uppercase()}",
                                 fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
+                                color = colors.textSecondary
                             )
                         }
 
@@ -478,7 +509,7 @@ fun SubjectTelemetryDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
+                            .background(colors.cardFill)
                             .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -505,7 +536,7 @@ fun SubjectTelemetryDialog(
                                 text = "NEXT SCHEDULED LECTURE",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF94A3B8)
+                                color = colors.textSecondary
                             )
                             Text(
                                 text = nextSlotInfo,
@@ -523,7 +554,7 @@ fun SubjectTelemetryDialog(
                         text = "ACADEMIC TALLY & LECTURE LOGS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B)
+                        color = colors.textMuted
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -603,7 +634,7 @@ fun SubjectTelemetryDialog(
                             Text(
                                 text = "Formula: B = ⌊(Attended - 0.75×Total) / 0.75⌋",
                                 fontSize = 9.sp,
-                                color = Color(0xFF94A3B8),
+                                color = colors.textSecondary,
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -649,7 +680,7 @@ private fun TallyStatBox(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = value, color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            Text(text = label, color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(text = label, color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -676,7 +707,7 @@ fun MainTopBar(
             )
             Text(
                 text = "IERT Prayagraj",
-                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
+                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = colors.textSecondary)
             )
         }
 
@@ -687,7 +718,7 @@ fun MainTopBar(
             Icon(
                 imageVector = Icons.Rounded.Settings,
                 contentDescription = "System Settings",
-                tint = Color(0xFFE2E8F0),
+                tint = colors.textPrimary,
                 modifier = Modifier.size(20.dp)
             )
         }
