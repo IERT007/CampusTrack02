@@ -136,7 +136,7 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = IceBlue
+                        tint = CaliperTheme.colors.primaryAccent
                     )
                 }
 
@@ -151,7 +151,7 @@ fun SettingsScreen(
                     )
                     Text(
                         text = "Tactical Academic OS • System Preferences",
-                        color = ArchitecturalTitanium,
+                        color = CaliperTheme.colors.textSecondary,
                         fontSize = 11.sp
                     )
                 }
@@ -167,7 +167,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // SECTION 1: Audio & Vernier Haptics Hub
-                SettingsSectionHeader("AUDIO & VERNIER HAPTIC ENGINE", Icons.Default.VolumeUp, IceBlue)
+                SettingsSectionHeader("AUDIO & VERNIER HAPTIC ENGINE", Icons.Default.VolumeUp, CaliperTheme.colors.primaryAccent)
 
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -194,7 +194,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "Audition Procedural Tones:",
-                        color = ArchitecturalTitanium,
+                        color = CaliperTheme.colors.textSecondary,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -214,7 +214,7 @@ fun SettingsScreen(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Tick", fontSize = 10.sp, color = IceBlue)
+                            Text("Tick", fontSize = 10.sp, color = CaliperTheme.colors.primaryAccent)
                         }
 
                         OutlinedButton(
@@ -267,7 +267,7 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "TERM COMMENCEMENT & CONCLUSION",
-                        color = ArchitecturalTitanium,
+                        color = CaliperTheme.colors.textSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
@@ -346,7 +346,7 @@ fun SettingsScreen(
                 }
 
                 // SECTION 3: Display & Dual-Theme Engine Hub
-                SettingsSectionHeader("DISPLAY & DUAL-THEME ENGINE", Icons.Default.Palette, MutedChampagneAmber)
+                SettingsSectionHeader("DISPLAY & DUAL-THEME ENGINE", Icons.Default.Palette, CaliperTheme.colors.primaryAccent)
 
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -354,7 +354,7 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "THEME SYSTEM & PALETTE",
-                        color = ArchitecturalTitanium,
+                        color = CaliperTheme.colors.textSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
@@ -366,7 +366,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.03f))
+                            .background(CaliperTheme.colors.containerSurface)
                             .border(0.5.dp, CaliperTheme.colors.containerSurface, RoundedCornerShape(10.dp))
                             .padding(10.dp)
                     ) {
@@ -400,7 +400,7 @@ fun SettingsScreen(
                     ) {
                         Column {
                             Text("Statutory Attendance Threshold", color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("IERT Prayagraj Academic Ordinance Rule", color = ArchitecturalTitanium, fontSize = 11.sp)
+                            Text("IERT Prayagraj Academic Ordinance Rule", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                         }
                         Box(
                             modifier = Modifier
@@ -439,7 +439,7 @@ fun SettingsScreen(
                             }
                             Text(
                                 text = "Serializes to context.filesDir/caliper_vault_snapshot.json on every commit",
-                                color = ArchitecturalTitanium,
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -463,7 +463,7 @@ fun SettingsScreen(
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f), thickness = 0.5.dp)
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text("Storage Access Framework (SAF) File Operations:", color = ArchitecturalTitanium, fontSize = 11.sp)
+                    Text("Storage Access Framework (SAF) File Operations:", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
@@ -481,9 +481,9 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.UploadFile, contentDescription = null, tint = IceBlue, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.UploadFile, contentDescription = null, tint = CaliperTheme.colors.primaryAccent, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Export JSON", color = IceBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Export JSON", color = CaliperTheme.colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -520,7 +520,7 @@ fun SettingsScreen(
                         )
                         Text(
                             text = "Mechanical & Tool Engineering (7 Core Subjects)",
-                            color = ArchitecturalTitanium,
+                            color = CaliperTheme.colors.textSecondary,
                             fontSize = 11.sp
                         )
                     }
@@ -573,7 +573,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("CALIPER ACADEMIC OS • V2.0", color = ArchitecturalTitanium, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("CALIPER ACADEMIC OS • V2.0", color = CaliperTheme.colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Text("IERT Mechanical & Tool Engineering • Offline-First", color = CaliperTheme.colors.textMuted, fontSize = 9.sp)
                     }
                 }
@@ -661,7 +661,7 @@ private fun SettingsToggleRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = CaliperTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
+            Text(subtitle, color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
         }
         Switch(
             checked = checked,
@@ -699,7 +699,7 @@ private fun NotificationSettingItem(
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = CaliperTheme.colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Text(description, color = ArchitecturalTitanium, fontSize = 10.sp)
+            Text(description, color = CaliperTheme.colors.textSecondary, fontSize = 10.sp)
         }
         Text("Active", color = VelvetSageEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
@@ -753,7 +753,7 @@ private fun SemesterDatePickerRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = CaliperTheme.colors.textPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = ArchitecturalTitanium, fontSize = 11.sp)
+            Text(subtitle, color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
         }
 
         Box(
@@ -764,9 +764,9 @@ private fun SemesterDatePickerRow(
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = IceBlue, modifier = Modifier.size(13.dp))
+                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = CaliperTheme.colors.primaryAccent, modifier = Modifier.size(13.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(formattedDisplay, color = IceBlue, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                Text(formattedDisplay, color = CaliperTheme.colors.primaryAccent, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -124,8 +124,8 @@ fun SafeZoneScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(NeonCyan.copy(alpha = 0.16f))
-                            .border(0.5.dp, NeonCyan.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .background(CaliperTheme.colors.primaryAccent.copy(alpha = 0.16f))
+                            .border(0.5.dp, CaliperTheme.colors.primaryAccent.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                             .clickable {
                                 CaliperHardwareEngine.playSound(CaliperHardwareEngine.SNAP)
                                 CaliperHardwareEngine.pulseHaptic(context)
@@ -141,7 +141,7 @@ fun SafeZoneScreen(
                                 text = "Slots",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonCyan
+                                color = CaliperTheme.colors.primaryAccent
                             )
                         }
                     }
@@ -219,7 +219,7 @@ fun SafeZoneScreen(
                     .fillMaxWidth()
                     .testTag("bunk_simulator_card"),
                 innerPadding = 12.dp,
-                borderColors = listOf(NeonCyan.copy(alpha = 0.35f), GlassBorderBottom)
+                borderColors = listOf(CaliperTheme.colors.primaryAccent.copy(alpha = 0.35f), GlassBorderBottom)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -353,10 +353,10 @@ fun SafeZoneScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) NeonCyan.copy(alpha = 0.2f) else Color(0x11FFFFFF))
+                                .background(if (isSelected) CaliperTheme.colors.primaryAccent.copy(alpha = 0.2f) else Color(0x11FFFFFF))
                                 .border(
                                     0.5.dp,
-                                    if (isSelected) NeonCyan else Color.Transparent,
+                                    if (isSelected) CaliperTheme.colors.primaryAccent else Color.Transparent,
                                     RoundedCornerShape(8.dp)
                                 )
                                 .clickable {
@@ -370,7 +370,7 @@ fun SafeZoneScreen(
                                 text = label,
                                 fontSize = 10.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) NeonCyan else TextSecondary
+                                color = if (isSelected) CaliperTheme.colors.primaryAccent else TextSecondary
                             )
                         }
                     }
@@ -381,12 +381,12 @@ fun SafeZoneScreen(
                     modifier = Modifier
                         .size(30.dp)
                         .clip(CircleShape)
-                        .background(NeonCyan.copy(alpha = 0.2f))
+                        .background(CaliperTheme.colors.primaryAccent.copy(alpha = 0.2f))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Subject",
-                        tint = NeonCyan,
+                        tint = CaliperTheme.colors.primaryAccent,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -434,13 +434,13 @@ fun SafeZoneScreen(
                         Text(
                             text = "Manage weekly slots and room mappings",
                             fontSize = 11.sp,
-                            color = Color(0xFF94A3B8)
+                            color = CaliperTheme.colors.textSecondary
                         )
                     }
 
                     Button(
                         onClick = { showCreateSlotDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                        colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.primaryAccent),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
@@ -468,8 +468,8 @@ fun SafeZoneScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isChosen) NeonCyan.copy(alpha = 0.2f) else Color(0x11FFFFFF))
-                                .border(0.5.dp, if (isChosen) NeonCyan else Color.Transparent, RoundedCornerShape(8.dp))
+                                .background(if (isChosen) CaliperTheme.colors.primaryAccent.copy(alpha = 0.2f) else Color(0x11FFFFFF))
+                                .border(0.5.dp, if (isChosen) CaliperTheme.colors.primaryAccent else Color.Transparent, RoundedCornerShape(8.dp))
                                 .clickable {
                                     CaliperHardwareEngine.playSound(CaliperHardwareEngine.SNAP)
                                     CaliperHardwareEngine.pulseHaptic(context)
@@ -483,12 +483,12 @@ fun SafeZoneScreen(
                                     text = dayLabel,
                                     fontSize = 11.sp,
                                     fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isChosen) NeonCyan else Color(0xFF94A3B8)
+                                    color = if (isChosen) CaliperTheme.colors.primaryAccent else CaliperTheme.colors.textSecondary
                                 )
                                 Text(
                                     text = "$slotCount",
                                     fontSize = 9.sp,
-                                    color = if (isChosen) NeonCyan else Color(0xFF64748B)
+                                    color = if (isChosen) CaliperTheme.colors.primaryAccent else CaliperTheme.colors.textSecondary
                                 )
                             }
                         }
@@ -509,8 +509,8 @@ fun SafeZoneScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color(0xFF475569), modifier = Modifier.size(36.dp))
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("No slots scheduled for this day.", color = Color(0xFF94A3B8), fontSize = 13.sp)
-                            Text("Tap '+ Add Slot' to configure a lecture or lab.", color = Color(0xFF64748B), fontSize = 11.sp)
+                            Text("No slots scheduled for this day.", color = CaliperTheme.colors.textSecondary, fontSize = 13.sp)
+                            Text("Tap '+ Add Slot' to configure a lecture or lab.", color = CaliperTheme.colors.textSecondary, fontSize = 11.sp)
                         }
                     }
                 } else {
@@ -538,7 +538,7 @@ fun SafeZoneScreen(
                                             text = "${slot.startTime} – ${slot.endTime}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = NeonCyan
+                                            color = CaliperTheme.colors.primaryAccent
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Box(
@@ -547,7 +547,7 @@ fun SafeZoneScreen(
                                                 .background(CaliperTheme.colors.containerSurface)
                                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                                         ) {
-                                            Text(slot.roomNo, fontSize = 10.sp, color = Color(0xFF94A3B8))
+                                            Text(slot.roomNo, fontSize = 10.sp, color = CaliperTheme.colors.textSecondary)
                                         }
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
@@ -560,7 +560,7 @@ fun SafeZoneScreen(
                                     Text(
                                         text = "${sub?.code ?: ""} • ${sub?.facultyName ?: ""}",
                                         fontSize = 10.sp,
-                                        color = Color(0xFF94A3B8)
+                                        color = CaliperTheme.colors.textSecondary
                                     )
                                 }
 
@@ -726,7 +726,7 @@ fun SubjectCardWithMenu(
                         text = stat.subject.code,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = NeonCyan
+                        color = CaliperTheme.colors.primaryAccent
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
@@ -738,7 +738,7 @@ fun SubjectCardWithMenu(
                         Text(
                             text = stat.subject.type.uppercase(),
                             fontSize = 8.5.sp,
-                            color = Color(0xFF94A3B8)
+                            color = CaliperTheme.colors.textSecondary
                         )
                     }
                 }
@@ -752,7 +752,7 @@ fun SubjectCardWithMenu(
                 Text(
                     text = stat.subject.facultyName,
                     fontSize = 11.sp,
-                    color = Color(0xFF94A3B8)
+                    color = CaliperTheme.colors.textSecondary
                 )
             }
 
@@ -772,7 +772,7 @@ fun SubjectCardWithMenu(
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Subject Options",
-                            tint = Color(0xFF94A3B8),
+                            tint = CaliperTheme.colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -784,7 +784,7 @@ fun SubjectCardWithMenu(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Edit Details", color = CaliperTheme.colors.textPrimary, fontSize = 12.sp) },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp)) },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = CaliperTheme.colors.primaryAccent, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 menuExpanded = false
                                 onEdit()

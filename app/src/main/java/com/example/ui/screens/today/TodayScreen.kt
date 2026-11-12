@@ -457,7 +457,7 @@ fun TodayScreen(
                                 )
                                 Text(
                                     text = "Curriculum begins on $semesterStartDate. Regular slots will activate then.",
-                                    color = Color(0xFF94A3B8),
+                                    color = CaliperTheme.colors.textSecondary,
                                     fontSize = 11.sp
                                 )
                             }
@@ -499,7 +499,7 @@ fun TodayScreen(
                                 )
                                 Text(
                                     text = "Official semester ended on $semesterEndDate. Best wishes for term exams!",
-                                    color = Color(0xFF94A3B8),
+                                    color = CaliperTheme.colors.textSecondary,
                                     fontSize = 11.sp
                                 )
                             }
@@ -552,13 +552,13 @@ fun TodayScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0x1F38BDF8))
-                                .border(0.5.dp, Color(0xFF38BDF8).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .background(CaliperTheme.colors.containerSurface)
+                                .border(1.dp, CaliperTheme.colors.primaryAccent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "$attendedCount/${slotItems.size} Marked",
-                                color = Color(0xFF38BDF8),
+                                color = CaliperTheme.colors.primaryAccent,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1239,7 +1239,7 @@ fun CustomActivityCard(
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = activity.location,
-                            color = Color(0xFF94A3B8),
+                            color = CaliperTheme.colors.textSecondary,
                             fontSize = 11.sp
                         )
                     }
@@ -1333,7 +1333,7 @@ fun SlotCard(
                         .background(Color(0x22FFFFFF))
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(item.slot.roomNo, color = Color(0xFF94A3B8), fontSize = 12.sp)
+                    Text(item.slot.roomNo, color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
                 }
 
                 if (item.isRescheduled) {
@@ -1459,7 +1459,7 @@ fun SlotCard(
         ) {
             Text(
                 text = "${item.subject?.code} • ${item.subject?.facultyName}",
-                color = Color(0xFF94A3B8),
+                color = CaliperTheme.colors.textSecondary,
                 fontSize = 11.5.sp
             )
             item.subject?.strictness?.let { StrictnessBadge(it) }
@@ -1974,14 +1974,14 @@ fun SingleDayRescheduleDialog(
         title = {
             Column {
                 Text("Reschedule / Shift Time", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("Today Only ($date) • ${item.subject?.name ?: "Slot"}", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                Text("Today Only ($date) • ${item.subject?.name ?: "Slot"}", color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = "This time shift will apply to $date only. Your master recurring weekly timetable will not be changed.",
-                    color = Color(0xFF94A3B8),
+                    color = CaliperTheme.colors.textSecondary,
                     fontSize = 11.5.sp
                 )
                 Row(
@@ -2051,7 +2051,7 @@ fun EnterMarksDialog(
         title = {
             Column {
                 Text("Enter Test Marks", color = CaliperTheme.colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("${testRecord.testName} • $subjectName", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                Text("${testRecord.testName} • $subjectName", color = CaliperTheme.colors.textSecondary, fontSize = 12.sp)
             }
         },
         text = {
@@ -2423,7 +2423,7 @@ fun AddExtraEventDialog(
                             )
                             Text(
                                 text = "Flags this event as valid academic attendance credit",
-                                color = Color(0xFF94A3B8),
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 10.sp
                             )
                         }
