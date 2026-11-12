@@ -119,7 +119,7 @@ fun MainTopBar(
                         style = TextStyle(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = colors.textSecondary
+                            color = CaliperTheme.colors.textSecondary
                         )
                     )
                 }
@@ -132,8 +132,8 @@ fun MainTopBar(
                         .weight(1f)
                         .height(42.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(colors.cardFill)
-                        .border(1.dp, colors.divider, RoundedCornerShape(24.dp))
+                        .background(CaliperTheme.colors.cardFill)
+                        .border(1.dp, CaliperTheme.colors.divider, RoundedCornerShape(24.dp))
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
@@ -144,7 +144,7 @@ fun MainTopBar(
                         Icon(
                             imageVector = Icons.Rounded.Search,
                             contentDescription = "Search",
-                            tint = colors.textSecondary,
+                            tint = CaliperTheme.colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
 
@@ -160,13 +160,13 @@ fun MainTopBar(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Normal
                             ),
-                            cursorBrush = SolidColor(colors.primaryAccent),
+                            cursorBrush = SolidColor(CaliperTheme.colors.primaryAccent),
                             decorationBox = { innerTextField ->
                                 if (searchQuery.isEmpty()) {
                                     Text(
                                         text = "Search subject, room...",
                                         style = TextStyle(
-                                            color = colors.textMuted,
+                                            color = CaliperTheme.colors.textMuted,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Normal
                                         )
@@ -185,7 +185,7 @@ fun MainTopBar(
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = "Clear",
-                                    tint = colors.textSecondary,
+                                    tint = CaliperTheme.colors.textSecondary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -199,21 +199,21 @@ fun MainTopBar(
                 Box(
                     modifier = Modifier
                         .size(38.dp)
-                        .shadow(if (colors.isMonochrome) 0.dp else 4.dp, CircleShape)
+                        .shadow(if (CaliperTheme.colors.isMonochrome) 0.dp else 4.dp, CircleShape)
                         .clip(CircleShape)
-                        .background(colors.cardFill)
-                        .border(1.dp, colors.divider, CircleShape)
+                        .background(CaliperTheme.colors.cardFill)
+                        .border(1.dp, CaliperTheme.colors.divider, CircleShape)
                         .clickable {
                             CaliperSoundManager.playSnap()
                             CaliperHapticManager.tick(context)
-                            viewModel.setMonochromeMode(!colors.isMonochrome)
+                            viewModel.setMonochromeMode(!CaliperTheme.colors.isMonochrome)
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (colors.isMonochrome) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                        imageVector = if (CaliperTheme.colors.isMonochrome) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
                         contentDescription = "Toggle Dark Mode",
-                        tint = colors.primaryAccent,
+                        tint = CaliperTheme.colors.primaryAccent,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -224,10 +224,10 @@ fun MainTopBar(
                 Box(
                     modifier = Modifier
                         .size(38.dp)
-                        .shadow(if (colors.isMonochrome) 0.dp else 4.dp, CircleShape)
+                        .shadow(if (CaliperTheme.colors.isMonochrome) 0.dp else 4.dp, CircleShape)
                         .clip(CircleShape)
-                        .background(colors.cardFill)
-                        .border(1.dp, colors.divider, CircleShape)
+                        .background(CaliperTheme.colors.cardFill)
+                        .border(1.dp, CaliperTheme.colors.divider, CircleShape)
                         .clickable {
                             CaliperSoundManager.playSnap()
                             CaliperHapticManager.tick(context)
@@ -238,7 +238,7 @@ fun MainTopBar(
                     Icon(
                         imageVector = Icons.Rounded.Settings,
                         contentDescription = "System Settings",
-                        tint = colors.textPrimary,
+                        tint = CaliperTheme.colors.textPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -269,7 +269,7 @@ fun MainTopBar(
                         ) {
                             Text(
                                 text = "No academic record matching \"$searchQuery\"",
-                                color = colors.textSecondary,
+                                color = CaliperTheme.colors.textSecondary,
                                 fontSize = 12.sp
                             )
                         }
@@ -279,7 +279,7 @@ fun MainTopBar(
                                 text = "MATCHING SUBJECTS & LABS (${matchingSubjects.size})",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textMuted,
+                                color = CaliperTheme.colors.textMuted,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
 
@@ -325,7 +325,7 @@ fun MainTopBar(
                                             )
                                             Text(
                                                 text = "${sub.facultyName} • Room: $roomLabel",
-                                                color = colors.textSecondary,
+                                                color = CaliperTheme.colors.textSecondary,
                                                 fontSize = 11.sp
                                             )
                                         }
@@ -482,7 +482,7 @@ fun SubjectTelemetryDialog(
                                 text = "${subject.code} Telemetry",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.primaryAccent
+                                color = CaliperTheme.colors.primaryAccent
                             )
                             Text(
                                 text = subject.name,
@@ -493,7 +493,7 @@ fun SubjectTelemetryDialog(
                             Text(
                                 text = "${subject.facultyName} • ${subject.type.uppercase()}",
                                 fontSize = 11.sp,
-                                color = colors.textSecondary
+                                color = CaliperTheme.colors.textSecondary
                             )
                         }
 
@@ -509,7 +509,7 @@ fun SubjectTelemetryDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(colors.cardFill)
+                            .background(CaliperTheme.colors.cardFill)
                             .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -536,7 +536,7 @@ fun SubjectTelemetryDialog(
                                 text = "NEXT SCHEDULED LECTURE",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.textSecondary
+                                color = CaliperTheme.colors.textSecondary
                             )
                             Text(
                                 text = nextSlotInfo,
@@ -554,7 +554,7 @@ fun SubjectTelemetryDialog(
                         text = "ACADEMIC TALLY & LECTURE LOGS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = colors.textMuted
+                        color = CaliperTheme.colors.textMuted
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -634,7 +634,7 @@ fun SubjectTelemetryDialog(
                             Text(
                                 text = "Formula: B = ⌊(Attended - 0.75×Total) / 0.75⌋",
                                 fontSize = 9.sp,
-                                color = colors.textSecondary,
+                                color = CaliperTheme.colors.textSecondary,
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -652,7 +652,7 @@ fun SubjectTelemetryDialog(
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = CaliperTheme.colors.primaryAccent),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Acknowledge Telemetry", fontWeight = FontWeight.Bold)
@@ -680,7 +680,7 @@ private fun TallyStatBox(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = value, color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            Text(text = label, color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(text = label, color = CaliperTheme.colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -707,7 +707,7 @@ fun MainTopBar(
             )
             Text(
                 text = "IERT Prayagraj",
-                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = colors.textSecondary)
+                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = CaliperTheme.colors.textSecondary)
             )
         }
 
@@ -718,7 +718,7 @@ fun MainTopBar(
             Icon(
                 imageVector = Icons.Rounded.Settings,
                 contentDescription = "System Settings",
-                tint = colors.textPrimary,
+                tint = CaliperTheme.colors.textPrimary,
                 modifier = Modifier.size(20.dp)
             )
         }
