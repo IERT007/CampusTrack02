@@ -8,11 +8,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
  * Dedicated PreLectureReceiver for firing 10-minute pre-lecture heads-up alerts.
- * Triggered by exact alarms scheduled via AlarmManager.setExactAndAllowWhileIdle().
- * Automatically mutes if today is a holiday or Sunday.
+ * Double-checks HolidayRangeDao, DailyDayStatusDao, Sunday, and Semester bounds
+ * inside goAsync() so alerts are strictly muted on holidays/off-days.
  */
 class PreLectureReceiver : BroadcastReceiver() {
 
@@ -26,13 +27,24 @@ class PreLectureReceiver : BroadcastReceiver() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                NotificationHelper.createNotificationChannels(appContext)
+
                 val db = AppDatabase.getInstance(appContext)
                 val today = LocalDate.now()
+                val todayStr = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val isSunday = (today.dayOfWeek.value == 7)
-                val holiday = db.holidayDao().getHolidayForDate(today.toString())
 
-                // Suppress if declared holiday or Sunday
-                if (holiday != null || isSunday) {
+                val prefs = appContext.getSharedPreferences("caliper_settings", Context.MODE_PRIVATE)
+                val semesterStartDate = prefs.getString("semester_start_date", "2026-07-15") ?: "2026-07-15"
+                val semesterEndDate = prefs.getString("semester_end_date", "2026-12-15") ?: "2026-12-15"
+                val isOutsideSemester = (todayStr < semesterStartDate || todayStr > semesterEndDate)
+
+                val holiday = db.holidayRangeDao().getHolidayForDate(todayStr)
+                val dayStatus = db.dailyDayStatusDao().getDayStatusDirect(todayStr)
+                val isDeclaredOff = dayStatus?.leaveCategory in listOf("college_holiday", "strike")
+
+                // Suppress alert on holidays, off-days, Sundays, or outside semester bounds
+                if (holiday != null || isDeclaredOff || isSunday || isOutsideSemester) {
                     return@launch
                 }
 

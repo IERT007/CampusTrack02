@@ -23,9 +23,10 @@ import com.example.data.local.entity.*
         TestRecordEntity::class,
         CustomActivityEntity::class,
         ExtraSlotEntity::class,
-        RescheduleOverrideEntity::class
+        RescheduleOverrideEntity::class,
+        TodoTaskEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun customActivityDao(): CustomActivityDao
     abstract fun extraSlotDao(): ExtraSlotDao
     abstract fun rescheduleOverrideDao(): RescheduleOverrideDao
+    abstract fun todoDao(): TodoDao
     fun scheduleDao(): ScheduleDao = extraSlotDao()
 
     companion object {
@@ -75,6 +77,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `todo_tasks` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `subjectId` INTEGER,
+                        `dueDateTimeMillis` INTEGER NOT NULL,
+                        `isCompleted` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -82,8 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "campustrack_iert.db"
                 )
-                    .addMigrations(MIGRATION_5_6)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7)
                     .build()
                 INSTANCE = instance
                 instance

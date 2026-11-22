@@ -31,14 +31,120 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.audio.CaliperHapticManager
 import com.example.audio.CaliperSoundManager
+import com.example.data.local.entity.DailyDayStatusEntity
+import com.example.data.local.entity.ExtraSlotEntity
+import com.example.data.local.entity.HolidayRangeEntity
+import com.example.data.local.entity.RescheduleOverrideEntity
 import com.example.data.local.entity.SubjectEntity
 import com.example.data.local.entity.TimetableSlotEntity
 import com.example.ui.MainViewModel
 import com.example.ui.SubjectAttendanceStats
 import com.example.ui.theme.CaliperTheme
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle as JavaTextStyle
+import java.util.Locale
 import kotlin.math.max
+
+/**
+ * Dynamic Future-Slot Resolver fixing Search Bar Temporal Drift.
+ *
+ * 1. Checks today's remaining slots (regular + RescheduleOverrideEntity + ExtraSlotEntity)
+ *    strictly where `startTime > nowDateTime.toLocalTime()`.
+ * 2. If none remain today, scans forward day-by-day up to 14 days, skipping Sundays,
+ *    declared holidays (HolidayRangeEntity & DailyDayStatusEntity), and dates outside
+ *    semester boundaries (unless a date-specific ExtraSlotEntity exists), returning the
+ *    exact next upcoming lecture e.g. "Next: Wednesday, 09:30 AM (LT-3)".
+ */
+fun resolveNextUpcomingSlot(
+    subjectId: Long,
+    nowDateTime: LocalDateTime,
+    regularSlots: List<TimetableSlotEntity>,
+    extraSlots: List<ExtraSlotEntity>,
+    overrides: List<RescheduleOverrideEntity>,
+    holidays: List<HolidayRangeEntity>,
+    dayStatuses: List<DailyDayStatusEntity>,
+    semesterStartDate: String,
+    semesterEndDate: String
+): String {
+    val subjectRegularSlots = regularSlots.filter { it.subjectId == subjectId }
+    val subjectExtraSlots = extraSlots.filter { it.subjectId == subjectId }
+    if (subjectRegularSlots.isEmpty() && subjectExtraSlots.isEmpty()) {
+        return "No timetable slot scheduled"
+    }
+
+    val isoFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+    val displayTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.US)
+    val today = nowDateTime.toLocalDate()
+    val nowTime = nowDateTime.toLocalTime()
+
+    data class CandidateSlot(
+        val startTime: LocalTime,
+        val roomNo: String,
+        val isExtra: Boolean
+    )
+
+    fun candidatesForDate(date: LocalDate): List<CandidateSlot> {
+        val dateStr = date.format(isoFormatter)
+        val dow = date.dayOfWeek.value // 1..7
+        val isSunday = (dow == 7)
+        val isHoliday = holidays.any { dateStr >= it.startDate && dateStr <= it.endDate }
+        val dayStatus = dayStatuses.find { it.date == dateStr }
+        val isOffDay = dayStatus?.leaveCategory in listOf("college_holiday", "strike")
+        val isOutsideSemester = (dateStr < semesterStartDate || dateStr > semesterEndDate)
+
+        val list = mutableListOf<CandidateSlot>()
+
+        // Regular weekly slots (only on active working days inside semester)
+        if (!isSunday && !isHoliday && !isOffDay && !isOutsideSemester) {
+            subjectRegularSlots.filter { it.dayOfWeek == dow }.forEach { slot ->
+                val override = overrides.find { it.slotId == slot.id && it.date == dateStr }
+                val effectiveStart = override?.newStartTime ?: slot.startTime
+                val effectiveRoom = override?.newRoomNo ?: slot.roomNo
+                try {
+                    list.add(CandidateSlot(LocalTime.parse(effectiveStart), effectiveRoom, isExtra = false))
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Date-specific extra slots (always considered for that exact date)
+        subjectExtraSlots.filter { it.date == dateStr }.forEach { extra ->
+            try {
+                list.add(CandidateSlot(LocalTime.parse(extra.startTime), extra.roomNo, isExtra = true))
+            } catch (_: Exception) {}
+        }
+
+        return list.sortedBy { it.startTime }
+    }
+
+    // Step 1: Remaining slots TODAY strictly after nowTime
+    val todayRemaining = candidatesForDate(today).firstOrNull { it.startTime.isAfter(nowTime) }
+    if (todayRemaining != null) {
+        val timeText = todayRemaining.startTime.format(displayTimeFormatter)
+        val extraTag = if (todayRemaining.isExtra) " • Extra" else ""
+        return "Next: Today, $timeText (${todayRemaining.roomNo}$extraTag)"
+    }
+
+    // Step 2: Scan forward day-by-day up to 14 days
+    for (offset in 1..14) {
+        val targetDate = today.plusDays(offset.toLong())
+        val nextSlot = candidatesForDate(targetDate).firstOrNull()
+        if (nextSlot != null) {
+            val dayLabel = when (offset) {
+                1 -> "Tomorrow"
+                in 2..6 -> targetDate.dayOfWeek.getDisplayName(JavaTextStyle.FULL, Locale.US)
+                else -> "${targetDate.dayOfWeek.getDisplayName(JavaTextStyle.FULL, Locale.US)} (${targetDate.format(DateTimeFormatter.ofPattern("dd MMM"))})"
+            }
+            val timeText = nextSlot.startTime.format(displayTimeFormatter)
+            val extraTag = if (nextSlot.isExtra) " • Extra" else ""
+            return "Next: $dayLabel, $timeText (${nextSlot.roomNo}$extraTag)"
+        }
+    }
+
+    return "No upcoming lecture in next 14 days"
+}
 
 @Composable
 fun MainTopBar(
@@ -53,6 +159,12 @@ fun MainTopBar(
     val subjects by viewModel.subjects.collectAsState()
     val statsList by viewModel.subjectStats.collectAsState()
     val allSlots by viewModel.slots.collectAsState()
+    val extraSlots by viewModel.extraSlots.collectAsState()
+    val rescheduleOverrides by viewModel.rescheduleOverrides.collectAsState()
+    val holidayRanges by viewModel.holidayRanges.collectAsState()
+    val dayStatuses by viewModel.dayStatuses.collectAsState()
+    val semesterStartDate by viewModel.semesterStartDate.collectAsState()
+    val semesterEndDate by viewModel.semesterEndDate.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     var selectedSubjectForTelemetry by remember { mutableStateOf<SubjectEntity?>(null) }
@@ -314,6 +426,12 @@ fun MainTopBar(
             subject = subject,
             stats = stats,
             slots = slots,
+            extraSlots = extraSlots,
+            overrides = rescheduleOverrides,
+            holidays = holidayRanges,
+            dayStatuses = dayStatuses,
+            semesterStartDate = semesterStartDate,
+            semesterEndDate = semesterEndDate,
             onDismiss = { selectedSubjectForTelemetry = null }
         )
     }
@@ -324,54 +442,28 @@ fun SubjectTelemetryDialog(
     subject: SubjectEntity,
     stats: SubjectAttendanceStats?,
     slots: List<TimetableSlotEntity>,
+    extraSlots: List<ExtraSlotEntity> = emptyList(),
+    overrides: List<RescheduleOverrideEntity> = emptyList(),
+    holidays: List<HolidayRangeEntity> = emptyList(),
+    dayStatuses: List<DailyDayStatusEntity> = emptyList(),
+    semesterStartDate: String = "2026-07-15",
+    semesterEndDate: String = "2026-12-15",
     onDismiss: () -> Unit
 ) {
     val colors = CaliperTheme.colors
 
-    val dayNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
-    val todayDayOfWeek = remember { LocalDate.now().dayOfWeek.value }
-
-    val nextSlotInfo = remember(slots, todayDayOfWeek) {
-        if (slots.isEmpty()) {
-            "No timetable slot scheduled"
-        } else {
-            val nowTime = LocalTime.now()
-            val todayUpcomingSlot = slots
-                .filter { it.dayOfWeek == todayDayOfWeek }
-                .filter { slot ->
-                    try {
-                        LocalTime.parse(slot.startTime).isAfter(nowTime)
-                    } catch (_: Exception) {
-                        false
-                    }
-                }
-                .minByOrNull { it.startTime }
-
-            if (todayUpcomingSlot != null) {
-                "Today ${todayUpcomingSlot.startTime} - ${todayUpcomingSlot.endTime} (${todayUpcomingSlot.roomNo})"
-            } else {
-                var resolvedSlot: TimetableSlotEntity? = null
-                var resolvedDayOffset = 0
-                for (offset in 1..6) {
-                    val targetDay = ((todayDayOfWeek - 1 + offset) % 7) + 1
-                    val daySlots = slots.filter { it.dayOfWeek == targetDay }.sortedBy { it.startTime }
-                    if (daySlots.isNotEmpty()) {
-                        resolvedSlot = daySlots.first()
-                        resolvedDayOffset = offset
-                        break
-                    }
-                }
-                if (resolvedSlot != null) {
-                    val dayName = if (resolvedDayOffset == 1) "Tomorrow" else dayNames.getOrElse(resolvedSlot.dayOfWeek - 1) { "Day ${resolvedSlot.dayOfWeek}" }
-                    "Next: $dayName ${resolvedSlot.startTime} (${resolvedSlot.roomNo})"
-                } else {
-                    val firstSlot = slots.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })).first()
-                    val dayName = dayNames.getOrElse(firstSlot.dayOfWeek - 1) { "Day ${firstSlot.dayOfWeek}" }
-                    "Next: $dayName ${firstSlot.startTime} (${firstSlot.roomNo})"
-                }
-            }
-        }
-    }
+    // Dynamically resolved using live LocalDateTime.now() so past today slots never drift as "Next"
+    val nextSlotInfo = resolveNextUpcomingSlot(
+        subjectId = subject.id,
+        nowDateTime = LocalDateTime.now(),
+        regularSlots = slots,
+        extraSlots = extraSlots,
+        overrides = overrides,
+        holidays = holidays,
+        dayStatuses = dayStatuses,
+        semesterStartDate = semesterStartDate,
+        semesterEndDate = semesterEndDate
+    )
 
     val attended = stats?.attended ?: 0
     val totalConducted = stats?.totalConducted ?: 0

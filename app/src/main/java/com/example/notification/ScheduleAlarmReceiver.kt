@@ -10,43 +10,76 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
+/**
+ * ScheduleAlarmReceiver — Daily 07:30 AM Morning Briefing & Pre-Lecture Alarm Dispatcher.
+ *
+ * Inside goAsync():
+ * 1. Checks HolidayRangeDao, DailyDayStatusDao, Sunday, and active Semester date bounds FIRST.
+ * 2. On declared holidays/off-days: cancels/suppresses all 10-min pre-lecture alarms and sends
+ *    a single clean "Campus Closed • Holiday" notice.
+ * 3. On active class days: builds a multi-line numbered InboxStyle briefing (merging regular
+ *    slots, RescheduleOverrideEntity, and ExtraSlotEntity) and schedules exact 10-minute
+ *    pre-lecture heads-up alarms for every upcoming lecture.
+ */
 class ScheduleAlarmReceiver : BroadcastReceiver() {
+
     override fun onReceive(context: Context, intent: Intent) {
         val asyncPendingResult = goAsync()
         val appContext = context.applicationContext
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                NotificationHelper.createNotificationChannels(appContext)
+
                 val db = AppDatabase.getInstance(appContext)
                 val today = LocalDate.now()
-                val todayStr = today.toString()
+                val todayStr = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val dayOfWeek = today.dayOfWeek.value // 1 = Monday, 7 = Sunday
                 val nowTime = LocalTime.now()
 
-                // Section 5: Holiday Auto-Mute & Notification Suppression
-                // Query HolidayDao for today's date
-                val holiday = db.holidayDao().getHolidayForDate(todayStr)
-                if (holiday != null || dayOfWeek == 7) {
-                    val holidayName = holiday?.title ?: if (dayOfWeek == 7) "Sunday Break" else "Institutional Closure"
-                    
-                    // 1. Suppress all pre-lecture notification alarms for the day
-                    // 2. Post dedicated Gazetted Holiday alert
-                    NotificationHelper.showHolidayAlert(
-                        context = appContext,
-                        title = "Campus Closed • Gazetted Holiday",
-                        bodyText = "Today is an official holiday ($holidayName). Enjoy your break!"
-                    )
+                val prefs = appContext.getSharedPreferences("caliper_settings", Context.MODE_PRIVATE)
+                val semesterStartDate = prefs.getString("semester_start_date", "2026-07-15") ?: "2026-07-15"
+                val semesterEndDate = prefs.getString("semester_end_date", "2026-12-15") ?: "2026-12-15"
 
-                    // Reschedule for next day 07:30 AM
+                val holiday = db.holidayRangeDao().getHolidayForDate(todayStr)
+                val dayStatus = db.dailyDayStatusDao().getDayStatusDirect(todayStr)
+                val isDeclaredOffDay = dayStatus?.leaveCategory in listOf("college_holiday", "strike")
+                val isSunday = (dayOfWeek == 7)
+                val isOutsideSemester = (todayStr < semesterStartDate || todayStr > semesterEndDate)
+
+                val baseSlots = db.timetableSlotDao().getSlotsForDayDirect(dayOfWeek)
+                val extraSlots = db.extraSlotDao().getExtraSlotsForDateDirect(todayStr)
+
+                // Holiday & Off-Day Auto-Mute
+                if (holiday != null || isDeclaredOffDay || isSunday || isOutsideSemester) {
+                    // Actively suppress/cancel all 10-minute pre-lecture alarms for today
+                    baseSlots.forEach { slot ->
+                        NotificationHelper.cancelPreLectureAlert(appContext, slot.id)
+                    }
+                    extraSlots.forEach { extra ->
+                        NotificationHelper.cancelPreLectureAlert(appContext, -extra.id)
+                    }
+
+                    // Dispatch a single clean holiday notice if declared holiday or institutional closure
+                    if (holiday != null || isDeclaredOffDay) {
+                        val holidayName = holiday?.title
+                            ?: dayStatus?.notes?.takeIf { it.isNotBlank() }
+                            ?: "Campus Holiday"
+                        NotificationHelper.showHolidayAlert(
+                            context = appContext,
+                            title = "Campus Closed • Holiday",
+                            bodyText = "Today is $holidayName. No classes scheduled."
+                        )
+                    }
+
                     NotificationHelper.scheduleDailyMorningBriefing(appContext)
                     return@launch
                 }
 
-                // Query Active Scheduled Classes
-                val baseSlots = db.timetableSlotDao().getSlotsForDayDirect(dayOfWeek)
+                // Resolve active classes for today (regular + reschedule overrides + extra slots)
                 val overrides = db.rescheduleOverrideDao().getOverridesForDateDirect(todayStr)
-                val extraSlots = db.extraSlotDao().getExtraSlotsForDateDirect(todayStr)
 
                 val regularSlots = baseSlots.map { slot ->
                     val override = overrides.find { it.slotId == slot.id }
@@ -67,7 +100,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                         dayOfWeek = dayOfWeek,
                         startTime = extra.startTime,
                         endTime = extra.endTime,
-                        roomNo = "${extra.roomNo} • ${extra.tag}",
+                        roomNo = extra.roomNo,
                         subjectId = extra.subjectId
                     )
                 }
@@ -75,57 +108,51 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 val allTodaySlots = (regularSlots + extraAsSlots).sortedBy { it.startTime }
 
                 if (allTodaySlots.isEmpty()) {
-                    NotificationHelper.showMorningBriefing(
-                        context = appContext,
-                        bodyText = "Today's Schedule • 0 Lectures\nNo timetable lectures scheduled for today."
-                    )
                     NotificationHelper.scheduleDailyMorningBriefing(appContext)
                     return@launch
                 }
 
                 val subjects = db.subjectDao().getAllSubjectsList()
 
-                // Section 6: Multi-line Bullet Schedule Notifications using NotificationCompat.InboxStyle()
-                val lines = allTodaySlots.map { slot ->
+                // Multi-Line Numbered Morning Briefing using NotificationCompat.InboxStyle()
+                val numberedLines = allTodaySlots.mapIndexed { index, slot ->
                     val sub = subjects.find { it.id == slot.subjectId }
                     val subjectName = sub?.name ?: sub?.code ?: "Lecture"
-                    "• ${slot.startTime} - ${slot.endTime} | $subjectName (${slot.roomNo})"
+                    "${index + 1}. ${slot.startTime} - ${slot.endTime} | $subjectName (${slot.roomNo})"
                 }
 
-                val briefingTitle = "Today's Schedule • ${allTodaySlots.size} Lectures"
+                val briefingTitle = "Caliper Schedule • ${allTodaySlots.size} Classes Today"
 
                 NotificationHelper.showMorningBriefingInbox(
                     context = appContext,
                     title = briefingTitle,
-                    lines = lines,
-                    summaryText = "Today's Schedule • ${allTodaySlots.size} Lectures"
+                    lines = numberedLines,
+                    summaryText = "${allTodaySlots.size} classes scheduled today"
                 )
 
-                // Deterministic 10-Minute Pre-Lecture Heads-Up for upcoming slots
-                val upcomingSlots = allTodaySlots.filter { slot ->
-                    try {
-                        val sTime = LocalTime.parse(slot.startTime)
-                        sTime.isAfter(nowTime)
+                // Schedule exact 10-minute pre-lecture heads-up alarms for every remaining class today
+                allTodaySlots.forEach { slot ->
+                    val isUpcoming = try {
+                        LocalTime.parse(slot.startTime).minusMinutes(10).isAfter(nowTime)
                     } catch (_: Exception) {
-                        true
+                        false
+                    }
+
+                    if (isUpcoming) {
+                        val sub = subjects.find { it.id == slot.subjectId }
+                        val subjectName = sub?.name ?: sub?.code ?: "Lecture"
+                        NotificationHelper.scheduleExactPreLectureForToday(
+                            context = appContext,
+                            slotId = slot.id,
+                            subjectName = subjectName,
+                            roomNo = slot.roomNo,
+                            startTimeStr = slot.startTime,
+                            endTimeStr = slot.endTime
+                        )
                     }
                 }
 
-                upcomingSlots.forEach { slot ->
-                    val sub = subjects.find { it.id == slot.subjectId }
-                    val subjectName = sub?.name ?: sub?.code ?: "Lecture"
-                    NotificationHelper.schedulePreLectureAlert(
-                        context = appContext,
-                        slotId = slot.id,
-                        subjectName = subjectName,
-                        roomNo = slot.roomNo,
-                        startTimeStr = slot.startTime,
-                        endTimeStr = slot.endTime,
-                        dayOfWeek = dayOfWeek
-                    )
-                }
-
-                // Reschedule for next day 07:30 AM
+                // Reschedule tomorrow's 07:30 AM briefing
                 NotificationHelper.scheduleDailyMorningBriefing(appContext)
             } finally {
                 asyncPendingResult.finish()

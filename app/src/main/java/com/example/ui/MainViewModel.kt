@@ -166,6 +166,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val tasks: StateFlow<List<AcademicTaskEntity>> = repository.allTasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val todoTasks: StateFlow<List<TodoTaskEntity>> = repository.allTodoTasks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val notes: StateFlow<List<QuickNoteEntity>> = repository.allNotes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -386,18 +389,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return streak
     }
 
-    private val extraAndOverrides = combine(extraSlots, rescheduleOverrides) { extras, overrides ->
-        extras to overrides
+    private val extraAndOverrides = combine(
+        extraSlots,
+        rescheduleOverrides,
+        semesterStartDate,
+        semesterEndDate
+    ) { extras, overrides, semStart, semEnd ->
+        Quadruple(extras, overrides, semStart, semEnd)
     }
 
-    // Today's display slots with live ongoing class indicator, date-specific extra classes, and time shifts
+    private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+    // Today's display slots with strict semester bounds, live ongoing class indicator, date-specific extra classes, and time shifts
     val currentDaySlots: StateFlow<List<SlotDisplayItem>> = combine(
         selectedDate,
         slots,
         subjects,
         logs,
         extraAndOverrides
-    ) { dateStr, slotList, subList, logList, (extraList, overrideList) ->
+    ) { dateStr, slotList, subList, logList, meta ->
+        val (extraList, overrideList, semStart, semEnd) = meta
         val localDate = try {
             LocalDate.parse(dateStr, dateFormatter)
         } catch (_: Exception) {
@@ -407,15 +418,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val isToday = (dateStr == LocalDate.now().format(dateFormatter))
         val nowTime = LocalTime.now()
+        val isOutsideSemester = (dateStr < semStart || dateStr > semEnd)
 
         val dayLogs = logList.filter { it.date == dateStr }
 
-        // 1. Regular weekly slots for this day of week with potential single-day reschedule override
-        val regularItems = slotList.filter { it.dayOfWeek == dayOfWeek }.map { slot ->
-            val sub = subList.find { it.id == slot.subjectId }
-            val log = dayLogs.find { it.slotId == slot.id }
+        // 1. Regular weekly slots (strictly suppressed outside semester boundaries)
+        val regularItems = if (isOutsideSemester) {
+            emptyList()
+        } else {
+            slotList.filter { it.dayOfWeek == dayOfWeek }.map { slot ->
+                val sub = subList.find { it.id == slot.subjectId }
+                val log = dayLogs.find { it.slotId == slot.id }
 
-            val override = overrideList.find { it.slotId == slot.id && it.date == dateStr }
+                val override = overrideList.find { it.slotId == slot.id && it.date == dateStr }
             val activeSlot = if (override != null) {
                 slot.copy(
                     startTime = override.newStartTime,
@@ -445,6 +460,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isDateSpecificExtra = false,
                 extraSlotId = null
             )
+            }
         }
 
         // 2. Strict Date-Locked Extra Classes for this exact ISO date
@@ -487,6 +503,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val todaySlots: StateFlow<List<SlotDisplayItem>> get() = currentDaySlots
+
+    // Orphan extra-class attendance logs for the selected date (logs with isExtraClass=true and no matching active ExtraSlotEntity)
+    val currentDayOrphanExtraLogs: StateFlow<List<Pair<AttendanceLogEntity, SubjectEntity?>>> = combine(
+        selectedDate,
+        subjects,
+        logs,
+        extraSlots,
+        currentDaySlots
+    ) { dateStr, subList, logList, extraList, activeDaySlots ->
+        val dateExtraSlots = extraList.filter { it.date == dateStr }
+        val activeRegularIds = activeDaySlots.filter { !it.isDateSpecificExtra }.map { it.slot.id }.toSet()
+        repository.findOrphanExtraLogsForDate(
+            date = dateStr,
+            allLogs = logList,
+            dateExtraSlots = dateExtraSlots,
+            activeRegularSlotIds = activeRegularIds
+        ).map { log ->
+            val sub = subList.find { it.id == log.subjectId }
+            Pair(log, sub)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Ad-hoc / extra classes for the selected date
     val currentDayExtraClasses: StateFlow<List<Pair<AttendanceLogEntity, SubjectEntity?>>> = combine(
@@ -872,6 +909,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // --- Smart Auto-Prioritized To-Do Actions ---
+    fun addTodoTask(
+        title: String,
+        subjectId: Long?,
+        dueDateTimeMillis: Long
+    ) {
+        viewModelScope.launch {
+            val trimmed = title.trim()
+            if (trimmed.isNotEmpty()) {
+                repository.addTodoTask(
+                    TodoTaskEntity(
+                        title = trimmed,
+                        subjectId = subjectId,
+                        dueDateTimeMillis = dueDateTimeMillis,
+                        isCompleted = false,
+                        createdAt = System.currentTimeMillis()
+                    )
+                )
+                com.example.audio.CaliperSoundManager.playSuccess()
+                com.example.audio.CaliperHapticManager.tick(getApplication())
+            }
+        }
+    }
+
+    fun toggleTodoTaskCompleted(id: Long, completed: Boolean) {
+        viewModelScope.launch {
+            repository.toggleTodoTaskCompleted(id, completed)
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun deleteTodoTask(id: Long) {
+        viewModelScope.launch {
+            repository.deleteTodoTask(id)
+            com.example.audio.CaliperSoundManager.playThud()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
     suspend fun exportBackupJson(): String {
         return repository.exportToJson()
     }
@@ -1070,7 +1147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tag: String
     ) {
         viewModelScope.launch {
-            repository.addExtraSlot(
+            val insertedId = repository.addExtraSlot(
                 ExtraSlotEntity(
                     date = date,
                     subjectId = subjectId,
@@ -1080,15 +1157,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     tag = tag
                 )
             )
+            if (date == LocalDate.now().format(dateFormatter)) {
+                val subName = subjects.value.find { it.id == subjectId }?.name ?: "Extra Class"
+                com.example.notification.NotificationHelper.scheduleExactPreLectureForToday(
+                    context = getApplication(),
+                    slotId = -insertedId,
+                    subjectName = subName,
+                    roomNo = roomNo,
+                    startTimeStr = startTime,
+                    endTimeStr = endTime
+                )
+            }
             com.example.audio.CaliperSoundManager.playSnap()
             com.example.audio.CaliperHapticManager.tick(getApplication())
         }
     }
 
-    fun deleteDateSpecificExtraSlot(extraSlotId: Long) {
+    fun deleteDateSpecificExtraSlot(extraSlotId: Long, deleteAttendanceLog: Boolean = true) {
         viewModelScope.launch {
-            repository.deleteExtraSlot(extraSlotId)
-            repository.deleteSlotAttendance(_selectedDate.value, -extraSlotId)
+            repository.deleteExtraSlotWithAttendanceOption(
+                extraSlotId = extraSlotId,
+                date = _selectedDate.value,
+                deleteAttendanceLog = deleteAttendanceLog
+            )
+            com.example.notification.NotificationHelper.cancelPreLectureAlert(getApplication(), -extraSlotId)
             com.example.audio.CaliperSoundManager.playThud()
             com.example.audio.CaliperHapticManager.bunkDoubleTap(getApplication())
         }
@@ -1111,6 +1203,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     newRoomNo = newRoomNo
                 )
             )
+            if (date == LocalDate.now().format(dateFormatter)) {
+                val slot = slots.value.find { it.id == slotId }
+                val subName = slot?.let { s -> subjects.value.find { it.id == s.subjectId }?.name } ?: "Lecture"
+                com.example.notification.NotificationHelper.scheduleExactPreLectureForToday(
+                    context = getApplication(),
+                    slotId = slotId,
+                    subjectName = subName,
+                    roomNo = newRoomNo ?: slot?.roomNo ?: "Room",
+                    startTimeStr = newStartTime,
+                    endTimeStr = newEndTime
+                )
+            }
             com.example.audio.CaliperSoundManager.playSuccess()
             com.example.audio.CaliperHapticManager.successClick(getApplication())
         }

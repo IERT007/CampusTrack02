@@ -83,6 +83,7 @@ fun TodayScreen(
     val subjects by viewModel.subjects.collectAsState()
     val testRecords by viewModel.testRecords.collectAsState()
     val customActivities by viewModel.currentDayActivities.collectAsState()
+    val orphanExtraLogs by viewModel.currentDayOrphanExtraLogs.collectAsState()
 
     val semesterStartDate by viewModel.semesterStartDate.collectAsState()
     val semesterEndDate by viewModel.semesterEndDate.collectAsState()
@@ -96,6 +97,7 @@ fun TodayScreen(
     var showMarkedTray by remember { mutableStateOf(false) }
     var reschedulingSlot by remember { mutableStateOf<SlotDisplayItem?>(null) }
     var enteringMarksForTest by remember { mutableStateOf<Pair<TestRecordEntity, String>?>(null) }
+    var extraSlotPendingDelete by remember { mutableStateOf<SlotDisplayItem?>(null) }
 
     var showNotificationPermissionBanner by remember {
         mutableStateOf(
@@ -142,7 +144,12 @@ fun TodayScreen(
 
     val upcomingSlots = remember(slotItems) { slotItems.filter { it.currentLog == null } }
     val markedSlots = remember(slotItems) { slotItems.filter { it.currentLog != null } }
-    val attendedCount = remember(markedSlots) { markedSlots.count { it.currentLog?.status == "attended" } }
+    val totalMarkedCount = markedSlots.size + orphanExtraLogs.size
+    val totalPeriodsCount = slotItems.size + orphanExtraLogs.size
+    val attendedCount = remember(markedSlots, orphanExtraLogs) {
+        markedSlots.count { it.currentLog?.status == "attended" } +
+            orphanExtraLogs.count { it.first.status == "attended" }
+    }
 
     val dateStripList = remember(today) {
         (-14..14).map { offset ->
@@ -549,7 +556,7 @@ fun TodayScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "$dayName • ${slotItems.size} Classes",
+                                text = "$dayName • $totalPeriodsCount Classes",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.textPrimary
@@ -564,7 +571,7 @@ fun TodayScreen(
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "$attendedCount/${slotItems.size} Marked",
+                                text = "$attendedCount/$totalPeriodsCount Marked",
                                 color = colors.primaryAccent,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -869,59 +876,66 @@ fun TodayScreen(
             }
         }
 
-        // 4. Primary Upcoming Slots
-        if (!isPreSemester && !isPostSemester) {
-            items(upcomingSlots, key = { it.slot.id }) { item ->
-                val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
-                val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true) || item.isDateSpecificExtra
-                SlotCard(
-                    item = item,
-                    testRecord = slotTest,
-                    selectedDate = selectedDateStr,
-                    onEditClick = if (!item.isDateSpecificExtra) { { editingSlot = item.slot } } else null,
-                    onDeleteSlot = {
-                        CaliperHapticManager.tick(context)
-                        CaliperSoundManager.playThud()
-                        if (item.isDateSpecificExtra) {
-                            viewModel.deleteDateSpecificExtraSlot(item.extraSlotId ?: -item.slot.id)
+        // 4. Primary Upcoming Slots (regular slots strictly suppressed outside semester; date-specific extras still allowed)
+        items(upcomingSlots, key = { it.slot.id }) { item ->
+            val slotTest = testRecords.find { it.slotId == item.slot.id && it.date == selectedDateStr }
+            val isExtra = item.slot.roomNo.contains("Extra", ignoreCase = true) || item.isDateSpecificExtra
+            SlotCard(
+                item = item,
+                testRecord = slotTest,
+                selectedDate = selectedDateStr,
+                onEditClick = if (!item.isDateSpecificExtra) { { editingSlot = item.slot } } else null,
+                onDeleteSlot = {
+                    CaliperHapticManager.tick(context)
+                    if (item.isDateSpecificExtra) {
+                        if (item.currentLog != null) {
+                            CaliperSoundManager.playSnap(view)
+                            extraSlotPendingDelete = item
                         } else {
-                            viewModel.deleteSlot(item.slot.id)
+                            CaliperSoundManager.playThud()
+                            viewModel.deleteDateSpecificExtraSlot(
+                                extraSlotId = item.extraSlotId ?: -item.slot.id,
+                                deleteAttendanceLog = true
+                            )
                         }
-                    },
-                    onRescheduleClick = { reschedulingSlot = item },
-                    onRevertReschedule = if (item.isRescheduled) {
-                        { viewModel.revertSlotReschedule(item.slot.id, selectedDateStr) }
-                    } else null,
-                    onEnterMarksClick = { record ->
-                        enteringMarksForTest = record to (item.subject?.name ?: "Class Test")
-                    },
-                    onStatusChange = { status, isProxy, notes ->
-                        viewModel.setSlotAttendance(
-                            slotId = item.slot.id,
-                            subjectId = item.slot.subjectId,
-                            status = status,
-                            isProxy = isProxy,
-                            isExtraClass = isExtra,
-                            notes = notes ?: if (isExtra) "Extra Class" else null
-                        )
-                    },
-                    onSaveTest = { name, obtained, max ->
-                        viewModel.saveSlotTestRecord(
-                            subjectId = item.slot.subjectId,
-                            date = selectedDateStr,
-                            slotId = item.slot.id,
-                            testName = name,
-                            marksObtained = obtained,
-                            maxMarks = max
-                        )
-                    },
-                    onDeleteTest = { testId -> viewModel.deleteTestRecord(testId) }
-                )
-            }
+                    } else {
+                        CaliperSoundManager.playThud()
+                        viewModel.deleteSlot(item.slot.id)
+                    }
+                },
+                onRescheduleClick = { reschedulingSlot = item },
+                onRevertReschedule = if (item.isRescheduled) {
+                    { viewModel.revertSlotReschedule(item.slot.id, selectedDateStr) }
+                } else null,
+                onEnterMarksClick = { record ->
+                    enteringMarksForTest = record to (item.subject?.name ?: "Class Test")
+                },
+                onStatusChange = { status, isProxy, notes ->
+                    viewModel.setSlotAttendance(
+                        slotId = item.slot.id,
+                        subjectId = item.slot.subjectId,
+                        status = status,
+                        isProxy = isProxy,
+                        isExtraClass = isExtra,
+                        notes = notes ?: if (isExtra) "Extra Class" else null
+                    )
+                },
+                onSaveTest = { name, obtained, max ->
+                    viewModel.saveSlotTestRecord(
+                        subjectId = item.slot.subjectId,
+                        date = selectedDateStr,
+                        slotId = item.slot.id,
+                        testName = name,
+                        marksObtained = obtained,
+                        maxMarks = max
+                    )
+                },
+                onDeleteTest = { testId -> viewModel.deleteTestRecord(testId) }
+            )
         }
 
-        // 5. Completed / Marked Slots Expandable Tray
-        if (!isPreSemester && !isPostSemester && markedSlots.isNotEmpty()) {
+        // 5. Completed / Marked Slots + Orphan Extra Logs Expandable Tray (Home-Audit Synchronized)
+        if (markedSlots.isNotEmpty() || orphanExtraLogs.isNotEmpty()) {
             item {
                 Box(
                     modifier = Modifier
@@ -934,6 +948,7 @@ fun TodayScreen(
                             showMarkedTray = !showMarkedTray
                         }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .testTag("marked_periods_tray_toggle")
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -949,7 +964,7 @@ fun TodayScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Marked Periods (${markedSlots.size} / ${slotItems.size})",
+                                text = "Marked Periods ($totalMarkedCount / $totalPeriodsCount)",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.textPrimary
@@ -976,10 +991,19 @@ fun TodayScreen(
                         onEditClick = if (!item.isDateSpecificExtra) { { editingSlot = item.slot } } else null,
                         onDeleteSlot = {
                             CaliperHapticManager.tick(context)
-                            CaliperSoundManager.playThud()
                             if (item.isDateSpecificExtra) {
-                                viewModel.deleteDateSpecificExtraSlot(item.extraSlotId ?: -item.slot.id)
+                                if (item.currentLog != null) {
+                                    CaliperSoundManager.playSnap(view)
+                                    extraSlotPendingDelete = item
+                                } else {
+                                    CaliperSoundManager.playThud()
+                                    viewModel.deleteDateSpecificExtraSlot(
+                                        extraSlotId = item.extraSlotId ?: -item.slot.id,
+                                        deleteAttendanceLog = true
+                                    )
+                                }
                             } else {
+                                CaliperSoundManager.playThud()
                                 viewModel.deleteSlot(item.slot.id)
                             }
                         },
@@ -1015,6 +1039,19 @@ fun TodayScreen(
                             )
                         },
                         onDeleteTest = { testId -> viewModel.deleteTestRecord(testId) }
+                    )
+                }
+
+                // Orphan Extra Class Logs (Historical Fallback keeping Home & Audit 100% synced)
+                items(orphanExtraLogs, key = { "orphan_extra_${it.first.id}" }) { (log, subject) ->
+                    OrphanExtraLogCard(
+                        log = log,
+                        subject = subject,
+                        onUndoOrDelete = {
+                            CaliperSoundManager.playThud()
+                            CaliperHapticManager.tick(context)
+                            viewModel.deleteAttendanceLog(log)
+                        }
                     )
                 }
             }
@@ -1128,6 +1165,191 @@ fun TodayScreen(
                 enteringMarksForTest = null
             }
         )
+    }
+
+    // 2-Option Confirmation Dialog when deleting an ExtraSlotEntity that already has a recorded AttendanceLogEntity
+    extraSlotPendingDelete?.let { pendingItem ->
+        val extraId = pendingItem.extraSlotId ?: -pendingItem.slot.id
+        val subName = pendingItem.subject?.name ?: "Extra Class"
+        val loggedStatusLabel = when (pendingItem.currentLog?.status) {
+            "attended" -> "PRESENT"
+            "bunked" -> "BUNKED"
+            "cancelled_by_faculty" -> "CANCELLED"
+            "college_off" -> "COLLEGE OFF"
+            else -> "RECORDED"
+        }
+
+        AlertDialog(
+            onDismissRequest = { extraSlotPendingDelete = null },
+            containerColor = colors.surfaceVariant,
+            shape = RoundedCornerShape(18.dp),
+            title = {
+                Text(
+                    text = "Remove Extra Class Slot",
+                    color = colors.textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "$subName (${pendingItem.slot.startTime} - ${pendingItem.slot.endTime}) already has an attendance log marked as $loggedStatusLabel.",
+                        color = colors.textSecondary,
+                        fontSize = 12.5.sp
+                    )
+                    Text(
+                        text = "Choose how you want to handle the recorded attendance:",
+                        color = colors.textPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    // Option 1: Delete Slot & Attendance
+                    Button(
+                        onClick = {
+                            viewModel.deleteDateSpecificExtraSlot(extraSlotId = extraId, deleteAttendanceLog = true)
+                            extraSlotPendingDelete = null
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("delete_extra_slot_and_attendance_btn"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.dangerRed.copy(alpha = 0.18f),
+                            contentColor = colors.dangerRed
+                        ),
+                        border = BorderStroke(1.dp, colors.dangerRed.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Delete Slot & Attendance", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Option 2: Remove Slot Only (Keep Attendance)
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.deleteDateSpecificExtraSlot(extraSlotId = extraId, deleteAttendanceLog = false)
+                            extraSlotPendingDelete = null
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("delete_extra_slot_keep_attendance_btn"),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primaryAccent),
+                        border = BorderStroke(1.dp, colors.primaryAccent.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Remove Slot Only (Keep Attendance)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { extraSlotPendingDelete = null }) {
+                    Text("Cancel", color = colors.textSecondary)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun OrphanExtraLogCard(
+    log: com.example.data.local.entity.AttendanceLogEntity,
+    subject: SubjectEntity?,
+    onUndoOrDelete: () -> Unit
+) {
+    val colors = CaliperTheme.colors
+    val (statusLabel, statusColor) = when (log.status) {
+        "attended" -> (if (log.isProxy) "PROXY PRESENT" else "PRESENT") to colors.safeGreen
+        "bunked" -> "BUNKED" to colors.dangerRed
+        "cancelled_by_faculty" -> "CANCELLED" to colors.warnAmber
+        "college_off" -> "COLLEGE OFF" to colors.offSlate
+        else -> log.status.uppercase() to colors.primaryAccent
+    }
+
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("orphan_extra_log_${log.id}"),
+        innerPadding = 10.dp,
+        borderColors = listOf(statusColor.copy(alpha = 0.5f), Color.Transparent)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(colors.primaryAccent.copy(alpha = 0.16f))
+                            .border(0.5.dp, colors.primaryAccent.copy(alpha = 0.5f), RoundedCornerShape(5.dp))
+                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "EXTRA CLASS",
+                            color = colors.primaryAccent,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(statusColor.copy(alpha = 0.16f))
+                            .border(0.5.dp, statusColor.copy(alpha = 0.5f), RoundedCornerShape(5.dp))
+                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = statusLabel,
+                            color = statusColor,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(5.dp))
+
+                Text(
+                    text = subject?.name ?: "Subject #${log.subjectId}",
+                    color = colors.textPrimary,
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = buildString {
+                        append(subject?.code?.ifBlank { "Extra" } ?: "Extra")
+                        if (!log.notes.isNullOrBlank()) {
+                            append(" • ${log.notes}")
+                        } else {
+                            append(" • Recorded Extra Session")
+                        }
+                    },
+                    color = colors.textSecondary,
+                    fontSize = 10.5.sp
+                )
+            }
+
+            OutlinedButton(
+                onClick = onUndoOrDelete,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.dangerRed),
+                border = BorderStroke(0.75.dp, colors.dangerRed.copy(alpha = 0.55f)),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                modifier = Modifier
+                    .height(30.dp)
+                    .testTag("undo_orphan_extra_${log.id}")
+            ) {
+                Icon(Icons.Default.Undo, contentDescription = "Undo Extra Log", modifier = Modifier.size(13.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Undo", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 

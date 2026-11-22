@@ -141,6 +141,9 @@ interface DailyDayStatusDao {
     @Query("SELECT * FROM daily_day_status WHERE date = :date LIMIT 1")
     fun getDayStatus(date: String): Flow<DailyDayStatusEntity?>
 
+    @Query("SELECT * FROM daily_day_status WHERE date = :date LIMIT 1")
+    suspend fun getDayStatusDirect(date: String): DailyDayStatusEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(status: DailyDayStatusEntity)
 

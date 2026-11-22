@@ -31,6 +31,7 @@ class CampusRepository(
     val allTestRecords: Flow<List<TestRecordEntity>> = db.testRecordDao().getAllTestRecords()
     val allExtraSlots: Flow<List<ExtraSlotEntity>> = db.extraSlotDao().getAllExtraSlots()
     val allOverrides: Flow<List<RescheduleOverrideEntity>> = db.rescheduleOverrideDao().getAllOverrides()
+    val allTodoTasks: Flow<List<TodoTaskEntity>> = db.todoDao().getAllTodoTasks()
 
     fun getExtraSlotsForDate(date: String): Flow<List<ExtraSlotEntity>> = db.extraSlotDao().getExtraSlotsForDate(date)
     fun getOverridesForDate(date: String): Flow<List<RescheduleOverrideEntity>> = db.rescheduleOverrideDao().getOverridesForDate(date)
@@ -230,6 +231,63 @@ class CampusRepository(
         triggerSilentAutoBackup()
     }
 
+    /**
+     * Clean 2-option Extra Class deletion:
+     * - deleteAttendanceLog = true  -> removes ExtraSlotEntity AND its recorded AttendanceLogEntity
+     * - deleteAttendanceLog = false -> removes ExtraSlotEntity ONLY, preserving the AttendanceLogEntity
+     *   so it remains visible as an orphan extra log in both Home (Marked Periods) and Audit.
+     */
+    suspend fun deleteExtraSlotWithAttendanceOption(
+        extraSlotId: Long,
+        date: String,
+        deleteAttendanceLog: Boolean
+    ) = withContext(Dispatchers.IO) {
+        val syntheticSlotId = -extraSlotId
+        db.extraSlotDao().deleteExtraSlotById(extraSlotId)
+        if (deleteAttendanceLog) {
+            db.attendanceLogDao().deleteLogForSlot(date, syntheticSlotId)
+            val dateLogs = db.attendanceLogDao().getLogsForDate(date).first()
+            dateLogs.filter {
+                it.slotId == syntheticSlotId ||
+                    (it.isExtraClass && it.notes?.contains("extra_$syntheticSlotId") == true)
+            }.forEach { log ->
+                db.attendanceLogDao().deleteAttendanceLog(log)
+            }
+        }
+        triggerSilentAutoBackup()
+    }
+
+    /**
+     * Collects all AttendanceLogEntity rows for a given date where `isExtraClass == true`
+     * that do NOT have a matching active ExtraSlotEntity (orphan logs from deleted slots
+     * or legacy builds), ensuring Home (Today) and Audit always stay 100% synchronized.
+     */
+    fun findOrphanExtraLogsForDate(
+        date: String,
+        allLogs: List<AttendanceLogEntity>,
+        dateExtraSlots: List<ExtraSlotEntity>,
+        activeRegularSlotIds: Set<Long> = emptySet()
+    ): List<AttendanceLogEntity> {
+        val activeSyntheticIds = dateExtraSlots.map { -it.id }.toSet()
+        return allLogs.filter { log ->
+            if (log.date != date) return@filter false
+            val isExtra = log.isExtraClass || (log.slotId != null && log.slotId < 0L)
+            if (!isExtra) return@filter false
+
+            val matchesActiveRegular = log.slotId != null && log.slotId > 0L && log.slotId in activeRegularSlotIds
+            if (matchesActiveRegular) return@filter false
+
+            val matchesActiveExtra = dateExtraSlots.any { extra ->
+                val syntheticId = -extra.id
+                log.slotId == syntheticId ||
+                    (log.isExtraClass && log.subjectId == extra.subjectId && log.notes?.contains("extra_$syntheticId") == true)
+            }
+            val matchesSyntheticId = log.slotId != null && log.slotId in activeSyntheticIds
+
+            !matchesActiveExtra && !matchesSyntheticId
+        }.sortedByDescending { it.timestamp }
+    }
+
     suspend fun saveRescheduleOverride(override: RescheduleOverrideEntity): Long = withContext(Dispatchers.IO) {
         val id = db.rescheduleOverrideDao().insertOverride(override)
         triggerSilentAutoBackup()
@@ -342,6 +400,28 @@ class CampusRepository(
         triggerSilentAutoBackup()
     }
 
+    // --- Smart Auto-Prioritized To-Do CRUD ---
+    suspend fun addTodoTask(task: TodoTaskEntity): Long = withContext(Dispatchers.IO) {
+        val id = db.todoDao().insertTodoTask(task)
+        triggerSilentAutoBackup()
+        id
+    }
+
+    suspend fun updateTodoTask(task: TodoTaskEntity) = withContext(Dispatchers.IO) {
+        db.todoDao().updateTodoTask(task)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun toggleTodoTaskCompleted(id: Long, completed: Boolean) = withContext(Dispatchers.IO) {
+        db.todoDao().updateTodoCompletion(id, completed)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun deleteTodoTask(id: Long) = withContext(Dispatchers.IO) {
+        db.todoDao().deleteTodoTaskById(id)
+        triggerSilentAutoBackup()
+    }
+
     suspend fun addNote(note: QuickNoteEntity) = withContext(Dispatchers.IO) {
         db.quickNoteDao().insertNote(note)
         triggerSilentAutoBackup()
@@ -384,6 +464,7 @@ class CampusRepository(
         db.medicalLeaveDao().deleteAllMedicalLeaves()
         db.holidayRangeDao().deleteAllHolidayRanges()
         db.academicTaskDao().deleteAllTasks()
+        db.todoDao().deleteAllTodoTasks()
     }
 
     // --- Silent Auto-Backup Engine (context.filesDir/caliper_vault_snapshot.json) ---
@@ -563,6 +644,21 @@ class CampusRepository(
             tasksArray.put(obj)
         }
         root.put("academic_tasks", tasksArray)
+
+        // 9. Smart Auto-Prioritized To-Do Tasks
+        val todoList = db.todoDao().getAllTodoTasks().first()
+        val todoArray = JSONArray()
+        for (todo in todoList) {
+            val obj = JSONObject()
+            obj.put("id", todo.id)
+            obj.put("title", todo.title)
+            obj.put("subjectId", todo.subjectId ?: JSONObject.NULL)
+            obj.put("dueDateTimeMillis", todo.dueDateTimeMillis)
+            obj.put("isCompleted", todo.isCompleted)
+            obj.put("createdAt", todo.createdAt)
+            todoArray.put(obj)
+        }
+        root.put("todo_tasks", todoArray)
 
         root.toString(2)
     }
@@ -745,6 +841,26 @@ class CampusRepository(
                     )
                 }
                 if (list.isNotEmpty()) db.academicTaskDao().insertTasks(list)
+            }
+
+            // 9. Smart Auto-Prioritized To-Do Tasks
+            if (root.has("todo_tasks")) {
+                val array = root.getJSONArray("todo_tasks")
+                val list = mutableListOf<TodoTaskEntity>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    list.add(
+                        TodoTaskEntity(
+                            id = obj.optLong("id", 0L),
+                            title = obj.getString("title"),
+                            subjectId = if (obj.isNull("subjectId")) null else obj.optLong("subjectId"),
+                            dueDateTimeMillis = obj.optLong("dueDateTimeMillis", System.currentTimeMillis()),
+                            isCompleted = obj.optBoolean("isCompleted", false),
+                            createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) db.todoDao().insertTodoTasks(list)
             }
 
             triggerSilentAutoBackup()

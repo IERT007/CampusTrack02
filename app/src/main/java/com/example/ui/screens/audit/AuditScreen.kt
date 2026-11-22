@@ -77,7 +77,9 @@ fun AuditScreen(
     val holidayRanges by viewModel.holidayRanges.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
     val testRecords by viewModel.testRecords.collectAsState()
-    val tasks by viewModel.tasks.collectAsState()
+    val todoTasks by viewModel.todoTasks.collectAsState()
+    val extraSlots by viewModel.extraSlots.collectAsState()
+    val rescheduleOverrides by viewModel.rescheduleOverrides.collectAsState()
     val semesterStartDate by viewModel.semesterStartDate.collectAsState()
     val semesterEndDate by viewModel.semesterEndDate.collectAsState()
 
@@ -95,7 +97,10 @@ fun AuditScreen(
 
     val todayDate = remember { LocalDate.now() }
     val todayDateStr = remember { todayDate.format(DateTimeFormatter.ISO_LOCAL_DATE) }
-    var selectedAuditDate by remember { mutableStateOf<String?>(todayDateStr) }
+    var selectedAuditDate by remember { mutableStateOf(todayDate) }
+    val selectedAuditDateStr = remember(selectedAuditDate) {
+        selectedAuditDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+    }
 
     // Compute Bento Donut Metrics
     val monthPrefix = remember(displayedMonth) {
@@ -140,9 +145,9 @@ fun AuditScreen(
         }
     }
 
-    // Compute To-Do Progress (Bar 2)
-    val completedTasksCount = remember(tasks) { tasks.count { it.isCompleted } }
-    val totalTasksCount = tasks.size
+    // Compute Smart To-Do Progress (Bar 2)
+    val completedTasksCount = remember(todoTasks) { todoTasks.count { it.isCompleted } }
+    val totalTasksCount = todoTasks.size
     val todoProgress = remember(completedTasksCount, totalTasksCount) {
         if (totalTasksCount > 0) (completedTasksCount.toFloat() / totalTasksCount.toFloat()).coerceIn(0f, 1f) else 0f
     }
@@ -384,8 +389,9 @@ fun AuditScreen(
             ) {
                 InteractiveAuditCalendar(
                     viewModel = viewModel,
+                    selectedDate = selectedAuditDate,
                     onDateSelected = { date ->
-                        selectedAuditDate = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        selectedAuditDate = date
                     },
                     onNavigateToTodayView = { dateStr ->
                         onNavigateToDate(dateStr)
@@ -625,20 +631,34 @@ fun AuditScreen(
                     fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(180))
                 },
                 label = "day_detail_transition"
-            ) { dateStr ->
+            ) { inspectDate ->
+                val dateStr = inspectDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                val isFutureInspect = inspectDate.isAfter(todayDate)
                 val inspectLogs = logs.filter { it.date == dateStr }
                 val inspectStatus = dayStatuses.find { it.date == dateStr }
-                val isHoliday = holidayRanges.any { dateStr != null && dateStr >= it.startDate && dateStr <= it.endDate }
+                val holidayMatch = holidayRanges.find { dateStr >= it.startDate && dateStr <= it.endDate }
+                val isHoliday = holidayMatch != null
+                val isSunday = inspectDate.dayOfWeek.value == 7
+                val isOutsideSemester = dateStr < semesterStartDate || dateStr > semesterEndDate
+                val isFutureOff = isFutureInspect && (isHoliday || isSunday || isOutsideSemester || inspectStatus?.leaveCategory in listOf("college_holiday", "strike"))
 
-                val parsedDateLabel = remember(dateStr) {
-                    try {
-                        dateStr?.let {
-                            LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
-                                .format(DateTimeFormatter.ofPattern("EEEE, dd MMM yyyy"))
-                        } ?: "Selected Date"
-                    } catch (_: Exception) {
-                        dateStr ?: "Selected Date"
+                val upcomingFutureSlots = remember(inspectDate, slots, extraSlots, rescheduleOverrides, subjects, isFutureOff, isOutsideSemester) {
+                    if (isFutureInspect) {
+                        resolveScheduledClassesForDate(
+                            date = inspectDate,
+                            allSlots = slots,
+                            extraSlots = extraSlots,
+                            overrides = rescheduleOverrides,
+                            subjects = subjects,
+                            includeRegularSlots = !isFutureOff && !isOutsideSemester
+                        )
+                    } else {
+                        emptyList()
                     }
+                }
+
+                val parsedDateLabel = remember(inspectDate) {
+                    inspectDate.format(DateTimeFormatter.ofPattern("EEEE, dd MMM yyyy"))
                 }
 
                 GlassCard(
@@ -660,7 +680,7 @@ fun AuditScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "DAY AUDIT DOSSIER",
+                                    text = if (isFutureInspect) "UPCOMING SCHEDULE PREVIEW" else "DAY AUDIT DOSSIER",
                                     color = colors.primaryAccent,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
@@ -675,20 +695,18 @@ fun AuditScreen(
                             )
                         }
 
-                        dateStr?.let { d ->
-                            Button(
-                                onClick = {
-                                    CaliperSoundManager.playSnap(view)
-                                    CaliperHapticManager.tick(context)
-                                    onNavigateToDate(d)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent.copy(alpha = 0.18f)),
-                                border = BorderStroke(0.5.dp, colors.primaryAccent),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("Open in Today →", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
+                        Button(
+                            onClick = {
+                                CaliperSoundManager.playSnap(view)
+                                CaliperHapticManager.tick(context)
+                                onNavigateToDate(dateStr)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent.copy(alpha = 0.18f)),
+                            border = BorderStroke(0.5.dp, colors.primaryAccent),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Open in Today →", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -703,7 +721,7 @@ fun AuditScreen(
                                 .border(0.5.dp, colors.warnAmber.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                 .padding(8.dp)
                         ) {
-                            Text("Official Institutional Holiday / Break Window Declared", color = colors.warnAmber, fontSize = 11.sp)
+                            Text("Declared Holiday / Off • ${holidayMatch?.title ?: "Official Break"}", color = colors.warnAmber, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -727,7 +745,77 @@ fun AuditScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    if (inspectLogs.isEmpty()) {
+                    if (isFutureInspect) {
+                        if (isFutureOff && upcomingFutureSlots.isEmpty()) {
+                            Text(
+                                text = when {
+                                    isHoliday -> "Declared Holiday / Off (${holidayMatch?.title ?: "Campus Closed"})."
+                                    isSunday -> "Declared Holiday / Off (Sunday)."
+                                    dateStr < semesterStartDate -> "Declared Holiday / Off (Pre-Semester, starts $semesterStartDate)."
+                                    dateStr > semesterEndDate -> "Declared Holiday / Off (Semester Concluded on $semesterEndDate)."
+                                    else -> "Declared Holiday / Off."
+                                },
+                                color = colors.textSecondary,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else if (upcomingFutureSlots.isEmpty()) {
+                            Text(
+                                text = "No scheduled classes for this upcoming date.",
+                                color = colors.textSecondary,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                upcomingFutureSlots.forEach { slot ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(colors.surface)
+                                            .border(0.5.dp, colors.border, RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = slot.subjectName,
+                                                color = colors.textPrimary,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${slot.startTime} - ${slot.endTime} • ${slot.roomNo}",
+                                                color = colors.textSecondary,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                        val pillColor = when {
+                                            slot.isExtra -> colors.safeGreen
+                                            slot.isRescheduled -> colors.warnAmber
+                                            else -> colors.primaryAccent
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(pillColor.copy(alpha = 0.15f))
+                                                .border(0.5.dp, pillColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = if (slot.isExtra) "EXTRA" else if (slot.isRescheduled) "SHIFTED" else "SCHEDULED",
+                                                color = pillColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.ExtraBold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (inspectLogs.isEmpty()) {
                         Text(
                             text = "No period attendance recorded for this date.",
                             color = colors.textSecondary,
@@ -1023,195 +1111,22 @@ fun AuditScreen(
         )
     }
 
-    // To-Do Bottom Sheet (Triggered by Vertical To-Do Fill-Pill Bar)
+    // Smart Auto-Prioritized To-Do Bottom Sheet (Triggered by Vertical To-Do Fill-Pill Bar 2)
     if (showTodoBottomSheet) {
-        var newTaskText by remember { mutableStateOf("") }
-        ModalBottomSheet(
-            onDismissRequest = { showTodoBottomSheet = false },
-            containerColor = colors.surfaceVariant,
-            scrimColor = Color.Black.copy(alpha = 0.72f),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = colors.offSlate) }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(colors.safeGreen.copy(alpha = 0.16f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Checklist, contentDescription = null, tint = colors.safeGreen, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Academic To-Do Checklist",
-                                color = colors.textPrimary,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "$completedTasksCount of $totalTasksCount tasks completed",
-                                color = colors.textSecondary,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    IconButton(onClick = { showTodoBottomSheet = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textSecondary)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Quick Add Task Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = newTaskText,
-                        onValueChange = { newTaskText = it },
-                        placeholder = { Text("Add sheet, assignment, or prep task...", fontSize = 12.sp) },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Button(
-                        onClick = {
-                            val trimmed = newTaskText.trim()
-                            if (trimmed.isNotEmpty()) {
-                                viewModel.addTask(
-                                    AcademicTaskEntity(
-                                        description = trimmed,
-                                        dueDate = todayDateStr,
-                                        priority = "Medium",
-                                        category = "Assignment",
-                                        isCompleted = false
-                                    )
-                                )
-                                CaliperSoundManager.playSuccess()
-                                CaliperHapticManager.tick(context)
-                                newTaskText = ""
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.safeGreen,
-                            contentColor = colors.onPrimaryAccent
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Task", modifier = Modifier.size(18.dp))
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                if (tasks.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surface)
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No academic tasks yet. Add assignments, lab files, or drawing sheets above.",
-                            color = colors.textSecondary,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 360.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(tasks, key = { it.id }) { task ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(colors.surface)
-                                    .border(0.5.dp, colors.border, RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        CaliperSoundManager.playSnap(view)
-                                        CaliperHapticManager.tick(context)
-                                        viewModel.toggleTaskCompleted(task.id, !task.isCompleted)
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Checkbox(
-                                        checked = task.isCompleted,
-                                        onCheckedChange = { checked ->
-                                            CaliperSoundManager.playSnap(view)
-                                            viewModel.toggleTaskCompleted(task.id, checked)
-                                        },
-                                        colors = CheckboxDefaults.colors(
-                                            checkedColor = colors.safeGreen,
-                                            checkmarkColor = Color.Black
-                                        )
-                                    )
-                                    Column {
-                                        Text(
-                                            text = task.description,
-                                            color = if (task.isCompleted) colors.textSecondary else colors.textPrimary,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                                        )
-                                        Text(
-                                            text = "${task.category} • Due ${task.dueDate}",
-                                            color = colors.textMuted,
-                                            fontSize = 10.sp
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = {
-                                        CaliperSoundManager.playThud()
-                                        viewModel.deleteTask(task.id)
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.DeleteOutline,
-                                        contentDescription = "Delete Task",
-                                        tint = colors.dangerRed.copy(alpha = 0.85f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+        TodoBottomSheet(
+            tasks = todoTasks,
+            subjects = subjects,
+            onDismiss = { showTodoBottomSheet = false },
+            onAddTask = { title, subjectId, dueMillis ->
+                viewModel.addTodoTask(title, subjectId, dueMillis)
+            },
+            onToggleTask = { id, completed ->
+                viewModel.toggleTodoTaskCompleted(id, completed)
+            },
+            onDeleteTask = { id ->
+                viewModel.deleteTodoTask(id)
             }
-        }
+        )
     }
 
     // Historical Faculty Cancellations Drill-Down Bottom Sheet
