@@ -1,20 +1,19 @@
-name: Build Android APK
+name: Build & Release Caliper APK
 
 on:
   push:
-    branches:
-      - "**"
-  pull_request:
-    branches:
-      - "**"
+    branches: [ "v1-stable", "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build_release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -23,30 +22,46 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Fix AI Studio Signing & Secrets
-        run: |
-          sed -i '/signingConfig = signingConfigs.getByName("debugConfig")/d' app/build.gradle.kts || true
-          echo "GEMINI_API_KEY=dummy_key_for_build" > .env
-
-      - name: Grant execute permission for gradlew
-        run: |
-          if [ -f "gradlew" ]; then
-            chmod +x gradlew
-          fi
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Debug APK
+      - name: Decode Release Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          if [ -f "gradlew" ]; then
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          else
-            gradle assembleDebug --no-daemon --stacktrace
-          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "${{ github.workspace }}/caliper-release.jks"
 
-      - name: Upload Debug APK
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/caliper-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+
+      - name: Extract Version & Prepare APK
+        id: meta
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "2.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          cp "$APK_PATH" "Caliper-v${VERSION}-release.apk"
+
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CampusTrack-IERT-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: Caliper-v${{ steps.meta.outputs.version }}-release
+          path: Caliper-v${{ steps.meta.outputs.version }}-release.apk
+
+      - name: Publish GitHub Release (For In-App OTA)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: Caliper v${{ steps.meta.outputs.version }}
+          files: Caliper-v${{ steps.meta.outputs.version }}-release.apk
+          generate_release_notes: true
+          make_latest: true
