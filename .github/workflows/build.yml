@@ -41,6 +41,13 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "${{ github.workspace }}/caliper-release.jks"
 
+      - name: Inject Supabase Secrets into .env
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > .env
+
       - name: Build Release APK
         env:
           KEYSTORE_FILE: ${{ github.workspace }}/caliper-release.jks
@@ -62,9 +69,7 @@ jobs:
           VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "2.0.0")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-          ls -la app/build/outputs/apk/release
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-
           SDK_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           BUILD_TOOLS=$(ls -d "$SDK_DIR/build-tools/"* | sort -V | tail -n 1)
 
