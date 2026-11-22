@@ -12,16 +12,15 @@ import com.example.ui.MainViewModel
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
-    setContent {
-      val viewModel: MainViewModel = viewModel()
-      val isMonochrome by viewModel.isMonochromeMode.collectAsState()
-      MyApplicationTheme(isMonochrome = isMonochrome) {
-        CampusTrackRootScreen(viewModel = viewModel)
-      }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val viewModel: MainViewModel = viewModel()
+            val themePreset by viewModel.themePreset.collectAsState()
+            MyApplicationTheme(themePresetKey = themePreset) {
+                CampusTrackRootScreen(viewModel = viewModel)
+            }
+        }
     }
-  }
 }
-

@@ -20,77 +20,202 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.core.view.WindowCompat
 import com.example.audio.CaliperHapticManager
 
 /**
- * Caliper OS Flagship Color Palette & System
- * Features:
- * - Canvas: True Pitch Black (#000000)
- * - Card Surfaces: Deep Obsidian Glass (#0E121B @ 85% alpha)
- * - Luminous Top-Edge Border: Hairline 0.5.dp specular highlight (0.16f alpha to Transparent)
- * - Universal unified palette: High clarity, zero ambient blue-navy wash
+ * 5 Curated Eye-Soothing Theme Presets for Caliper v2.0
+ */
+enum class CaliperThemePreset(
+    val key: String,
+    val displayName: String,
+    val subtitle: String
+) {
+    OBSIDIAN_ICE(
+        key = "obsidian_ice",
+        displayName = "Obsidian Ice",
+        subtitle = "Pitch black • Ice blue • Emerald"
+    ),
+    CARBON_MINT(
+        key = "carbon_mint",
+        displayName = "Carbon Mint",
+        subtitle = "Deep carbon • Soft mint teal"
+    ),
+    MIDNIGHT_INDIGO(
+        key = "midnight_indigo",
+        displayName = "Midnight Indigo",
+        subtitle = "Night navy • Calm indigo"
+    ),
+    WARM_GRAPHITE(
+        key = "warm_graphite",
+        displayName = "Warm Graphite",
+        subtitle = "Warm charcoal • Amber gold"
+    ),
+    PURE_MONOCHROME(
+        key = "pure_monochrome",
+        displayName = "Pure Monochrome",
+        subtitle = "True black • High-contrast silver"
+    );
+
+    companion object {
+        fun fromKey(key: String?): CaliperThemePreset {
+            return entries.firstOrNull { it.key == key } ?: OBSIDIAN_ICE
+        }
+    }
+}
+
+/**
+ * Centralized Design Token System for Caliper v2.0
+ * Every surface, border, text, and semantic accent reads from CaliperTheme.colors.
  */
 @Immutable
-data class CaliperColors(
-    val isMonochrome: Boolean,
-    val baseSurface: Color,
-    val containerSurface: Color,
-    val cardFill: Color,
-    val cardBorderTop: Color,
-    val cardBorderBottom: Color,
+data class CaliperColorTokens(
+    val preset: CaliperThemePreset,
+    val background: Color,
+    val surface: Color,
+    val surfaceVariant: Color,
+    val border: Color,
+    val primaryAccent: Color,
     val textPrimary: Color,
     val textSecondary: Color,
-    val textMuted: Color,
-    // Semantic Tokens
-    val primaryAccent: Color,
-    val safeZone: Color,
-    val safeZoneContainer: Color,
-    val scheduledLecture: Color,
-    val deadlineWarning: Color,
-    val bunkDanger: Color,
-    val streakGold: Color,
-    val divider: Color
+    val safeGreen: Color,
+    val warnAmber: Color,
+    val dangerRed: Color,
+    val offSlate: Color,
+    val onPrimaryAccent: Color = Color.Black,
+    val isMonochrome: Boolean = false
+) {
+    // Seamless compatibility accessors for existing components
+    val baseSurface: Color get() = background
+    val containerSurface: Color get() = surface
+    val cardFill: Color get() = surfaceVariant.copy(alpha = 0.88f)
+    val cardBorderTop: Color get() = border
+    val cardBorderBottom: Color get() = Color.Transparent
+    val textMuted: Color get() = textSecondary.copy(alpha = 0.78f)
+    val safeZone: Color get() = safeGreen
+    val safeZoneContainer: Color get() = safeGreen.copy(alpha = 0.15f)
+    val scheduledLecture: Color get() = primaryAccent
+    val deadlineWarning: Color get() = warnAmber
+    val bunkDanger: Color get() = dangerRed
+    val streakGold: Color get() = warnAmber
+    val divider: Color get() = border.copy(alpha = 0.55f)
+}
+
+typealias CaliperColors = CaliperColorTokens
+
+val ObsidianIceTokens = CaliperColorTokens(
+    preset = CaliperThemePreset.OBSIDIAN_ICE,
+    background = ObsidianIceBg,
+    surface = ObsidianIceSurface,
+    surfaceVariant = ObsidianIceSurfaceVariant,
+    border = ObsidianIceBorder,
+    primaryAccent = ObsidianIceAccent,
+    textPrimary = ObsidianIceTextPrimary,
+    textSecondary = ObsidianIceTextSecondary,
+    safeGreen = ObsidianIceSafe,
+    warnAmber = ObsidianIceWarn,
+    dangerRed = ObsidianIceDanger,
+    offSlate = ObsidianIceOffSlate,
+    onPrimaryAccent = Color.Black,
+    isMonochrome = false
 )
 
-val FlagshipObsidianColors = CaliperColors(
-    isMonochrome = false,
-    baseSurface = Color(0xFF000000), // True Pitch Black canvas background
-    containerSurface = Color(0xFF07090E),
-    cardFill = Color(0xFF0E121B).copy(alpha = 0.85f), // Deep Obsidian Glass
-    cardBorderTop = Color.White.copy(alpha = 0.16f), // Luminous specular top border
-    cardBorderBottom = Color.Transparent,
-    textPrimary = Color(0xFFFFFFFF), // Pure Crisp White
-    textSecondary = Color(0xFFCBD5E1), // Soft silver secondary labels
-    textMuted = Color(0xFF94A3B8),
-    primaryAccent = PsychologyBlue,
-    safeZone = PsychologyGreen,
-    safeZoneContainer = PsychologyGreen.copy(alpha = 0.15f),
-    scheduledLecture = PsychologyBlue,
-    deadlineWarning = PsychologyOrange,
-    bunkDanger = PsychologyRed,
-    streakGold = PsychologyGold,
-    divider = Color.White.copy(alpha = 0.08f)
+val CarbonMintTokens = CaliperColorTokens(
+    preset = CaliperThemePreset.CARBON_MINT,
+    background = CarbonMintBg,
+    surface = CarbonMintSurface,
+    surfaceVariant = CarbonMintSurfaceVariant,
+    border = CarbonMintBorder,
+    primaryAccent = CarbonMintAccent,
+    textPrimary = CarbonMintTextPrimary,
+    textSecondary = CarbonMintTextSecondary,
+    safeGreen = CarbonMintSafe,
+    warnAmber = CarbonMintWarn,
+    dangerRed = CarbonMintDanger,
+    offSlate = CarbonMintOffSlate,
+    onPrimaryAccent = Color.Black,
+    isMonochrome = false
 )
 
-val LocalCaliperColors = staticCompositionLocalOf { FlagshipObsidianColors }
+val MidnightIndigoTokens = CaliperColorTokens(
+    preset = CaliperThemePreset.MIDNIGHT_INDIGO,
+    background = MidnightIndigoBg,
+    surface = MidnightIndigoSurface,
+    surfaceVariant = MidnightIndigoSurfaceVariant,
+    border = MidnightIndigoBorder,
+    primaryAccent = MidnightIndigoAccent,
+    textPrimary = MidnightIndigoTextPrimary,
+    textSecondary = MidnightIndigoTextSecondary,
+    safeGreen = MidnightIndigoSafe,
+    warnAmber = MidnightIndigoWarn,
+    dangerRed = MidnightIndigoDanger,
+    offSlate = MidnightIndigoOffSlate,
+    onPrimaryAccent = Color.Black,
+    isMonochrome = false
+)
+
+val WarmGraphiteTokens = CaliperColorTokens(
+    preset = CaliperThemePreset.WARM_GRAPHITE,
+    background = WarmGraphiteBg,
+    surface = WarmGraphiteSurface,
+    surfaceVariant = WarmGraphiteSurfaceVariant,
+    border = WarmGraphiteBorder,
+    primaryAccent = WarmGraphiteAccent,
+    textPrimary = WarmGraphiteTextPrimary,
+    textSecondary = WarmGraphiteTextSecondary,
+    safeGreen = WarmGraphiteSafe,
+    warnAmber = WarmGraphiteWarn,
+    dangerRed = WarmGraphiteDanger,
+    offSlate = WarmGraphiteOffSlate,
+    onPrimaryAccent = Color.Black,
+    isMonochrome = false
+)
+
+val PureMonochromeTokens = CaliperColorTokens(
+    preset = CaliperThemePreset.PURE_MONOCHROME,
+    background = PureMonoBg,
+    surface = PureMonoSurface,
+    surfaceVariant = PureMonoSurfaceVariant,
+    border = PureMonoBorder,
+    primaryAccent = PureMonoAccent,
+    textPrimary = PureMonoTextPrimary,
+    textSecondary = PureMonoTextSecondary,
+    safeGreen = PureMonoSafe,
+    warnAmber = PureMonoWarn,
+    dangerRed = PureMonoDanger,
+    offSlate = PureMonoOffSlate,
+    onPrimaryAccent = Color.Black,
+    isMonochrome = true
+)
+
+val FlagshipObsidianColors = ObsidianIceTokens
+
+fun tokensForPreset(preset: CaliperThemePreset): CaliperColorTokens = when (preset) {
+    CaliperThemePreset.OBSIDIAN_ICE -> ObsidianIceTokens
+    CaliperThemePreset.CARBON_MINT -> CarbonMintTokens
+    CaliperThemePreset.MIDNIGHT_INDIGO -> MidnightIndigoTokens
+    CaliperThemePreset.WARM_GRAPHITE -> WarmGraphiteTokens
+    CaliperThemePreset.PURE_MONOCHROME -> PureMonochromeTokens
+}
+
+fun tokensForPresetKey(key: String?): CaliperColorTokens =
+    tokensForPreset(CaliperThemePreset.fromKey(key))
+
+val LocalCaliperColors = staticCompositionLocalOf { ObsidianIceTokens }
 
 object CaliperTheme {
-    val colors: CaliperColors
+    val colors: CaliperColorTokens
         @Composable
         get() = LocalCaliperColors.current
 }
 
 /**
  * Living Fluid Touch Feedback Modifier
- * ColorOS/OxygenOS fluid dynamics spring compression:
- * - On Press: Animates scale smoothly down to 0.965f with immediate tactile micro-tick
- * - On Release/Cancel: Snaps back to 1.0f using spring physics (dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
  */
 fun Modifier.fluidTouchFeedback(
     enabled: Boolean = true,
@@ -118,7 +243,7 @@ fun Modifier.fluidTouchFeedback(
         }
         .pointerInput(Unit) {
             awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false)
+                awaitFirstDown(requireUnconsumed = false)
                 isPressed = true
                 try {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -126,7 +251,6 @@ fun Modifier.fluidTouchFeedback(
                     CaliperHapticManager.tick(context)
                 }
 
-                // Wait for up or cancel
                 val up = try {
                     waitForUpOrCancellation()
                 } catch (_: Exception) {
@@ -142,7 +266,6 @@ fun Modifier.fluidTouchFeedback(
 
 /**
  * Tactile Pressed & Inset Mechanics
- * Scales button to 0.965f on press with haptic feedback
  */
 fun Modifier.tactilePressEffect(
     context: Context? = null,
@@ -177,19 +300,33 @@ fun Modifier.tactilePressEffect(
 
 @Composable
 fun MyApplicationTheme(
+    themePresetKey: String = CaliperThemePreset.OBSIDIAN_ICE.key,
     isMonochrome: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val caliperColors = FlagshipObsidianColors
+    val resolvedPreset = if (isMonochrome && themePresetKey == CaliperThemePreset.OBSIDIAN_ICE.key) {
+        CaliperThemePreset.PURE_MONOCHROME
+    } else {
+        CaliperThemePreset.fromKey(themePresetKey)
+    }
+
+    val caliperColors = remember(resolvedPreset) { tokensForPreset(resolvedPreset) }
 
     val materialColorScheme = darkColorScheme(
         primary = caliperColors.primaryAccent,
-        background = caliperColors.baseSurface,
-        surface = caliperColors.containerSurface,
-        onPrimary = Color.Black,
+        onPrimary = caliperColors.onPrimaryAccent,
+        secondary = caliperColors.safeGreen,
+        onSecondary = Color.Black,
+        tertiary = caliperColors.warnAmber,
+        background = caliperColors.background,
         onBackground = caliperColors.textPrimary,
+        surface = caliperColors.surface,
         onSurface = caliperColors.textPrimary,
-        error = caliperColors.bunkDanger
+        surfaceVariant = caliperColors.surfaceVariant,
+        onSurfaceVariant = caliperColors.textSecondary,
+        outline = caliperColors.border,
+        error = caliperColors.dangerRed,
+        onError = Color.White
     )
 
     val view = LocalView.current
@@ -197,8 +334,10 @@ fun MyApplicationTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = caliperColors.baseSurface.toArgb()
-                window.navigationBarColor = caliperColors.baseSurface.toArgb()
+                @Suppress("DEPRECATION")
+                window.statusBarColor = caliperColors.background.toArgb()
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = caliperColors.background.toArgb()
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
                 WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
             }

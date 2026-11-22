@@ -1,5 +1,6 @@
 package com.example.ui.screens.audit
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,10 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.audio.CaliperHapticManager
@@ -52,15 +54,23 @@ fun InteractiveAuditCalendar(
     viewModel: CampusViewModel,
     onDateSelected: (LocalDate) -> Unit,
     onNavigateToTodayView: ((String) -> Unit)? = null,
+    onMonthChanged: ((YearMonth) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val colors = CaliperTheme.colors
+    val view = LocalView.current
     val initialPage = remember { 1200 }
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 2400 })
     val coroutineScope = rememberCoroutineScope()
-    
+
     val currentMonth = remember(pagerState.currentPage) {
         YearMonth.now().plusMonths((pagerState.currentPage - initialPage).toLong())
     }
+
+    LaunchedEffect(currentMonth) {
+        onMonthChanged?.invoke(currentMonth)
+    }
+
     var showMonthPicker by remember { mutableStateOf(false) }
     var inspectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
@@ -68,40 +78,45 @@ fun InteractiveAuditCalendar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = {
+                    CaliperSoundManager.playSnap(view)
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage - 1)
                     }
                 }
             ) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = Color.White)
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month", tint = colors.textPrimary)
             }
 
             Text(
                 text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = colors.textPrimary
                 ),
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { showMonthPicker = true }
+                    .clickable {
+                        CaliperSoundManager.playSnap(view)
+                        showMonthPicker = true
+                    }
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )
 
             IconButton(
                 onClick = {
+                    CaliperSoundManager.playSnap(view)
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
                 }
             ) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = Color.White)
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month", tint = colors.textPrimary)
             }
         }
 
@@ -124,73 +139,77 @@ fun InteractiveAuditCalendar(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Refactored Clean Bottom Legend
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AuditLegendChip("● Present (All)", Color(0xFF22C55E))
-            AuditLegendChip("● Partial Cancel", Color(0xFFF59E0B))
-            AuditLegendChip("● All Cancelled", Color(0xFFF87171))
-            AuditLegendChip("● Bunked", Color(0xFFEF4444))
-            AuditLegendChip("○ Off/Holiday", Color(0xFF94A3B8))
+            AuditLegendChip("● Present", colors.safeGreen)
+            AuditLegendChip("● Partial", colors.warnAmber)
+            AuditLegendChip("● All Cancel", colors.dangerRed.copy(alpha = 0.78f))
+            AuditLegendChip("● Bunked", colors.dangerRed)
+            AuditLegendChip("○ Off/Hol", colors.offSlate)
         }
     }
 
-    // Month Selector Dialog
     if (showMonthPicker) {
         val currentYear = remember { LocalDate.now().year }
-        val semesterMonths = listOf(
-            YearMonth.of(currentYear, 7),
-            YearMonth.of(currentYear, 8),
-            YearMonth.of(currentYear, 9),
-            YearMonth.of(currentYear, 10),
-            YearMonth.of(currentYear, 11),
-            YearMonth.of(currentYear, 12)
-        )
+        val semesterMonths = (1..12).map { YearMonth.of(currentYear, it) }
         AlertDialog(
             onDismissRequest = { showMonthPicker = false },
-            containerColor = Color(0xFF111622),
-            title = { Text("Select Semester Month", color = Color.White, fontWeight = FontWeight.Bold) },
+            containerColor = colors.surfaceVariant,
+            title = { Text("Select Month", color = colors.textPrimary, fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    semesterMonths.forEach { ym ->
-                        val isChosen = (ym == currentMonth)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    semesterMonths.chunked(3).forEach { rowMonths ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isChosen) Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                                .clickable {
-                                    val targetPage = initialPage + ((ym.year - YearMonth.now().year) * 12 + (ym.monthValue - YearMonth.now().monthValue))
-                                    coroutineScope.launch {
-                                        pagerState.scrollToPage(targetPage)
-                                    }
-                                    showMonthPicker = false
-                                }
-                                .padding(12.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = ym.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                                color = if (isChosen) Color.White else Color(0xFF94A3B8),
-                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
-                            )
+                            rowMonths.forEach { ym ->
+                                val isChosen = (ym == currentMonth)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isChosen) colors.primaryAccent.copy(alpha = 0.2f) else colors.surface)
+                                        .border(
+                                            0.5.dp,
+                                            if (isChosen) colors.primaryAccent else colors.border,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable {
+                                            val targetPage = initialPage + ((ym.year - YearMonth.now().year) * 12 + (ym.monthValue - YearMonth.now().monthValue))
+                                            coroutineScope.launch {
+                                                pagerState.scrollToPage(targetPage)
+                                            }
+                                            showMonthPicker = false
+                                        }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = ym.format(DateTimeFormatter.ofPattern("MMM")),
+                                        color = if (isChosen) colors.primaryAccent else colors.textSecondary,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showMonthPicker = false }) {
-                    Text("Close", color = Color.White)
+                    Text("Close", color = colors.primaryAccent)
                 }
             }
         )
     }
 
-    // Interactive Date Inspector Dialog: "Day Summary • [Date]"
     inspectedDate?.let { date ->
         DaySummaryModal(
             date = date,
@@ -211,6 +230,7 @@ fun MonthGrid(
     onDateSelected: (LocalDate) -> Unit
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val colors = CaliperTheme.colors
     val daysInMonth = remember(month) { month.lengthOfMonth() }
     val firstDayOffset = remember(month) { month.atDay(1).dayOfWeek.value - 1 }
@@ -219,8 +239,7 @@ fun MonthGrid(
     val dayStatuses by viewModel.dayStatuses.collectAsState()
     val today = remember { LocalDate.now() }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-        // Weekday header
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
         val dayHeaders = listOf("M", "T", "W", "T", "F", "S", "S")
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -228,7 +247,7 @@ fun MonthGrid(
         ) {
             dayHeaders.forEach { d ->
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text(d, color = Color(0xFF94A3B8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(d, color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -251,29 +270,29 @@ fun MonthGrid(
                         val isToday = cellDate.isEqual(today)
                         val state = evaluateDayAttendanceState(cellDate, logs, holidays, dayStatuses)
 
-                        val cellBg = when (state) {
-                            DayAttendanceState.FULL_PRESENT -> Color(0x2822C55E)
-                            DayAttendanceState.PARTIAL_CANCELLED -> Color(0x28F59E0B)
-                            DayAttendanceState.ALL_CANCELLED -> Color(0x26F87171)
-                            DayAttendanceState.COLLEGE_OFF_HOLIDAY -> Color(0x33475569)
-                            DayAttendanceState.BUNKED -> Color(0x28EF4444)
-                            DayAttendanceState.UNRECORDED -> if (isToday) colors.primaryAccent.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.03f)
+                        val dotColor = when (state) {
+                            DayAttendanceState.FULL_PRESENT -> colors.safeGreen
+                            DayAttendanceState.PARTIAL_CANCELLED -> colors.warnAmber
+                            DayAttendanceState.ALL_CANCELLED -> colors.dangerRed.copy(alpha = 0.78f)
+                            DayAttendanceState.COLLEGE_OFF_HOLIDAY -> colors.offSlate
+                            DayAttendanceState.BUNKED -> colors.dangerRed
+                            DayAttendanceState.UNRECORDED -> Color.Transparent
                         }
 
-                        val dotColor = when (state) {
-                            DayAttendanceState.FULL_PRESENT -> Color(0xFF22C55E)
-                            DayAttendanceState.PARTIAL_CANCELLED -> Color(0xFFF59E0B)
-                            DayAttendanceState.ALL_CANCELLED -> Color(0xFFF87171)
-                            DayAttendanceState.COLLEGE_OFF_HOLIDAY -> Color(0xFF94A3B8)
-                            DayAttendanceState.BUNKED -> Color(0xFFEF4444)
-                            DayAttendanceState.UNRECORDED -> Color.Transparent
+                        val cellBg = when (state) {
+                            DayAttendanceState.FULL_PRESENT -> colors.safeGreen.copy(alpha = 0.16f)
+                            DayAttendanceState.PARTIAL_CANCELLED -> colors.warnAmber.copy(alpha = 0.16f)
+                            DayAttendanceState.ALL_CANCELLED -> colors.dangerRed.copy(alpha = 0.14f)
+                            DayAttendanceState.COLLEGE_OFF_HOLIDAY -> colors.offSlate.copy(alpha = 0.20f)
+                            DayAttendanceState.BUNKED -> colors.dangerRed.copy(alpha = 0.18f)
+                            DayAttendanceState.UNRECORDED -> if (isToday) colors.primaryAccent.copy(alpha = 0.14f) else colors.textPrimary.copy(alpha = 0.03f)
                         }
 
                         val borderColor = when {
                             isToday -> colors.primaryAccent
-                            state == DayAttendanceState.COLLEGE_OFF_HOLIDAY -> Color(0x4464748B)
+                            state == DayAttendanceState.COLLEGE_OFF_HOLIDAY -> colors.offSlate.copy(alpha = 0.35f)
                             dotColor != Color.Transparent -> dotColor.copy(alpha = 0.35f)
-                            else -> Color.White.copy(alpha = 0.05f)
+                            else -> colors.border.copy(alpha = 0.35f)
                         }
 
                         Box(
@@ -289,19 +308,18 @@ fun MonthGrid(
                                     RoundedCornerShape(8.dp)
                                 )
                                 .clickable {
-                                    CaliperSoundManager.playSnap()
+                                    CaliperSoundManager.playSnap(view)
                                     CaliperHapticManager.tick(context)
                                     onDateSelected(cellDate)
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            // Slash indicator for ALL_CANCELLED or COLLEGE_OFF_HOLIDAY
                             if (state == DayAttendanceState.ALL_CANCELLED || state == DayAttendanceState.COLLEGE_OFF_HOLIDAY) {
-                                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
                                     drawLine(
                                         color = dotColor.copy(alpha = 0.45f),
-                                        start = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.82f),
-                                        end = androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.18f),
+                                        start = Offset(size.width * 0.18f, size.height * 0.82f),
+                                        end = Offset(size.width * 0.82f, size.height * 0.18f),
                                         strokeWidth = 1.3f
                                     )
                                 }
@@ -313,7 +331,7 @@ fun MonthGrid(
                             ) {
                                 Text(
                                     text = "$dayNum",
-                                    color = if (isToday) Color.White else Color(0xFFF8FAFC),
+                                    color = if (isToday) colors.primaryAccent else colors.textPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = if (isToday || dotColor != Color.Transparent) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -387,10 +405,6 @@ fun AuditLegendChip(label: String, color: Color) {
     )
 }
 
-/**
- * Interactive Date Inspector Bottom Sheet / Modal Dialog
- * "Day Summary • [Date]"
- */
 @Composable
 fun DaySummaryModal(
     date: LocalDate,
@@ -398,6 +412,7 @@ fun DaySummaryModal(
     onDismiss: () -> Unit,
     onNavigateToToday: (String) -> Unit
 ) {
+    val colors = CaliperTheme.colors
     val dateStr = remember(date) { date.format(DateTimeFormatter.ISO_LOCAL_DATE) }
     val formattedDate = remember(date) { date.format(DateTimeFormatter.ofPattern("EEEE, dd MMM yyyy")) }
     val logs by viewModel.logs.collectAsState()
@@ -410,13 +425,12 @@ fun DaySummaryModal(
     val isSunday = (date.dayOfWeek.value == 7)
     val isHoliday = holidays.any { dateStr >= it.startDate && dateStr <= it.endDate }
     val holidayObj = holidays.find { dateStr >= it.startDate && dateStr <= it.endDate }
-    val dayStatus = dayStatuses.find { it.date == dateStr }
 
     val dayState = evaluateDayAttendanceState(date, logs, holidays, dayStatuses)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0F172A),
+        containerColor = colors.surfaceVariant,
         shape = RoundedCornerShape(20.dp),
         title = {
             Row(
@@ -428,7 +442,7 @@ fun DaySummaryModal(
                     Icon(
                         imageVector = Icons.Default.EventNote,
                         contentDescription = null,
-                        tint = Color(0xFF38BDF8),
+                        tint = colors.primaryAccent,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -436,12 +450,12 @@ fun DaySummaryModal(
                         text = "Day Summary • ${date.format(DateTimeFormatter.ofPattern("dd MMM"))}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = Color.White
+                        color = colors.textPrimary
                     )
                 }
 
                 IconButton(onClick = onDismiss, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                 }
             }
         },
@@ -450,20 +464,19 @@ fun DaySummaryModal(
                 Text(
                     text = formattedDate,
                     fontSize = 12.sp,
-                    color = Color(0xFF38BDF8),
+                    color = colors.primaryAccent,
                     fontWeight = FontWeight.SemiBold
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Summary Status Banner
                 val (stateTitle, stateColor) = when (dayState) {
-                    DayAttendanceState.FULL_PRESENT -> "100% Attended (Full Present)" to Color(0xFF22C55E)
-                    DayAttendanceState.PARTIAL_CANCELLED -> "Partial Faculty Cancellation" to Color(0xFFF59E0B)
-                    DayAttendanceState.ALL_CANCELLED -> "All Scheduled Classes Cancelled" to Color(0xFFF87171)
-                    DayAttendanceState.COLLEGE_OFF_HOLIDAY -> (if (isSunday) "Sunday Break" else "Institutional Holiday (${holidayObj?.title ?: "Closed"})") to Color(0xFF94A3B8)
-                    DayAttendanceState.BUNKED -> "Missed Lectures (Bunked)" to Color(0xFFEF4444)
-                    DayAttendanceState.UNRECORDED -> "No Period Attendance Recorded" to Color(0xFF64748B)
+                    DayAttendanceState.FULL_PRESENT -> "100% Attended (Full Present)" to colors.safeGreen
+                    DayAttendanceState.PARTIAL_CANCELLED -> "Partial Faculty Cancellation" to colors.warnAmber
+                    DayAttendanceState.ALL_CANCELLED -> "All Scheduled Classes Cancelled" to colors.dangerRed.copy(alpha = 0.8f)
+                    DayAttendanceState.COLLEGE_OFF_HOLIDAY -> (if (isSunday) "Sunday Break" else "Institutional Holiday (${holidayObj?.title ?: "Closed"})") to colors.offSlate
+                    DayAttendanceState.BUNKED -> "Missed Lectures (Bunked)" to colors.dangerRed
+                    DayAttendanceState.UNRECORDED -> "No Period Attendance Recorded" to colors.offSlate
                 }
 
                 Box(
@@ -487,9 +500,9 @@ fun DaySummaryModal(
                 if (dayLogs.isEmpty()) {
                     Text(
                         text = if (isSunday) "Sunday / Institutional Break. No recurring periods."
-                               else if (isHoliday) "Declared gazetted holiday: ${holidayObj?.title ?: "Off"}."
-                               else "No period logs recorded for this day in Caliper DB.",
-                        color = Color(0xFF94A3B8),
+                        else if (isHoliday) "Declared gazetted holiday: ${holidayObj?.title ?: "Off"}."
+                        else "No period logs recorded for this day in Caliper DB.",
+                        color = colors.textSecondary,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
@@ -498,7 +511,7 @@ fun DaySummaryModal(
                         text = "RECORDED LECTURES (${dayLogs.size}):",
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B),
+                        color = colors.textSecondary,
                         letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -508,19 +521,19 @@ fun DaySummaryModal(
                             val sub = subjects.find { it.id == log.subjectId }
                             val slot = allSlots.find { it.id == log.slotId }
                             val (statusText, statusColor) = when (log.status) {
-                                "attended" -> (if (log.isProxy) "PROXY PRESENT" else "PRESENT") to Color(0xFF22C55E)
-                                "bunked" -> "BUNKED" to Color(0xFFEF4444)
-                                "cancelled_by_faculty" -> "CANCELLED BY FACULTY" to Color(0xFFF59E0B)
-                                "college_off" -> "COLLEGE OFF" to Color(0xFF94A3B8)
-                                else -> log.status.uppercase() to Color(0xFF38BDF8)
+                                "attended" -> (if (log.isProxy) "PROXY PRESENT" else "PRESENT") to colors.safeGreen
+                                "bunked" -> "BUNKED" to colors.dangerRed
+                                "cancelled_by_faculty" -> "CANCELLED BY FACULTY" to colors.warnAmber
+                                "college_off" -> "COLLEGE OFF" to colors.offSlate
+                                else -> log.status.uppercase() to colors.primaryAccent
                             }
 
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.White.copy(alpha = 0.03f))
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                    .background(colors.surface)
+                                    .border(0.5.dp, colors.border, RoundedCornerShape(8.dp))
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -528,14 +541,14 @@ fun DaySummaryModal(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = sub?.name ?: "Subject #${log.subjectId}",
-                                        color = Color.White,
+                                        color = colors.textPrimary,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     val timeSpan = if (slot != null) "${slot.startTime} - ${slot.endTime} • " else ""
                                     Text(
                                         text = "$timeSpan${sub?.code ?: ""} ${if (log.isExtraClass) "• Extra Class" else ""}",
-                                        color = Color(0xFF94A3B8),
+                                        color = colors.textSecondary,
                                         fontSize = 10.5.sp
                                     )
                                 }
@@ -563,16 +576,16 @@ fun DaySummaryModal(
         confirmButton = {
             Button(
                 onClick = { onNavigateToToday(dateStr) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8).copy(alpha = 0.2f)),
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, Color(0xFF38BDF8)),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent.copy(alpha = 0.2f)),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, colors.primaryAccent),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Open in Today View →", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("Open in Today →", color = colors.primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = Color.White)
+                Text("Close", color = colors.textSecondary)
             }
         }
     )

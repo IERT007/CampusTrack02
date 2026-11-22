@@ -5,13 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
@@ -25,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,18 +38,8 @@ import com.example.ui.SubjectAttendanceStats
 import com.example.ui.theme.CaliperTheme
 import java.time.LocalDate
 import java.time.LocalTime
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.max
 
-/**
- * Centered Google-Style Integrated Glass Search Bar in Top Bar
- * 1. Left (~100.dp): Brand "Caliper", Subtitle "IERT Prayagraj"
- * 2. Center (Flexible Weight): 42.dp Frosted Glass Search Capsule with native BasicTextField
- * 3. Right (~40.dp): Embedded 20.dp Settings Icon (navigates smoothly to SettingsScreen)
- *
- * Reactive Autocomplete & Precision Telemetry Dropdown for matches.
- */
 @Composable
 fun MainTopBar(
     viewModel: MainViewModel,
@@ -59,6 +47,7 @@ fun MainTopBar(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val colors = CaliperTheme.colors
 
     val subjects by viewModel.subjects.collectAsState()
@@ -68,7 +57,6 @@ fun MainTopBar(
 
     var selectedSubjectForTelemetry by remember { mutableStateOf<SubjectEntity?>(null) }
 
-    // Real-time matched subjects and room slots
     val matchingSubjects = remember(searchQuery, subjects, allSlots) {
         if (searchQuery.isBlank()) {
             emptyList()
@@ -90,17 +78,14 @@ fun MainTopBar(
             .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Unified Top Bar Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 1. Left Component (Width: ~100.dp)
                 Column(
-                    modifier = Modifier
-                        .widthIn(min = 90.dp, max = 110.dp),
+                    modifier = Modifier.widthIn(min = 90.dp, max = 110.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -108,7 +93,7 @@ fun MainTopBar(
                         style = TextStyle(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = colors.textPrimary
                         )
                     )
                     Text(
@@ -116,21 +101,20 @@ fun MainTopBar(
                         style = TextStyle(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF94A3B8)
+                            color = colors.textSecondary
                         )
                     )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // 2. Center Component (Flexible Weight / FillRemainingWidth) - Frosted Glass Search Capsule
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(42.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                        .background(colors.surfaceVariant.copy(alpha = 0.85f))
+                        .border(0.5.dp, colors.border, RoundedCornerShape(24.dp))
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
@@ -141,7 +125,7 @@ fun MainTopBar(
                         Icon(
                             imageVector = Icons.Rounded.Search,
                             contentDescription = "Search",
-                            tint = Color(0xFF94A3B8),
+                            tint = colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
 
@@ -153,7 +137,7 @@ fun MainTopBar(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle = TextStyle(
-                                color = Color.White,
+                                color = colors.textPrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Normal
                             ),
@@ -163,7 +147,7 @@ fun MainTopBar(
                                     Text(
                                         text = "Search subject, room...",
                                         style = TextStyle(
-                                            color = Color(0xFF64748B),
+                                            color = colors.textSecondary.copy(alpha = 0.7f),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Normal
                                         )
@@ -173,7 +157,6 @@ fun MainTopBar(
                             }
                         )
 
-                        // Instant Clear Button (✕) when text is present
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
                                 onClick = { viewModel.setSearchQuery("") },
@@ -182,7 +165,7 @@ fun MainTopBar(
                                 Icon(
                                     imageVector = Icons.Rounded.Close,
                                     contentDescription = "Clear",
-                                    tint = Color(0xFF94A3B8),
+                                    tint = colors.textSecondary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -192,13 +175,12 @@ fun MainTopBar(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // 3. Right Component (Width: ~40.dp) - Embedded 20.dp Settings Icon
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .clickable {
-                            CaliperSoundManager.playSnap()
+                            CaliperSoundManager.playSnap(view)
                             CaliperHapticManager.tick(context)
                             onNavigateToSettings()
                         },
@@ -207,13 +189,12 @@ fun MainTopBar(
                     Icon(
                         imageVector = Icons.Rounded.Settings,
                         contentDescription = "System Settings",
-                        tint = Color(0xFFE2E8F0),
+                        tint = colors.textPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            // Floating Frosted Glass Autocomplete Dropdown Modal
             AnimatedVisibility(
                 visible = searchQuery.isNotBlank(),
                 enter = fadeIn() + expandVertically(),
@@ -224,8 +205,8 @@ fun MainTopBar(
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF0F141C).copy(alpha = 0.95f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                        .background(colors.surfaceVariant.copy(alpha = 0.96f))
+                        .border(0.5.dp, colors.border, RoundedCornerShape(16.dp))
                         .padding(12.dp)
                 ) {
                     if (matchingSubjects.isEmpty()) {
@@ -238,7 +219,7 @@ fun MainTopBar(
                         ) {
                             Text(
                                 text = "No academic record matching \"$searchQuery\"",
-                                color = Color(0xFF94A3B8),
+                                color = colors.textSecondary,
                                 fontSize = 12.sp
                             )
                         }
@@ -248,7 +229,7 @@ fun MainTopBar(
                                 text = "MATCHING SUBJECTS & LABS (${matchingSubjects.size})",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF64748B),
+                                color = colors.textSecondary,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
 
@@ -262,7 +243,7 @@ fun MainTopBar(
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
                                         .clickable {
-                                            CaliperSoundManager.playSnap()
+                                            CaliperSoundManager.playSnap(view)
                                             CaliperHapticManager.tick(context)
                                             selectedSubjectForTelemetry = sub
                                             viewModel.setSearchQuery("")
@@ -280,40 +261,37 @@ fun MainTopBar(
                                                 .size(8.dp)
                                                 .clip(CircleShape)
                                                 .background(
-                                                    if ((stats?.percentage ?: 100.0) >= 75.0) colors.safeZone
-                                                    else colors.bunkDanger
+                                                    if ((stats?.percentage ?: 100.0) >= 75.0) colors.safeGreen
+                                                    else colors.dangerRed
                                                 )
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
                                             Text(
                                                 text = "${sub.code} — ${sub.name}",
-                                                color = Color.White,
+                                                color = colors.textPrimary,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             Text(
                                                 text = "${sub.facultyName} • Room: $roomLabel",
-                                                color = Color(0xFF94A3B8),
+                                                color = colors.textSecondary,
                                                 fontSize = 11.sp
                                             )
                                         }
                                     }
 
-                                    // Attendance % chip
                                     stats?.let { s ->
+                                        val pctColor = if (s.percentage >= 75.0) colors.safeGreen else colors.dangerRed
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(6.dp))
-                                                .background(
-                                                    if (s.percentage >= 75.0) colors.safeZone.copy(alpha = 0.15f)
-                                                    else colors.bunkDanger.copy(alpha = 0.15f)
-                                                )
+                                                .background(pctColor.copy(alpha = 0.15f))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
                                                 text = "${String.format("%.1f", s.percentage)}%",
-                                                color = if (s.percentage >= 75.0) colors.safeZone else colors.bunkDanger,
+                                                color = pctColor,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -329,7 +307,6 @@ fun MainTopBar(
         }
     }
 
-    // Precision Telemetry Pop-up Card when a subject is tapped
     selectedSubjectForTelemetry?.let { subject ->
         val stats = statsList.find { it.subject.id == subject.id }
         val slots = allSlots.filter { it.subjectId == subject.id }
@@ -342,12 +319,6 @@ fun MainTopBar(
     }
 }
 
-/**
- * Precision Telemetry Pop-Up Card
- * 1. Next Schedule: Day, Time (e.g., "Wednesday 11:00 AM - 12:30 PM"), and Room No.
- * 2. Academic Tally: Exact count of Attended, Bunked, and Cancelled lectures.
- * 3. Cutoff Status: Live Safe-Zone % and exact bunk buffer remaining B = floor((A - 0.75C)/0.75).
- */
 @Composable
 fun SubjectTelemetryDialog(
     subject: SubjectEntity,
@@ -358,22 +329,18 @@ fun SubjectTelemetryDialog(
     val colors = CaliperTheme.colors
 
     val dayNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
-    val todayDayOfWeek = remember { LocalDate.now().dayOfWeek.value } // 1 (Mon) .. 7 (Sun)
+    val todayDayOfWeek = remember { LocalDate.now().dayOfWeek.value }
 
-    // Calculate next schedule with zero temporal drift (never show past lecture as "Next")
     val nextSlotInfo = remember(slots, todayDayOfWeek) {
         if (slots.isEmpty()) {
             "No timetable slot scheduled"
         } else {
             val nowTime = LocalTime.now()
-
-            // 1. Check today's slots where slot.startTime > LocalTime.now()
             val todayUpcomingSlot = slots
                 .filter { it.dayOfWeek == todayDayOfWeek }
                 .filter { slot ->
                     try {
-                        val sTime = LocalTime.parse(slot.startTime)
-                        sTime.isAfter(nowTime)
+                        LocalTime.parse(slot.startTime).isAfter(nowTime)
                     } catch (_: Exception) {
                         false
                     }
@@ -383,10 +350,8 @@ fun SubjectTelemetryDialog(
             if (todayUpcomingSlot != null) {
                 "Today ${todayUpcomingSlot.startTime} - ${todayUpcomingSlot.endTime} (${todayUpcomingSlot.roomNo})"
             } else {
-                // 2. Scan subsequent 6 days sequentially
                 var resolvedSlot: TimetableSlotEntity? = null
                 var resolvedDayOffset = 0
-
                 for (offset in 1..6) {
                     val targetDay = ((todayDayOfWeek - 1 + offset) % 7) + 1
                     val daySlots = slots.filter { it.dayOfWeek == targetDay }.sortedBy { it.startTime }
@@ -396,12 +361,10 @@ fun SubjectTelemetryDialog(
                         break
                     }
                 }
-
                 if (resolvedSlot != null) {
                     val dayName = if (resolvedDayOffset == 1) "Tomorrow" else dayNames.getOrElse(resolvedSlot.dayOfWeek - 1) { "Day ${resolvedSlot.dayOfWeek}" }
                     "Next: $dayName ${resolvedSlot.startTime} (${resolvedSlot.roomNo})"
                 } else {
-                    // Fallback to first available slot in schedule
                     val firstSlot = slots.sortedWith(compareBy({ it.dayOfWeek }, { it.startTime })).first()
                     val dayName = dayNames.getOrElse(firstSlot.dayOfWeek - 1) { "Day ${firstSlot.dayOfWeek}" }
                     "Next: $dayName ${firstSlot.startTime} (${firstSlot.roomNo})"
@@ -418,6 +381,7 @@ fun SubjectTelemetryDialog(
     val bunksAvailable = stats?.bunksAvailable ?: 0
     val classesNeeded = stats?.classesNeeded ?: 0
     val isSafe = percentage >= 75.0
+    val statusColor = if (isSafe) colors.safeGreen else colors.dangerRed
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -426,7 +390,7 @@ fun SubjectTelemetryDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.70f))
+                .background(Color.Black.copy(alpha = 0.72f))
                 .padding(20.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -434,13 +398,9 @@ fun SubjectTelemetryDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(),
-                borderColors = listOf(
-                    if (isSafe) colors.safeZone.copy(alpha = 0.6f) else colors.bunkDanger.copy(alpha = 0.6f),
-                    colors.cardBorderBottom
-                )
+                borderColors = listOf(statusColor.copy(alpha = 0.6f), Color.Transparent)
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    // Header
+                Column(modifier = Modifier.padding(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -457,29 +417,28 @@ fun SubjectTelemetryDialog(
                                 text = subject.name,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = colors.textPrimary
                             )
                             Text(
                                 text = "${subject.facultyName} • ${subject.type.uppercase()}",
                                 fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
+                                color = colors.textSecondary
                             )
                         }
 
                         IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = colors.textPrimary)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 1. Next Schedule Banner
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                            .background(colors.surface)
+                            .border(0.5.dp, colors.border, RoundedCornerShape(12.dp))
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -487,13 +446,13 @@ fun SubjectTelemetryDialog(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(colors.scheduledLecture.copy(alpha = 0.18f)),
+                                .background(colors.primaryAccent.copy(alpha = 0.16f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Schedule,
                                 contentDescription = null,
-                                tint = colors.scheduledLecture,
+                                tint = colors.primaryAccent,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -505,25 +464,24 @@ fun SubjectTelemetryDialog(
                                 text = "NEXT SCHEDULED LECTURE",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF94A3B8)
+                                color = colors.textSecondary
                             )
                             Text(
                                 text = nextSlotInfo,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                color = colors.textPrimary
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 2. Academic Tally: Attended, Bunked, Cancelled
                     Text(
                         text = "ACADEMIC TALLY & LECTURE LOGS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B)
+                        color = colors.textSecondary
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -532,43 +490,19 @@ fun SubjectTelemetryDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        TallyStatBox(
-                            label = "Attended",
-                            value = "$attended",
-                            color = colors.safeZone,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TallyStatBox(
-                            label = "Bunked",
-                            value = "$bunked",
-                            color = colors.bunkDanger,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TallyStatBox(
-                            label = "Cancelled",
-                            value = "$cancelled",
-                            color = colors.scheduledLecture,
-                            modifier = Modifier.weight(1f)
-                        )
+                        TallyStatBox("Attended", "$attended", colors.safeGreen, Modifier.weight(1f))
+                        TallyStatBox("Bunked", "$bunked", colors.dangerRed, Modifier.weight(1f))
+                        TallyStatBox("Cancelled", "$cancelled", colors.warnAmber, Modifier.weight(1f))
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 3. Cutoff Status: Live Safe-Zone % and exact bunk buffer remaining B = floor((A - 0.75C)/0.75)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSafe) colors.safeZone.copy(alpha = 0.12f)
-                                else colors.bunkDanger.copy(alpha = 0.12f)
-                            )
-                            .border(
-                                0.5.dp,
-                                if (isSafe) colors.safeZone.copy(alpha = 0.35f)
-                                else colors.bunkDanger.copy(alpha = 0.35f),
-                                RoundedCornerShape(12.dp)
-                            )
+                            .background(statusColor.copy(alpha = 0.12f))
+                            .border(0.5.dp, statusColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -578,7 +512,7 @@ fun SubjectTelemetryDialog(
                                 Icon(
                                     imageVector = Icons.Rounded.Security,
                                     contentDescription = null,
-                                    tint = if (isSafe) colors.safeZone else colors.bunkDanger,
+                                    tint = statusColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -586,7 +520,7 @@ fun SubjectTelemetryDialog(
                                     text = if (isSafe) "SAFE-ZONE MAINTAINED" else "DEBAR CRITICAL RISK",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isSafe) colors.safeZone else colors.bunkDanger
+                                    color = statusColor
                                 )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
@@ -598,12 +532,12 @@ fun SubjectTelemetryDialog(
                                 },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = Color.White
+                                color = colors.textPrimary
                             )
                             Text(
                                 text = "Formula: B = ⌊(Attended - 0.75×Total) / 0.75⌋",
                                 fontSize = 9.sp,
-                                color = Color(0xFF94A3B8),
+                                color = colors.textSecondary,
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -612,7 +546,7 @@ fun SubjectTelemetryDialog(
                             text = "${String.format("%.1f", percentage)}%",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (isSafe) colors.safeZone else colors.bunkDanger
+                            color = statusColor
                         )
                     }
 
@@ -621,7 +555,10 @@ fun SubjectTelemetryDialog(
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryAccent,
+                            contentColor = colors.onPrimaryAccent
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Acknowledge Telemetry", fontWeight = FontWeight.Bold)
@@ -639,28 +576,28 @@ private fun TallyStatBox(
     color: Color,
     modifier: Modifier = Modifier
 ) {
+    val colors = CaliperTheme.colors
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+            .background(colors.surface)
+            .border(0.5.dp, colors.border, RoundedCornerShape(10.dp))
             .padding(vertical = 8.dp, horizontal = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = value, color = color, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            Text(text = label, color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(text = label, color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
 
-// Backwards-compatible overload for existing calls
 @Composable
 fun MainTopBar(
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // When called without ViewModel, provide standard aligned top bar
+    val colors = CaliperTheme.colors
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -672,11 +609,11 @@ fun MainTopBar(
         Column(modifier = Modifier.widthIn(min = 90.dp, max = 110.dp)) {
             Text(
                 text = "Caliper",
-                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
             )
             Text(
                 text = "IERT Prayagraj",
-                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
+                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = colors.textSecondary)
             )
         }
 
@@ -687,7 +624,7 @@ fun MainTopBar(
             Icon(
                 imageVector = Icons.Rounded.Settings,
                 contentDescription = "System Settings",
-                tint = Color(0xFFE2E8F0),
+                tint = colors.textPrimary,
                 modifier = Modifier.size(20.dp)
             )
         }

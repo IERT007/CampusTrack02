@@ -93,6 +93,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedTheme = MutableStateFlow(prefs.getString("selected_theme", "Normal") ?: "Normal")
     val selectedTheme: StateFlow<String> = _selectedTheme.asStateFlow()
 
+    private val _themePreset = MutableStateFlow(
+        prefs.getString("theme_preset_key", com.example.data.DataStoreManager.DEFAULT_THEME_PRESET)
+            ?: com.example.data.DataStoreManager.DEFAULT_THEME_PRESET
+    )
+    val themePreset: StateFlow<String> = _themePreset.asStateFlow()
+
     init {
         val db = AppDatabase.getDatabase(application)
         repository = CampusRepository(application, db)
@@ -116,6 +122,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             dataStoreManager.semesterEndDateFlow.collect { endDate ->
                 if (_semesterEndDate.value != endDate) {
                     _semesterEndDate.value = endDate
+                }
+            }
+        }
+        viewModelScope.launch {
+            dataStoreManager.themePresetFlow.collect { presetKey ->
+                if (_themePreset.value != presetKey) {
+                    _themePreset.value = presetKey
+                    prefs.edit().putString("theme_preset_key", presetKey).apply()
+                    _isMonochromeMode.value = (presetKey == "pure_monochrome")
                 }
             }
         }
@@ -684,6 +699,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSelectedTheme(theme: String) {
         _selectedTheme.value = theme
         prefs.edit().putString("selected_theme", theme).apply()
+        com.example.audio.CaliperSoundManager.playSnap()
+        com.example.audio.CaliperHapticManager.tick(getApplication())
+    }
+
+    fun setThemePreset(presetKey: String) {
+        _themePreset.value = presetKey
+        val isMono = (presetKey == "pure_monochrome")
+        _isMonochromeMode.value = isMono
+        _selectedTheme.value = presetKey
+        prefs.edit()
+            .putString("theme_preset_key", presetKey)
+            .putBoolean("is_monochrome_mode", isMono)
+            .putString("selected_theme", presetKey)
+            .apply()
+        viewModelScope.launch {
+            dataStoreManager.setThemePreset(presetKey)
+        }
         com.example.audio.CaliperSoundManager.playSnap()
         com.example.audio.CaliperHapticManager.tick(getApplication())
     }

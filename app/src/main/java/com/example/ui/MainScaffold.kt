@@ -1,23 +1,25 @@
 package com.example.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,14 +32,11 @@ import com.example.ui.screens.audit.AuditScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.subjects.SafeZoneScreen
 import com.example.ui.screens.today.TodayScreen
-import com.example.ui.theme.*
+import com.example.ui.theme.CaliperTheme
 
 /**
- * MainScaffold — CALIPER OS 3-Tab Container
- * Ultra-slim, ergonomic navigation container:
- * 1. Today — Daily schedule, in-slot logging, class test entry, 1-day custom activities.
- * 2. Safe-Zone — Attendance telemetry, bunk simulator, subject management & cascading delete.
- * 3. Audit — Interactive monthly calendar, progression wave, academic test performance ledger.
+ * MainScaffold — CALIPER v2.0 3-Tab Container
+ * Centered ultra-compact floating bottom pill (216.dp x 50.dp) with spring sliding indicator.
  */
 @Composable
 fun MainScaffold(
@@ -45,6 +44,7 @@ fun MainScaffold(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val colors = CaliperTheme.colors
 
     var currentTab by remember { mutableStateOf(AppTab.TODAY) }
@@ -58,14 +58,13 @@ fun MainScaffold(
         return
     }
 
-    // Android back button: If not on TODAY, return to TODAY
     BackHandler(enabled = currentTab != AppTab.TODAY) {
         currentTab = AppTab.TODAY
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = AmoledBackground,
+        containerColor = colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(
@@ -73,33 +72,30 @@ fun MainScaffold(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            // Ambient radial background glow
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                colors.baseSurface,
-                                colors.containerSurface,
-                                colors.baseSurface
+                                colors.background,
+                                colors.surface,
+                                colors.background
                             )
                         )
                     )
             )
 
             Column(modifier = Modifier.fillMaxSize()) {
-                // Unified Google-Style Frosted Glass Top Bar
                 MainTopBar(
                     viewModel = viewModel,
                     onNavigateToSettings = {
-                        CaliperSoundManager.playSnap()
+                        CaliperSoundManager.playSnap(view)
                         CaliperHapticManager.tick(context)
                         showSettingsScreen = true
                     }
                 )
 
-                // Dedicated View Containers with animated transitions
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -125,30 +121,27 @@ fun MainScaffold(
                 }
             }
 
-            // Compact 54.dp Frosted Glass Bottom Navigation Bar (Ultra-Slim)
             CompactFloatingGlassNavBar(
                 selectedTab = currentTab,
                 onTabSelected = { tab ->
-                    CaliperSoundManager.playSnap()
-                    CaliperHapticManager.tick(context)
-                    currentTab = tab
+                    if (tab != currentTab) {
+                        CaliperSoundManager.playSnap(view)
+                        CaliperHapticManager.tick(context)
+                        currentTab = tab
+                    }
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(bottom = 10.dp)
             )
         }
     }
 }
 
 /**
- * Compact 54.dp 3-Tab Bottom Navigation Bar
- * - Container height: 54.dp
- * - Internal padding: icon-to-label spacing 2.dp, icon size 20.dp
- * - Tab labels: 11.sp Medium typography
- * - Selected indicator: subtle translucent pill (Color.White.copy(alpha = 0.08f))
- * - Styling: Translucent frosted obsidian (Color(0xFF0A0D14).copy(alpha = 0.85f)) with 0.5.dp border
+ * Ultra-Compact Centered Floating Bottom Pill Bar (216.dp x 50.dp)
+ * Features a single 68.dp translucent sliding indicator pill driven by spring physics.
  */
 @Composable
 fun CompactFloatingGlassNavBar(
@@ -156,40 +149,63 @@ fun CompactFloatingGlassNavBar(
     onTabSelected: (AppTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = CaliperTheme.colors
+    val tabs = AppTab.entries
+    val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
+
+    // Pill outer width = 216.dp; horizontal padding = 6.dp each side -> 204.dp track -> 3 slots of 68.dp each
+    val indicatorWidth = 68.dp
+    val indicatorOffset by animateDpAsState(
+        targetValue = indicatorWidth * selectedIndex,
+        animationSpec = spring(
+            dampingRatio = 0.75f,
+            stiffness = 400f
+        ),
+        label = "floating_nav_pill_offset"
+    )
+
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(Color(0xFF0A0D14).copy(alpha = 0.85f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .width(216.dp)
+            .height(50.dp)
+            .clip(CircleShape)
+            .background(colors.surfaceVariant.copy(alpha = 0.90f))
+            .border(0.5.dp, colors.border, CircleShape)
+            .padding(horizontal = 6.dp, vertical = 4.dp)
             .testTag("floating_glass_nav_bar"),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.CenterStart
     ) {
-        Row(
+        // Fluid Sliding Translucent Indicator Pill
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .offset(x = indicatorOffset)
+                .width(indicatorWidth)
+                .fillMaxHeight()
+                .clip(CircleShape)
+                .background(colors.primaryAccent.copy(alpha = 0.16f))
+                .border(0.5.dp, colors.primaryAccent.copy(alpha = 0.35f), CircleShape)
+        )
+
+        // 3 Equal-Width Navigation Tab Targets
+        Row(
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AppTab.values().forEach { tab ->
+            tabs.forEach { tab ->
                 val isSelected = (selectedTab == tab)
+                val itemTint by animateColorAsState(
+                    targetValue = if (isSelected) colors.primaryAccent else colors.textSecondary,
+                    label = "nav_item_tint"
+                )
 
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(42.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent
-                        )
-                        .fluidTouchFeedback {
-                            onTabSelected(tab)
-                        }
+                        .width(indicatorWidth)
+                        .fillMaxHeight()
+                        .clip(CircleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(color = Color.White.copy(alpha = 0.2f)),
+                            indication = null,
                             onClick = { onTabSelected(tab) }
                         )
                         .testTag(tab.testTag),
@@ -202,15 +218,16 @@ fun CompactFloatingGlassNavBar(
                         Icon(
                             imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
                             contentDescription = tab.title,
-                            tint = if (isSelected) Color.White else Color(0xFF94A3B8),
-                            modifier = Modifier.size(20.dp)
+                            tint = itemTint,
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(1.dp))
                         Text(
                             text = tab.title,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSelected) Color.White else Color(0xFF94A3B8)
+                            fontSize = 9.5.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = itemTint,
+                            maxLines = 1
                         )
                     }
                 }

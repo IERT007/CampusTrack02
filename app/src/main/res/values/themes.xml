@@ -4,11 +4,13 @@
         <item name="android:windowBackground">#000000</item>
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
+        <item name="android:colorBackground">#000000</item>
     </style>
 
     <style name="SplashTheme" parent="Theme.MyApplication">
         <item name="android:windowBackground">#000000</item>
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
+        <item name="android:colorBackground">#000000</item>
     </style>
 </resources>

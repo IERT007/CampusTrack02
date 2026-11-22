@@ -5,63 +5,52 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Solid Deep Charcoal / Obsidian Circle Background (#12161F) -->
-    <path
-        android:fillColor="#12161F"
-        android:strokeColor="#24FFFFFF"
-        android:strokeWidth="1"
-        android:pathData="M54,21 A33,33 0 1,1 53.99,21 Z" />
+    <!-- Minimal Dual-Tone Vernier Caliper Geometry (Centered within 66dp safe zone) -->
 
-    <!-- Sleek Minimalist Geometric Vernier Caliper Body & Fixed Jaw (#F8FAFC) -->
-    <!-- Main Horizontal Beam -->
+    <!-- Main Horizontal Beam & Fixed Measuring Jaw (Ice Blue #38BDF8) -->
     <path
-        android:fillColor="#F8FAFC"
-        android:pathData="M35,44.5 L73,44.5 L73,49 L35,49 Z" />
+        android:fillColor="#38BDF8"
+        android:pathData="M31,45 L77,45 L77,50 L31,50 Z" />
 
-    <!-- Main Fixed Lower Measuring Jaw (Left) -->
+    <!-- Fixed Lower Measuring Jaw (Left) -->
     <path
-        android:fillColor="#F8FAFC"
-        android:pathData="M35,44.5 L40,44.5 L40,50 L38.5,65 L35.5,65 L35,50 Z" />
+        android:fillColor="#38BDF8"
+        android:pathData="M31,45 L37.5,45 L37.5,51 L35.5,69 L32,69 L31,51 Z" />
 
     <!-- Fixed Upper Internal Measuring Nib -->
     <path
-        android:fillColor="#F8FAFC"
-        android:pathData="M35,44.5 L39.5,44.5 L37.5,35.5 L35,36.5 Z" />
+        android:fillColor="#38BDF8"
+        android:pathData="M31,45 L36.5,45 L34.2,35.5 L31,37 Z" />
 
-    <!-- Sliding Vernier Sleeve & Movable Lower Jaw -->
+    <!-- Sliding Vernier Sleeve & Movable Lower Jaw (Soft Sage Emerald #34D399) -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M47,42.5 L56,42.5 L56,52.5 L53,52.5 L51.8,66 L48.5,66 L49.6,52.5 L47,52.5 Z" />
+
+    <!-- Sliding Upper Internal Measuring Nib (Soft Sage Emerald #34D399) -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M49.5,42.5 L54.2,42.5 L51.8,35.5 L49.5,37 Z" />
+
+    <!-- Precision Thumb Roller Accent (Crisp Ice White) -->
     <path
         android:fillColor="#E2E8F0"
-        android:pathData="M48.5,42.5 L55.5,42.5 L55.5,51 L53,51 L52,62 L49.5,62 L50.5,51 L48.5,51 Z" />
+        android:pathData="M49.5,40.2 L54.2,40.2 L54.2,42.5 L49.5,42.5 Z" />
 
-    <!-- Sliding Upper Internal Measuring Nib -->
+    <!-- 3 Subtle Calibration Ticks along the beam (Cutout in #111827) -->
     <path
-        android:fillColor="#E2E8F0"
-        android:pathData="M50.5,42.5 L54.5,42.5 L52.5,35.5 L50.5,36.5 Z" />
+        android:fillColor="#111827"
+        android:pathData="M61,45 L62.5,45 L62.5,48.2 L61,48.2 Z" />
+    <path
+        android:fillColor="#111827"
+        android:pathData="M66.5,45 L68,45 L68,49 L66.5,49 Z" />
+    <path
+        android:fillColor="#111827"
+        android:pathData="M72,45 L73.5,45 L73.5,48.2 L72,48.2 Z" />
 
-    <!-- Knurled Locking Thumb Wheel -->
+    <!-- Precision Depth Probe -->
     <path
-        android:fillColor="#94A3B8"
-        android:pathData="M50,40.5 L54,40.5 L54,42.5 L50,42.5 Z" />
-
-    <!-- 3 Micro-Scale Calibration Tick Marks in soft matte white (#F8FAFC) -->
-    <!-- Tick Mark 1 -->
-    <path
-        android:fillColor="#12161F"
-        android:pathData="M59,44.5 L60.2,44.5 L60.2,47.5 L59,47.5 Z" />
-
-    <!-- Tick Mark 2 -->
-    <path
-        android:fillColor="#12161F"
-        android:pathData="M63.5,44.5 L64.7,44.5 L64.7,48.2 L63.5,48.2 Z" />
-
-    <!-- Tick Mark 3 -->
-    <path
-        android:fillColor="#12161F"
-        android:pathData="M68,44.5 L69.2,44.5 L69.2,47.5 L68,47.5 Z" />
-
-    <!-- Depth Measuring Probe (Extending from right end of beam) -->
-    <path
-        android:fillColor="#94A3B8"
-        android:pathData="M73,46.2 L75.5,46.2 L75.5,47.2 L73,47.2 Z" />
+        android:fillColor="#34D399"
+        android:pathData="M77,46.8 L80,46.8 L80,48.2 L77,48.2 Z" />
 
 </vector>
