@@ -34,6 +34,7 @@ import com.example.audio.CaliperSoundManager
 import com.example.notification.NotificationHelper
 import com.example.ui.MainViewModel
 import com.example.ui.components.GlassCard
+import com.example.ui.dialogs.OtaUpdateDialog
 import com.example.ui.theme.CaliperTheme
 import com.example.ui.theme.CaliperThemePreset
 import com.example.ui.theme.tokensForPreset
@@ -416,6 +417,10 @@ fun SettingsScreen(
                     }
                 }
 
+                // SECTION 2B: Multi-Semester Profiles & Read-Only Archiving
+                SettingsSectionHeader("SEMESTER PROFILES & ARCHIVING", Icons.Default.Layers, colors.primaryAccent)
+                SemesterProfilesCard(viewModel = viewModel)
+
                 // SECTION 3: Academic Semester Timeline
                 SettingsSectionHeader("ACADEMIC SEMESTER TIMELINE", Icons.Default.DateRange, colors.primaryAccent)
 
@@ -500,6 +505,10 @@ fun SettingsScreen(
                         Text("Send Test Pre-Lecture Ping", color = colors.safeGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+
+                // SECTION 4B: Offline-First Supabase Cloud Auto-Sync
+                SettingsSectionHeader("CLOUD BACKUP & SYNC (SUPABASE)", Icons.Default.CloudDone, colors.safeGreen)
+                CloudBackupSyncCard(viewModel = viewModel)
 
                 // SECTION 5: Data Auto-Vault & Cloud-Free Storage Hub
                 SettingsSectionHeader("DATA AUTO-VAULT & BACKUP", Icons.Default.CloudSync, colors.primaryAccent)
@@ -652,6 +661,10 @@ fun SettingsScreen(
                     }
                 }
 
+                // SECTION 7: In-App GitHub Releases OTA Updater
+                SettingsSectionHeader("APP UPDATES (GITHUB RELEASES OTA)", Icons.Default.SystemUpdate, colors.primaryAccent)
+                AppUpdatesOtaCard(viewModel = viewModel)
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -659,13 +672,15 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("CALIPER ACADEMIC OS • V2.0", color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Text("IERT Mechanical & Tool Engineering • Offline-First", color = colors.textMuted, fontSize = 9.sp)
+                        Text("CALIPER ACADEMIC OS • V2.0.0", color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("IERT Mechanical & Tool Engineering • Offline-First + Cloud Sync", color = colors.textMuted, fontSize = 9.sp)
                     }
                 }
             }
         }
     }
+
+    OtaUpdateDialog(viewModel = viewModel)
 
     if (showResetConfirmation) {
         AlertDialog(

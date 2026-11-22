@@ -14,7 +14,8 @@ data class SubjectEntity(
     val strictness: String, // "strict", "moderate", "chill"
     val colorHex: String,
     val reconciledAttendedOffset: Int = 0,
-    val reconciledTotalOffset: Int = 0
+    val reconciledTotalOffset: Int = 0,
+    val semesterId: Long = 1L
 )
 
 @Entity(tableName = "timetable_slots")
@@ -25,7 +26,8 @@ data class TimetableSlotEntity(
     val startTime: String, // "08:00"
     val endTime: String, // "09:00"
     val roomNo: String, // "LT-4", "Workshop A", "CAD Lab"
-    val subjectId: Long
+    val subjectId: Long,
+    val semesterId: Long = 1L
 ) {
     val slotId: Long get() = id
     val subjectName: String get() = "Lecture"
@@ -42,7 +44,8 @@ data class AttendanceLogEntity(
     val isProxy: Boolean = false,
     val isExtraClass: Boolean = false,
     val notes: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val semesterId: Long = 1L
 )
 
 @Entity(tableName = "assessments")
@@ -58,7 +61,8 @@ data class AssessmentEntity(
     val missedReason: String? = null,
     val dueDate: String, // "YYYY-MM-DD"
     val dueTime: String = "17:00", // "HH:mm" target time
-    val syllabusCoveragePercent: Int = 0
+    val syllabusCoveragePercent: Int = 0,
+    val semesterId: Long = 1L
 ) {
     val marksObtained: Float? get() = obtainedMarks?.toFloat()
 }

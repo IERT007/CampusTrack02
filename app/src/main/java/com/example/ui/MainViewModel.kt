@@ -1,11 +1,18 @@
 package com.example.ui
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.cloud.SupabaseSyncManager
+import com.example.data.DataStoreManager
+import com.example.data.SupabaseSession
 import com.example.data.local.AppDatabase
 import com.example.data.local.entity.*
 import com.example.data.repository.CampusRepository
+import com.example.update.OtaCheckResult
+import com.example.update.OtaUpdateManager
+import com.example.update.ReleaseInfo
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -63,7 +70,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: CampusRepository
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val prefs = application.getSharedPreferences("caliper_settings", android.content.Context.MODE_PRIVATE)
-    private val dataStoreManager = com.example.data.DataStoreManager(application)
+    private val dataStoreManager = DataStoreManager(application)
+    private val supabaseSyncManager = SupabaseSyncManager(application, dataStoreManager)
+    private val otaUpdateManager = OtaUpdateManager(application, dataStoreManager)
 
     private val _selectedDate = MutableStateFlow(LocalDate.now().format(dateFormatter))
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
@@ -94,10 +103,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedTheme: StateFlow<String> = _selectedTheme.asStateFlow()
 
     private val _themePreset = MutableStateFlow(
-        prefs.getString("theme_preset_key", com.example.data.DataStoreManager.DEFAULT_THEME_PRESET)
-            ?: com.example.data.DataStoreManager.DEFAULT_THEME_PRESET
+        prefs.getString("theme_preset_key", DataStoreManager.DEFAULT_THEME_PRESET)
+            ?: DataStoreManager.DEFAULT_THEME_PRESET
     )
     val themePreset: StateFlow<String> = _themePreset.asStateFlow()
+
+    // --- Supabase Cloud Sync UI State ---
+    val isSupabaseConfigured: Boolean = supabaseSyncManager.isConfigured()
+
+    val supabaseSession: StateFlow<SupabaseSession?> = dataStoreManager.supabaseSessionFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val cloudLastSyncedAt: StateFlow<String> = dataStoreManager.supabaseLastSyncedAtFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    private val _cloudSyncBusy = MutableStateFlow(false)
+    val cloudSyncBusy: StateFlow<Boolean> = _cloudSyncBusy.asStateFlow()
+
+    private val _cloudSyncStatusMessage = MutableStateFlow<String?>(null)
+    val cloudSyncStatusMessage: StateFlow<String?> = _cloudSyncStatusMessage.asStateFlow()
+
+    // --- GitHub Releases OTA Updater UI State ---
+    private val _availableUpdate = MutableStateFlow<ReleaseInfo?>(null)
+    val availableUpdate: StateFlow<ReleaseInfo?> = _availableUpdate.asStateFlow()
+
+    private val _isCheckingUpdate = MutableStateFlow(false)
+    val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
+
+    private val _isDownloadingUpdate = MutableStateFlow(false)
+    val isDownloadingUpdate: StateFlow<Boolean> = _isDownloadingUpdate.asStateFlow()
+
+    private val _updateDownloadProgress = MutableStateFlow(0f)
+    val updateDownloadProgress: StateFlow<Float> = _updateDownloadProgress.asStateFlow()
+
+    private val _updateStatusMessage = MutableStateFlow<String?>(null)
+    val updateStatusMessage: StateFlow<String?> = _updateStatusMessage.asStateFlow()
+
+    private val _semesterStartDate = MutableStateFlow(prefs.getString("semester_start_date", DataStoreManager.DEFAULT_START_DATE) ?: DataStoreManager.DEFAULT_START_DATE)
+    val semesterStartDate: StateFlow<String> = _semesterStartDate.asStateFlow()
+
+    private val _semesterEndDate = MutableStateFlow(prefs.getString("semester_end_date", DataStoreManager.DEFAULT_END_DATE) ?: DataStoreManager.DEFAULT_END_DATE)
+    val semesterEndDate: StateFlow<String> = _semesterEndDate.asStateFlow()
 
     init {
         val db = AppDatabase.getDatabase(application)
@@ -108,20 +154,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.example.audio.CaliperHapticManager.isHapticsEnabled = _isHapticsEnabled.value
         com.example.notification.NotificationHelper.createNotificationChannels(application)
         com.example.notification.NotificationHelper.scheduleDailyMorningBriefing(application)
+
         viewModelScope.launch {
             repository.checkAndInitializeDefaultData()
         }
         viewModelScope.launch {
-            dataStoreManager.semesterStartDateFlow.collect { startDate ->
-                if (_semesterStartDate.value != startDate) {
-                    _semesterStartDate.value = startDate
-                }
-            }
-        }
-        viewModelScope.launch {
-            dataStoreManager.semesterEndDateFlow.collect { endDate ->
-                if (_semesterEndDate.value != endDate) {
-                    _semesterEndDate.value = endDate
+            repository.activeSemester.collect { activeSem ->
+                if (activeSem != null) {
+                    if (_semesterStartDate.value != activeSem.startDate) {
+                        _semesterStartDate.value = activeSem.startDate
+                    }
+                    if (_semesterEndDate.value != activeSem.endDate) {
+                        _semesterEndDate.value = activeSem.endDate
+                    }
                 }
             }
         }
@@ -134,25 +179,74 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        // Throttled 12-hour OTA update check on app launch
+        checkForUpdates(force = false)
     }
 
-    val subjects: StateFlow<List<SubjectEntity>> = repository.allSubjects
+    // --- Multi-Semester StateFlows ---
+    val semesters: StateFlow<List<SemesterEntity>> = repository.allSemesters
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val slots: StateFlow<List<TimetableSlotEntity>> = repository.allSlots
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val activeSemester: StateFlow<SemesterEntity?> = repository.activeSemester
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val extraSlots: StateFlow<List<ExtraSlotEntity>> = repository.allExtraSlots
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val activeSemesterId: StateFlow<Long> = activeSemester
+        .map { it?.id ?: 1L }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1L)
 
-    val rescheduleOverrides: StateFlow<List<RescheduleOverrideEntity>> = repository.allOverrides
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val isActiveSemesterArchived: StateFlow<Boolean> = activeSemester
+        .map { it?.isArchived == true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val logs: StateFlow<List<AttendanceLogEntity>> = repository.allLogs
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // --- Semester-Scoped Core Flows (Today, Safe-Zone, Audit, To-Do automatically scope to active semester) ---
+    val subjects: StateFlow<List<SubjectEntity>> = combine(
+        repository.allSubjects,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val assessments: StateFlow<List<AssessmentEntity>> = repository.allAssessments
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val slots: StateFlow<List<TimetableSlotEntity>> = combine(
+        repository.allSlots,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val extraSlots: StateFlow<List<ExtraSlotEntity>> = combine(
+        repository.allExtraSlots,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val rescheduleOverrides: StateFlow<List<RescheduleOverrideEntity>> = combine(
+        repository.allOverrides,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val logs: StateFlow<List<AttendanceLogEntity>> = combine(
+        repository.allLogs,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val assessments: StateFlow<List<AssessmentEntity>> = combine(
+        repository.allAssessments,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val todoTasks: StateFlow<List<TodoTaskEntity>> = combine(
+        repository.allTodoTasks,
+        activeSemesterId
+    ) { list, semId ->
+        list.filter { it.semesterId == semId }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val dayStatuses: StateFlow<List<DailyDayStatusEntity>> = repository.allDayStatuses
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -166,19 +260,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val tasks: StateFlow<List<AcademicTaskEntity>> = repository.allTasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val todoTasks: StateFlow<List<TodoTaskEntity>> = repository.allTodoTasks
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val notes: StateFlow<List<QuickNoteEntity>> = repository.allNotes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _semesterStartDate = MutableStateFlow(prefs.getString("semester_start_date", "2026-07-15") ?: "2026-07-15")
-    val semesterStartDate: StateFlow<String> = _semesterStartDate.asStateFlow()
+    private fun guardWritable(): Boolean {
+        if (isActiveSemesterArchived.value) {
+            Toast.makeText(
+                getApplication(),
+                "Archived semester is Read-Only. Unarchive in Settings to edit.",
+                Toast.LENGTH_SHORT
+            ).show()
+            com.example.audio.CaliperSoundManager.playAlert()
+            return false
+        }
+        return true
+    }
 
-    private val _semesterEndDate = MutableStateFlow(prefs.getString("semester_end_date", "2026-12-15") ?: "2026-12-15")
-    val semesterEndDate: StateFlow<String> = _semesterEndDate.asStateFlow()
+    // --- Multi-Semester Profile Actions ---
+    fun createSemester(name: String, startDate: String, endDate: String, activate: Boolean = true) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            repository.createSemester(name = name, startDate = startDate, endDate = endDate, activate = activate)
+            com.example.audio.CaliperSoundManager.playSuccess()
+            com.example.audio.CaliperHapticManager.successClick(getApplication())
+        }
+    }
+
+    fun switchActiveSemester(semesterId: Long) {
+        viewModelScope.launch {
+            repository.switchActiveSemester(semesterId)
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
+
+    fun setSemesterArchived(semesterId: Long, isArchived: Boolean) {
+        viewModelScope.launch {
+            repository.setSemesterArchived(semesterId, isArchived)
+            com.example.audio.CaliperSoundManager.playSnap()
+            com.example.audio.CaliperHapticManager.tick(getApplication())
+        }
+    }
 
     fun setSemesterDates(startDate: String, endDate: String) {
+        if (!guardWritable()) return
         _semesterStartDate.value = startDate
         _semesterEndDate.value = endDate
         prefs.edit()
@@ -187,6 +312,171 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .apply()
         viewModelScope.launch {
             dataStoreManager.setSemesterDates(startDate, endDate)
+            repository.updateSemesterDates(activeSemesterId.value, startDate, endDate)
+        }
+    }
+
+    // --- Supabase Cloud Sync Actions ---
+    fun signInCloud(email: String, password: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _cloudSyncBusy.value = true
+            _cloudSyncStatusMessage.value = "Signing in..."
+            val result = supabaseSyncManager.signIn(email, password)
+            _cloudSyncBusy.value = false
+            result.fold(
+                onSuccess = { msg ->
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(true, msg)
+                },
+                onFailure = { err ->
+                    val msg = err.message ?: "Sign in failed"
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(false, msg)
+                }
+            )
+        }
+    }
+
+    fun signUpCloud(email: String, password: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _cloudSyncBusy.value = true
+            _cloudSyncStatusMessage.value = "Creating account..."
+            val result = supabaseSyncManager.signUp(email, password)
+            _cloudSyncBusy.value = false
+            result.fold(
+                onSuccess = { msg ->
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(true, msg)
+                },
+                onFailure = { err ->
+                    val msg = err.message ?: "Sign up failed"
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(false, msg)
+                }
+            )
+        }
+    }
+
+    fun signOutCloud(onResult: () -> Unit = {}) {
+        viewModelScope.launch {
+            _cloudSyncBusy.value = true
+            supabaseSyncManager.signOut()
+            _cloudSyncBusy.value = false
+            _cloudSyncStatusMessage.value = "Signed out from Supabase Cloud"
+            onResult()
+        }
+    }
+
+    fun syncNowCloud(onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _cloudSyncBusy.value = true
+            _cloudSyncStatusMessage.value = "Uploading backup..."
+            val result = supabaseSyncManager.pushBackupToCloud(repository)
+            _cloudSyncBusy.value = false
+            result.fold(
+                onSuccess = { ts ->
+                    val msg = "Synced to cloud ($ts)"
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(true, msg)
+                },
+                onFailure = { err ->
+                    val msg = err.message ?: "Sync failed"
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(false, msg)
+                }
+            )
+        }
+    }
+
+    fun restoreFromCloud(onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _cloudSyncBusy.value = true
+            _cloudSyncStatusMessage.value = "Downloading backup..."
+            val result = supabaseSyncManager.restoreBackupFromCloud(repository)
+            _cloudSyncBusy.value = false
+            result.fold(
+                onSuccess = { ts ->
+                    val msg = "Restored cloud backup ($ts)"
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(true, msg)
+                },
+                onFailure = { err ->
+                    val msg = err.message ?: "Restore failed"
+                    _cloudSyncStatusMessage.value = msg
+                    onResult(false, msg)
+                }
+            )
+        }
+    }
+
+    // --- GitHub Releases OTA Updater Actions ---
+    fun checkForUpdates(force: Boolean = false, onFeedback: ((String) -> Unit)? = null) {
+        if (_isCheckingUpdate.value) return
+        viewModelScope.launch {
+            _isCheckingUpdate.value = true
+            if (force) _updateStatusMessage.value = "Checking GitHub Releases..."
+            when (val result = otaUpdateManager.checkForUpdate(force = force)) {
+                is OtaCheckResult.UpdateAvailable -> {
+                    _availableUpdate.value = result.release
+                    val msg = "Update v${result.release.versionName} is available!"
+                    _updateStatusMessage.value = msg
+                    onFeedback?.invoke(msg)
+                }
+                is OtaCheckResult.UpToDate -> {
+                    if (force) {
+                        val msg = "You're up to date (v${result.currentVersion})"
+                        _updateStatusMessage.value = msg
+                        onFeedback?.invoke(msg)
+                    }
+                }
+                is OtaCheckResult.Throttled -> {
+                    // Silent skip during 12-hour window
+                }
+                is OtaCheckResult.Error -> {
+                    if (force) {
+                        _updateStatusMessage.value = result.message
+                        onFeedback?.invoke(result.message)
+                    }
+                }
+            }
+            _isCheckingUpdate.value = false
+        }
+    }
+
+    fun downloadAndInstallUpdate(onError: (String) -> Unit = {}) {
+        val release = _availableUpdate.value ?: return
+        if (_isDownloadingUpdate.value) return
+        viewModelScope.launch {
+            _isDownloadingUpdate.value = true
+            _updateDownloadProgress.value = 0f
+            _updateStatusMessage.value = "Downloading v${release.versionName}..."
+            val downloadResult = otaUpdateManager.downloadApk(release.apkDownloadUrl) { progress ->
+                _updateDownloadProgress.value = progress
+            }
+            _isDownloadingUpdate.value = false
+
+            downloadResult.fold(
+                onSuccess = { apkFile ->
+                    _updateStatusMessage.value = "Launching Android installer..."
+                    val installResult = otaUpdateManager.launchApkInstaller(apkFile)
+                    installResult.onFailure { err ->
+                        val msg = err.message ?: "Unable to open installer"
+                        _updateStatusMessage.value = msg
+                        onError(msg)
+                    }
+                },
+                onFailure = { err ->
+                    val msg = err.message ?: "APK download failed"
+                    _updateStatusMessage.value = msg
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        if (!_isDownloadingUpdate.value) {
+            _availableUpdate.value = null
         }
     }
 
@@ -431,35 +721,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val log = dayLogs.find { it.slotId == slot.id }
 
                 val override = overrideList.find { it.slotId == slot.id && it.date == dateStr }
-            val activeSlot = if (override != null) {
-                slot.copy(
-                    startTime = override.newStartTime,
-                    endTime = override.newEndTime,
-                    roomNo = override.newRoomNo ?: slot.roomNo
+                val activeSlot = if (override != null) {
+                    slot.copy(
+                        startTime = override.newStartTime,
+                        endTime = override.newEndTime,
+                        roomNo = override.newRoomNo ?: slot.roomNo
+                    )
+                } else {
+                    slot
+                }
+
+                var isOngoing = false
+                if (isToday) {
+                    try {
+                        val sTime = LocalTime.parse(activeSlot.startTime)
+                        val eTime = LocalTime.parse(activeSlot.endTime)
+                        isOngoing = (nowTime.isAfter(sTime) || nowTime == sTime) && nowTime.isBefore(eTime)
+                    } catch (_: Exception) {}
+                }
+
+                SlotDisplayItem(
+                    slot = activeSlot,
+                    subject = sub,
+                    currentLog = log,
+                    isOngoing = isOngoing,
+                    isRescheduled = (override != null),
+                    originalTime = if (override != null) "${slot.startTime} - ${slot.endTime}" else null,
+                    isDateSpecificExtra = false,
+                    extraSlotId = null
                 )
-            } else {
-                slot
-            }
-
-            var isOngoing = false
-            if (isToday) {
-                try {
-                    val sTime = LocalTime.parse(activeSlot.startTime)
-                    val eTime = LocalTime.parse(activeSlot.endTime)
-                    isOngoing = (nowTime.isAfter(sTime) || nowTime == sTime) && nowTime.isBefore(eTime)
-                } catch (_: Exception) {}
-            }
-
-            SlotDisplayItem(
-                slot = activeSlot,
-                subject = sub,
-                currentLog = log,
-                isOngoing = isOngoing,
-                isRescheduled = (override != null),
-                originalTime = if (override != null) "${slot.startTime} - ${slot.endTime}" else null,
-                isDateSpecificExtra = false,
-                extraSlotId = null
-            )
             }
         }
 
@@ -475,7 +765,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 startTime = extra.startTime,
                 endTime = extra.endTime,
                 roomNo = "${extra.roomNo} • ${extra.tag}",
-                subjectId = extra.subjectId
+                subjectId = extra.subjectId,
+                semesterId = extra.semesterId
             )
 
             var isOngoing = false
@@ -644,6 +935,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isExtraClass: Boolean = false,
         notes: String? = null
     ) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             val isExtra = isExtraClass || slots.value.find { it.id == slotId }?.roomNo?.contains("Extra", ignoreCase = true) == true
             repository.setSlotAttendance(
@@ -653,7 +946,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 status = status,
                 isProxy = isProxy,
                 isExtraClass = isExtra,
-                notes = notes
+                notes = notes,
+                semesterId = semId
             )
             when (status) {
                 "attended" -> {
@@ -673,6 +967,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun undoSlotAttendance(slotId: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteSlotAttendance(_selectedDate.value, slotId)
             com.example.audio.CaliperSoundManager.playThud()
@@ -681,6 +976,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteAttendanceLog(log: AttendanceLogEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteAttendanceLog(log)
             com.example.audio.CaliperSoundManager.playThud()
@@ -689,6 +985,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteAttendanceLogById(logId: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteAttendanceLogById(logId)
             com.example.audio.CaliperSoundManager.playThud()
@@ -697,14 +994,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateTimetableSlot(slot: TimetableSlotEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
-            repository.updateTimetableSlot(slot)
+            repository.updateTimetableSlot(slot.copy(semesterId = activeSemesterId.value))
             com.example.audio.CaliperSoundManager.playSuccess()
             com.example.audio.CaliperHapticManager.successClick(getApplication())
         }
     }
 
     fun deleteTimetableSlot(slotId: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteTimetableSlot(slotId)
             com.example.audio.CaliperSoundManager.playThud()
@@ -758,36 +1057,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun markWholeDayPresent() {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             val items = currentDaySlots.value
             val slotEntities = items.map { it.slot }
-            repository.markWholeDayPresent(_selectedDate.value, slotEntities)
+            repository.markWholeDayPresent(_selectedDate.value, slotEntities, semesterId = semId)
         }
     }
 
     fun markMassBunkOrOff(category: String) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             val items = currentDaySlots.value
             val slotEntities = items.map { it.slot }
-            repository.markMassBunkOrOff(_selectedDate.value, slotEntities, category)
+            repository.markMassBunkOrOff(_selectedDate.value, slotEntities, category, semesterId = semId)
         }
     }
 
     fun applyHolidayToCurrentDay(title: String) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             val items = currentDaySlots.value
             val slotEntities = items.map { it.slot }
-            repository.markMassBunkOrOff(_selectedDate.value, slotEntities, "college_holiday")
+            repository.markMassBunkOrOff(_selectedDate.value, slotEntities, "college_holiday", semesterId = semId)
         }
     }
 
     fun logExtraClass(subjectId: Long, status: String, isProxy: Boolean, notes: String) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
-            repository.logAdHocExtraClass(_selectedDate.value, subjectId, status, isProxy, notes)
+            repository.logAdHocExtraClass(_selectedDate.value, subjectId, status, isProxy, notes, semesterId = semId)
         }
     }
 
     fun reconcileSubject(subjectId: Long, officialAttended: Int, officialTotal: Int) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             val currentStat = subjectStats.value.find { it.subject.id == subjectId }
             val currentAttended = currentStat?.attended ?: 0
@@ -797,48 +1105,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveSubject(subject: SubjectEntity) {
+        if (!guardWritable()) return
+        val scopedSubject = subject.copy(semesterId = activeSemesterId.value)
         viewModelScope.launch {
-            if (subject.id == 0L) {
-                repository.addSubject(subject)
+            if (scopedSubject.id == 0L) {
+                repository.addSubject(scopedSubject)
             } else {
-                repository.updateSubject(subject)
+                repository.updateSubject(scopedSubject)
             }
         }
     }
 
     fun saveSlot(slot: TimetableSlotEntity) {
+        if (!guardWritable()) return
+        val scopedSlot = slot.copy(semesterId = activeSemesterId.value)
         viewModelScope.launch {
-            if (slot.id == 0L) {
-                repository.addTimetableSlot(slot)
+            if (scopedSlot.id == 0L) {
+                repository.addTimetableSlot(scopedSlot)
             } else {
-                repository.updateTimetableSlot(slot)
+                repository.updateTimetableSlot(scopedSlot)
             }
         }
     }
 
     fun deleteSlot(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteTimetableSlotById(id)
         }
     }
 
     fun deleteSubject(subject: SubjectEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteSubject(subject)
         }
     }
 
     fun saveAssessment(assessment: AssessmentEntity) {
+        if (!guardWritable()) return
+        val scoped = assessment.copy(semesterId = activeSemesterId.value)
         viewModelScope.launch {
-            if (assessment.id == 0L) {
-                repository.addAssessment(assessment)
+            if (scoped.id == 0L) {
+                repository.addAssessment(scoped)
             } else {
-                repository.updateAssessment(assessment)
+                repository.updateAssessment(scoped)
             }
         }
     }
 
     fun updateAssessmentStatus(id: Long, newStatus: String) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             val current = assessments.value.find { it.id == id }
             if (current != null) {
@@ -848,12 +1165,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteAssessment(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteAssessment(id)
         }
     }
 
     fun saveMedicalLeave(leave: MedicalLeaveEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             if (leave.id == 0L) {
                 repository.addMedicalLeave(leave)
@@ -864,12 +1183,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteMedicalLeave(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteMedicalLeave(id)
         }
     }
 
     fun saveHolidayRange(range: HolidayRangeEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             if (range.id == 0L) {
                 repository.addHolidayRange(range)
@@ -880,6 +1201,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteHolidayRange(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteHolidayRange(id)
         }
@@ -888,6 +1210,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun addTask(task: AcademicTaskEntity) = saveTask(task)
 
     fun saveTask(task: AcademicTaskEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             if (task.id == 0L) {
                 repository.addTask(task)
@@ -898,12 +1221,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteTask(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteTask(id)
         }
     }
 
     fun toggleTaskCompleted(id: Long, completed: Boolean) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.toggleTaskCompleted(id, completed)
         }
@@ -915,6 +1240,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         subjectId: Long?,
         dueDateTimeMillis: Long
     ) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             val trimmed = title.trim()
             if (trimmed.isNotEmpty()) {
@@ -924,7 +1251,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         subjectId = subjectId,
                         dueDateTimeMillis = dueDateTimeMillis,
                         isCompleted = false,
-                        createdAt = System.currentTimeMillis()
+                        createdAt = System.currentTimeMillis(),
+                        semesterId = semId
                     )
                 )
                 com.example.audio.CaliperSoundManager.playSuccess()
@@ -934,6 +1262,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleTodoTaskCompleted(id: Long, completed: Boolean) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.toggleTodoTaskCompleted(id, completed)
             com.example.audio.CaliperSoundManager.playSnap()
@@ -942,6 +1271,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteTodoTask(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteTodoTask(id)
             com.example.audio.CaliperSoundManager.playThud()
@@ -1035,16 +1365,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun preloadDefaultData() {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
-            repository.preloadDefaultIertData()
+            repository.preloadDefaultIertData(semesterId = semId)
             scheduleAllLectureAlerts()
             scheduleAllDeadlineAlerts()
         }
     }
 
     fun clearAllData() {
+        if (!guardWritable()) return
         viewModelScope.launch {
-            repository.clearAllData()
+            repository.clearAllData(preserveSemesters = true)
         }
     }
 
@@ -1056,12 +1389,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearAttendanceLogs() {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.clearAttendanceLogs()
         }
     }
 
     fun addNote(title: String, content: String, category: String = "General", subjectCode: String? = null) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.addNote(
                 QuickNoteEntity(
@@ -1077,6 +1412,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateNote(note: QuickNoteEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.updateNote(note)
             com.example.audio.CaliperSoundManager.playSnap()
@@ -1085,6 +1421,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteNote(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteNote(id)
             com.example.audio.CaliperSoundManager.playThud()
@@ -1093,6 +1430,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleNotePin(id: Long, currentPinned: Boolean) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.toggleNotePin(id, !currentPinned)
             com.example.audio.CaliperSoundManager.playSnap()
@@ -1115,6 +1453,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         marksObtained: Double?,
         maxMarks: Double
     ) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             val record = TestRecordEntity(
                 subjectId = subjectId,
@@ -1131,6 +1470,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateTestRecordMarks(id: Long, marksObtained: Double?) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.updateTestRecordMarks(id, marksObtained)
             com.example.audio.CaliperSoundManager.playSuccess()
@@ -1146,6 +1486,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         roomNo: String,
         tag: String
     ) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             val insertedId = repository.addExtraSlot(
                 ExtraSlotEntity(
@@ -1154,7 +1496,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     startTime = startTime,
                     endTime = endTime,
                     roomNo = roomNo,
-                    tag = tag
+                    tag = tag,
+                    semesterId = semId
                 )
             )
             if (date == LocalDate.now().format(dateFormatter)) {
@@ -1174,6 +1517,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteDateSpecificExtraSlot(extraSlotId: Long, deleteAttendanceLog: Boolean = true) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteExtraSlotWithAttendanceOption(
                 extraSlotId = extraSlotId,
@@ -1193,6 +1537,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         newEndTime: String,
         newRoomNo: String? = null
     ) {
+        if (!guardWritable()) return
+        val semId = activeSemesterId.value
         viewModelScope.launch {
             repository.saveRescheduleOverride(
                 RescheduleOverrideEntity(
@@ -1200,7 +1546,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     date = date,
                     newStartTime = newStartTime,
                     newEndTime = newEndTime,
-                    newRoomNo = newRoomNo
+                    newRoomNo = newRoomNo,
+                    semesterId = semId
                 )
             )
             if (date == LocalDate.now().format(dateFormatter)) {
@@ -1221,6 +1568,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun revertSlotReschedule(slotId: Long, date: String) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteRescheduleOverride(slotId, date)
             com.example.audio.CaliperSoundManager.playSnap()
@@ -1229,6 +1577,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteTestRecord(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteTestRecord(id)
             com.example.audio.CaliperSoundManager.playPip()
@@ -1244,6 +1593,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         location: String = "",
         countsTowardsAttendance: Boolean = false
     ) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             val act = CustomActivityEntity(
                 date = date,
@@ -1261,6 +1611,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteCustomActivity(id: Long) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteCustomActivity(id)
             com.example.audio.CaliperSoundManager.playThud()
@@ -1269,6 +1620,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteSubjectCascade(subject: SubjectEntity) {
+        if (!guardWritable()) return
         viewModelScope.launch {
             repository.deleteSubjectCascade(subject)
             com.example.audio.CaliperSoundManager.playThud()

@@ -16,5 +16,6 @@ data class RescheduleOverrideEntity(
     val date: String, // "YYYY-MM-DD"
     val newStartTime: String, // "10:00"
     val newEndTime: String, // "11:00"
-    val newRoomNo: String? = null
+    val newRoomNo: String? = null,
+    val semesterId: Long = 1L
 )

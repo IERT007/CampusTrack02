@@ -15,5 +15,6 @@ data class TodoTaskEntity(
     val subjectId: Long? = null,
     val dueDateTimeMillis: Long,
     val isCompleted: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val semesterId: Long = 1L
 )

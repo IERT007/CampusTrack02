@@ -1,6 +1,8 @@
 package com.example.data.repository
 
 import android.content.Context
+import com.example.cloud.CloudSyncWorker
+import com.example.cloud.SupabaseSyncManager
 import com.example.data.local.AppDatabase
 import com.example.data.local.entity.*
 import com.example.data.sample.IertDefaultData
@@ -19,6 +21,8 @@ class CampusRepository(
 
     constructor(db: AppDatabase) : this(null, db)
 
+    val allSemesters: Flow<List<SemesterEntity>> = db.semesterDao().getAllSemesters()
+    val activeSemester: Flow<SemesterEntity?> = db.semesterDao().getActiveSemester()
     val allSubjects: Flow<List<SubjectEntity>> = db.subjectDao().getAllSubjects()
     val allSlots: Flow<List<TimetableSlotEntity>> = db.timetableSlotDao().getAllSlots()
     val allLogs: Flow<List<AttendanceLogEntity>> = db.attendanceLogDao().getAllLogs()
@@ -32,6 +36,62 @@ class CampusRepository(
     val allExtraSlots: Flow<List<ExtraSlotEntity>> = db.extraSlotDao().getAllExtraSlots()
     val allOverrides: Flow<List<RescheduleOverrideEntity>> = db.rescheduleOverrideDao().getAllOverrides()
     val allTodoTasks: Flow<List<TodoTaskEntity>> = db.todoDao().getAllTodoTasks()
+
+    // --- Multi-Semester Profile Operations ---
+    suspend fun ensureDefaultSemesterExists() = withContext(Dispatchers.IO) {
+        val existing = db.semesterDao().getAllSemestersDirect()
+        if (existing.isEmpty()) {
+            db.semesterDao().insertSemester(
+                SemesterEntity(
+                    id = 1L,
+                    name = "Semester 3 • Tool Engg",
+                    startDate = "2026-09-19",
+                    endDate = "2026-12-15",
+                    isActive = true,
+                    isArchived = false
+                )
+            )
+        } else if (existing.none { it.isActive }) {
+            db.semesterDao().switchActiveSemester(existing.first().id)
+        }
+    }
+
+    suspend fun createSemester(
+        name: String,
+        startDate: String,
+        endDate: String,
+        activate: Boolean = true
+    ): Long = withContext(Dispatchers.IO) {
+        val newId = db.semesterDao().insertSemester(
+            SemesterEntity(
+                name = name.trim(),
+                startDate = startDate,
+                endDate = endDate,
+                isActive = false,
+                isArchived = false
+            )
+        )
+        if (activate) {
+            db.semesterDao().switchActiveSemester(newId)
+        }
+        triggerSilentAutoBackup()
+        newId
+    }
+
+    suspend fun switchActiveSemester(semesterId: Long) = withContext(Dispatchers.IO) {
+        db.semesterDao().switchActiveSemester(semesterId)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun setSemesterArchived(semesterId: Long, isArchived: Boolean) = withContext(Dispatchers.IO) {
+        db.semesterDao().setSemesterArchived(semesterId, isArchived)
+        triggerSilentAutoBackup()
+    }
+
+    suspend fun updateSemesterDates(semesterId: Long, startDate: String, endDate: String) = withContext(Dispatchers.IO) {
+        db.semesterDao().updateSemesterDates(semesterId, startDate, endDate)
+        triggerSilentAutoBackup()
+    }
 
     fun getExtraSlotsForDate(date: String): Flow<List<ExtraSlotEntity>> = db.extraSlotDao().getExtraSlotsForDate(date)
     fun getOverridesForDate(date: String): Flow<List<RescheduleOverrideEntity>> = db.rescheduleOverrideDao().getOverridesForDate(date)
@@ -59,7 +119,8 @@ class CampusRepository(
         status: String,
         isProxy: Boolean = false,
         isExtraClass: Boolean = false,
-        notes: String? = null
+        notes: String? = null,
+        semesterId: Long = 1L
     ) = withContext(Dispatchers.IO) {
         if (slotId != null) {
             db.attendanceLogDao().deleteLogForSlot(date, slotId)
@@ -72,7 +133,8 @@ class CampusRepository(
             isProxy = isProxy,
             isExtraClass = isExtraClass,
             notes = notes,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            semesterId = semesterId
         )
         db.attendanceLogDao().insertLog(entity)
         triggerSilentAutoBackup()
@@ -93,7 +155,11 @@ class CampusRepository(
         triggerSilentAutoBackup()
     }
 
-    suspend fun markWholeDayPresent(date: String, slots: List<TimetableSlotEntity>) = withContext(Dispatchers.IO) {
+    suspend fun markWholeDayPresent(
+        date: String,
+        slots: List<TimetableSlotEntity>,
+        semesterId: Long = 1L
+    ) = withContext(Dispatchers.IO) {
         db.dailyDayStatusDao().insertOrUpdate(
             DailyDayStatusEntity(date = date, wentToCollege = true, leaveCategory = "none", notes = "Whole day marked present")
         )
@@ -108,7 +174,8 @@ class CampusRepository(
                     isProxy = false,
                     isExtraClass = false,
                     notes = "Auto bulk mark",
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    semesterId = semesterId
                 )
             )
         }
@@ -118,7 +185,8 @@ class CampusRepository(
     suspend fun markMassBunkOrOff(
         date: String,
         slots: List<TimetableSlotEntity>,
-        category: String // "college_holiday", "mass_bunk", "strike"
+        category: String, // "college_holiday", "mass_bunk", "strike"
+        semesterId: Long = 1L
     ) = withContext(Dispatchers.IO) {
         val statusString = if (category == "mass_bunk") "bunked" else "college_off"
         db.dailyDayStatusDao().insertOrUpdate(
@@ -140,7 +208,8 @@ class CampusRepository(
                     isProxy = false,
                     isExtraClass = false,
                     notes = category,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    semesterId = semesterId
                 )
             )
         }
@@ -152,7 +221,8 @@ class CampusRepository(
         subjectId: Long,
         status: String,
         isProxy: Boolean,
-        notes: String
+        notes: String,
+        semesterId: Long = 1L
     ) = withContext(Dispatchers.IO) {
         val entity = AttendanceLogEntity(
             date = date,
@@ -162,7 +232,8 @@ class CampusRepository(
             isProxy = isProxy,
             isExtraClass = true,
             notes = notes,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            semesterId = semesterId
         )
         db.attendanceLogDao().insertLog(entity)
         triggerSilentAutoBackup()
@@ -443,19 +514,20 @@ class CampusRepository(
     }
 
     suspend fun checkAndInitializeDefaultData() = withContext(Dispatchers.IO) {
-        // App starts fresh with 0 historical logs, 0 attendance percentage, 0 fake assessments per specification
+        ensureDefaultSemesterExists()
     }
 
-    suspend fun preloadDefaultIertData() = withContext(Dispatchers.IO) {
-        clearAllData()
+    suspend fun preloadDefaultIertData(semesterId: Long = 1L) = withContext(Dispatchers.IO) {
+        ensureDefaultSemesterExists()
+        clearAllData(preserveSemesters = true)
 
-        db.subjectDao().insertSubjects(IertDefaultData.defaultSubjects)
-        db.timetableSlotDao().insertSlots(IertDefaultData.createDefaultSlots())
-        db.assessmentDao().insertAssessments(IertDefaultData.createDefaultAssessments())
+        db.subjectDao().insertSubjects(IertDefaultData.defaultSubjects.map { it.copy(semesterId = semesterId) })
+        db.timetableSlotDao().insertSlots(IertDefaultData.createDefaultSlots().map { it.copy(semesterId = semesterId) })
+        db.assessmentDao().insertAssessments(IertDefaultData.createDefaultAssessments().map { it.copy(semesterId = semesterId) })
         triggerSilentAutoBackup()
     }
 
-    suspend fun clearAllData() = withContext(Dispatchers.IO) {
+    suspend fun clearAllData(preserveSemesters: Boolean = false) = withContext(Dispatchers.IO) {
         db.subjectDao().deleteAllSubjects()
         db.timetableSlotDao().deleteAllSlots()
         db.attendanceLogDao().deleteAllLogs()
@@ -465,10 +537,16 @@ class CampusRepository(
         db.holidayRangeDao().deleteAllHolidayRanges()
         db.academicTaskDao().deleteAllTasks()
         db.todoDao().deleteAllTodoTasks()
+        db.extraSlotDao().deleteAllExtraSlots()
+        db.rescheduleOverrideDao().deleteAllOverrides()
+        db.testRecordDao().deleteAllTestRecords()
+        if (!preserveSemesters) {
+            db.semesterDao().deleteAllSemesters()
+        }
     }
 
-    // --- Silent Auto-Backup Engine (context.filesDir/caliper_vault_snapshot.json) ---
-    suspend fun triggerSilentAutoBackup() = withContext(Dispatchers.IO) {
+    // --- Silent Auto-Backup Engine (local vault + debounced Supabase WorkManager Cloud Sync) ---
+    suspend fun triggerSilentAutoBackup(enqueueCloudSync: Boolean = true) = withContext(Dispatchers.IO) {
         val ctx = context ?: return@withContext
         try {
             val jsonStr = exportToJson()
@@ -479,6 +557,14 @@ class CampusRepository(
                 tempFile.renameTo(vaultFile)
             }
         } catch (_: Exception) {}
+
+        if (enqueueCloudSync) {
+            try {
+                if (SupabaseSyncManager(ctx).isConfigured()) {
+                    CloudSyncWorker.enqueueDebouncedSync(ctx)
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     suspend fun restoreFromAutoVault(): Boolean = withContext(Dispatchers.IO) {
@@ -503,12 +589,27 @@ class CampusRepository(
         return (vaultFile.exists() && vaultFile.length() > 0) || (legacyVaultFile.exists() && legacyVaultFile.length() > 0)
     }
 
-    // --- JSON Backup & Restore Engine (Local File Storage) ---
+    // --- JSON Backup & Restore Engine (Local File Storage & Supabase Cloud Vault) ---
     suspend fun exportToJson(): String = withContext(Dispatchers.IO) {
         val root = JSONObject()
         root.put("app", "Caliper")
-        root.put("version", 3)
+        root.put("version", 4)
         root.put("timestamp", System.currentTimeMillis())
+
+        // 0. Semesters
+        val semestersList = db.semesterDao().getAllSemestersDirect()
+        val semestersArray = JSONArray()
+        for (sem in semestersList) {
+            val obj = JSONObject()
+            obj.put("id", sem.id)
+            obj.put("name", sem.name)
+            obj.put("startDate", sem.startDate)
+            obj.put("endDate", sem.endDate)
+            obj.put("isActive", sem.isActive)
+            obj.put("isArchived", sem.isArchived)
+            semestersArray.put(obj)
+        }
+        root.put("semesters", semestersArray)
 
         // 1. Subjects
         val subjectsList = db.subjectDao().getAllSubjects().first()
@@ -524,6 +625,7 @@ class CampusRepository(
             obj.put("colorHex", s.colorHex)
             obj.put("reconciledAttendedOffset", s.reconciledAttendedOffset)
             obj.put("reconciledTotalOffset", s.reconciledTotalOffset)
+            obj.put("semesterId", s.semesterId)
             subjectsArray.put(obj)
         }
         root.put("subjects", subjectsArray)
@@ -539,6 +641,7 @@ class CampusRepository(
             obj.put("endTime", slot.endTime)
             obj.put("roomNo", slot.roomNo)
             obj.put("subjectId", slot.subjectId)
+            obj.put("semesterId", slot.semesterId)
             slotsArray.put(obj)
         }
         root.put("timetable_slots", slotsArray)
@@ -557,6 +660,7 @@ class CampusRepository(
             obj.put("isExtraClass", log.isExtraClass)
             obj.put("notes", log.notes ?: JSONObject.NULL)
             obj.put("timestamp", log.timestamp)
+            obj.put("semesterId", log.semesterId)
             logsArray.put(obj)
         }
         root.put("attendance_logs", logsArray)
@@ -577,6 +681,7 @@ class CampusRepository(
             obj.put("dueDate", a.dueDate)
             obj.put("dueTime", a.dueTime)
             obj.put("syllabusCoveragePercent", a.syllabusCoveragePercent)
+            obj.put("semesterId", a.semesterId)
             assessmentsArray.put(obj)
         }
         root.put("assessments", assessmentsArray)
@@ -656,21 +761,96 @@ class CampusRepository(
             obj.put("dueDateTimeMillis", todo.dueDateTimeMillis)
             obj.put("isCompleted", todo.isCompleted)
             obj.put("createdAt", todo.createdAt)
+            obj.put("semesterId", todo.semesterId)
             todoArray.put(obj)
         }
         root.put("todo_tasks", todoArray)
 
+        // 10. Date-Specific Extra Slots
+        val extraSlotsList = db.extraSlotDao().getAllExtraSlots().first()
+        val extraSlotsArray = JSONArray()
+        for (ex in extraSlotsList) {
+            val obj = JSONObject()
+            obj.put("id", ex.id)
+            obj.put("date", ex.date)
+            obj.put("subjectId", ex.subjectId)
+            obj.put("startTime", ex.startTime)
+            obj.put("endTime", ex.endTime)
+            obj.put("roomNo", ex.roomNo)
+            obj.put("tag", ex.tag)
+            obj.put("semesterId", ex.semesterId)
+            extraSlotsArray.put(obj)
+        }
+        root.put("extra_slots", extraSlotsArray)
+
+        // 11. Single-Day Reschedule Overrides
+        val overridesList = db.rescheduleOverrideDao().getAllOverrides().first()
+        val overridesArray = JSONArray()
+        for (ov in overridesList) {
+            val obj = JSONObject()
+            obj.put("id", ov.id)
+            obj.put("slotId", ov.slotId)
+            obj.put("date", ov.date)
+            obj.put("newStartTime", ov.newStartTime)
+            obj.put("newEndTime", ov.newEndTime)
+            obj.put("newRoomNo", ov.newRoomNo ?: JSONObject.NULL)
+            obj.put("semesterId", ov.semesterId)
+            overridesArray.put(obj)
+        }
+        root.put("reschedule_overrides", overridesArray)
+
+        // 12. Test Records
+        val testsList = db.testRecordDao().getAllTestRecords().first()
+        val testsArray = JSONArray()
+        for (tr in testsList) {
+            val obj = JSONObject()
+            obj.put("id", tr.id)
+            obj.put("subjectId", tr.subjectId)
+            obj.put("date", tr.date)
+            obj.put("slotId", tr.slotId ?: JSONObject.NULL)
+            obj.put("testName", tr.testName)
+            obj.put("marksObtained", tr.marksObtained ?: JSONObject.NULL)
+            obj.put("maxMarks", tr.maxMarks)
+            obj.put("timestamp", tr.timestamp)
+            testsArray.put(obj)
+        }
+        root.put("test_records", testsArray)
+
         root.toString(2)
     }
 
-    suspend fun importFromJson(jsonString: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun importFromJson(
+        jsonString: String,
+        triggerCloudSync: Boolean = true
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
             val root = JSONObject(jsonString)
-            if (!root.has("subjects") && !root.has("timetable_slots")) {
+            if (!root.has("subjects") && !root.has("timetable_slots") && !root.has("semesters")) {
                 return@withContext false
             }
 
-            clearAllData()
+            clearAllData(preserveSemesters = false)
+
+            // 0. Semesters
+            if (root.has("semesters")) {
+                val array = root.getJSONArray("semesters")
+                val list = mutableListOf<SemesterEntity>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    list.add(
+                        SemesterEntity(
+                            id = obj.optLong("id", 0L),
+                            name = obj.optString("name", "Semester 3 • Tool Engg"),
+                            startDate = obj.optString("startDate", "2026-09-19"),
+                            endDate = obj.optString("endDate", "2026-12-15"),
+                            isActive = obj.optBoolean("isActive", i == 0),
+                            isArchived = obj.optBoolean("isArchived", false)
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) db.semesterDao().insertSemesters(list)
+            }
+            ensureDefaultSemesterExists()
 
             // 1. Subjects
             if (root.has("subjects")) {
@@ -688,7 +868,8 @@ class CampusRepository(
                             strictness = obj.optString("strictness", "moderate"),
                             colorHex = obj.optString("colorHex", "#00E5FF"),
                             reconciledAttendedOffset = obj.optInt("reconciledAttendedOffset", 0),
-                            reconciledTotalOffset = obj.optInt("reconciledTotalOffset", 0)
+                            reconciledTotalOffset = obj.optInt("reconciledTotalOffset", 0),
+                            semesterId = obj.optLong("semesterId", 1L)
                         )
                     )
                 }
@@ -708,7 +889,8 @@ class CampusRepository(
                             startTime = obj.getString("startTime"),
                             endTime = obj.getString("endTime"),
                             roomNo = obj.getString("roomNo"),
-                            subjectId = obj.getLong("subjectId")
+                            subjectId = obj.getLong("subjectId"),
+                            semesterId = obj.optLong("semesterId", 1L)
                         )
                     )
                 }
@@ -731,7 +913,8 @@ class CampusRepository(
                             isProxy = obj.optBoolean("isProxy", false),
                             isExtraClass = obj.optBoolean("isExtraClass", false),
                             notes = if (obj.isNull("notes")) null else obj.optString("notes"),
-                            timestamp = obj.optLong("timestamp", System.currentTimeMillis())
+                            timestamp = obj.optLong("timestamp", System.currentTimeMillis()),
+                            semesterId = obj.optLong("semesterId", 1L)
                         )
                     )
                 }
@@ -756,7 +939,8 @@ class CampusRepository(
                             missedReason = if (obj.isNull("missedReason")) null else obj.optString("missedReason"),
                             dueDate = obj.getString("dueDate"),
                             dueTime = obj.optString("dueTime", "17:00"),
-                            syllabusCoveragePercent = obj.optInt("syllabusCoveragePercent", 0)
+                            syllabusCoveragePercent = obj.optInt("syllabusCoveragePercent", 0),
+                            semesterId = obj.optLong("semesterId", 1L)
                         )
                     )
                 }
@@ -856,14 +1040,80 @@ class CampusRepository(
                             subjectId = if (obj.isNull("subjectId")) null else obj.optLong("subjectId"),
                             dueDateTimeMillis = obj.optLong("dueDateTimeMillis", System.currentTimeMillis()),
                             isCompleted = obj.optBoolean("isCompleted", false),
-                            createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                            createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
+                            semesterId = obj.optLong("semesterId", 1L)
                         )
                     )
                 }
                 if (list.isNotEmpty()) db.todoDao().insertTodoTasks(list)
             }
 
-            triggerSilentAutoBackup()
+            // 10. Extra Slots
+            if (root.has("extra_slots")) {
+                val array = root.getJSONArray("extra_slots")
+                val list = mutableListOf<ExtraSlotEntity>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    list.add(
+                        ExtraSlotEntity(
+                            id = obj.optLong("id", 0L),
+                            date = obj.getString("date"),
+                            subjectId = obj.getLong("subjectId"),
+                            startTime = obj.getString("startTime"),
+                            endTime = obj.getString("endTime"),
+                            roomNo = obj.optString("roomNo", "Room"),
+                            tag = obj.optString("tag", "Extra Class"),
+                            semesterId = obj.optLong("semesterId", 1L)
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) db.extraSlotDao().insertExtraSlots(list)
+            }
+
+            // 11. Reschedule Overrides
+            if (root.has("reschedule_overrides")) {
+                val array = root.getJSONArray("reschedule_overrides")
+                val list = mutableListOf<RescheduleOverrideEntity>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    list.add(
+                        RescheduleOverrideEntity(
+                            id = obj.optLong("id", 0L),
+                            slotId = obj.getLong("slotId"),
+                            date = obj.getString("date"),
+                            newStartTime = obj.getString("newStartTime"),
+                            newEndTime = obj.getString("newEndTime"),
+                            newRoomNo = if (obj.isNull("newRoomNo")) null else obj.optString("newRoomNo"),
+                            semesterId = obj.optLong("semesterId", 1L)
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) db.rescheduleOverrideDao().insertOverrides(list)
+            }
+
+            // 12. Test Records
+            if (root.has("test_records")) {
+                val array = root.getJSONArray("test_records")
+                val list = mutableListOf<TestRecordEntity>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    list.add(
+                        TestRecordEntity(
+                            id = obj.optLong("id", 0L),
+                            subjectId = obj.getLong("subjectId"),
+                            date = obj.getString("date"),
+                            slotId = if (obj.isNull("slotId")) null else obj.optLong("slotId"),
+                            testName = obj.optString("testName", "Class Test"),
+                            marksObtained = if (obj.isNull("marksObtained")) null else obj.optDouble("marksObtained"),
+                            maxMarks = obj.optDouble("maxMarks", 20.0),
+                            timestamp = obj.optLong("timestamp", System.currentTimeMillis())
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) db.testRecordDao().insertTestRecords(list)
+            }
+
+            triggerSilentAutoBackup(enqueueCloudSync = triggerCloudSync)
             true
         } catch (_: Exception) {
             false

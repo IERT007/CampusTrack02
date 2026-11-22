@@ -22,6 +22,9 @@ interface ExtraSlotDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExtraSlot(slot: ExtraSlotEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExtraSlots(slots: List<ExtraSlotEntity>)
+
     @Update
     suspend fun updateExtraSlot(slot: ExtraSlotEntity)
 
@@ -54,6 +57,9 @@ interface RescheduleOverrideDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOverride(override: RescheduleOverrideEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOverrides(overrides: List<RescheduleOverrideEntity>)
 
     @Update
     suspend fun updateOverride(override: RescheduleOverrideEntity)

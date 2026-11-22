@@ -264,6 +264,9 @@ interface TestRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTestRecord(testRecord: TestRecordEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTestRecords(testRecords: List<TestRecordEntity>)
+
     @Update
     suspend fun updateTestRecord(testRecord: TestRecordEntity)
 
@@ -278,6 +281,9 @@ interface TestRecordDao {
 
     @Query("DELETE FROM test_records WHERE subjectId = :subjectId")
     suspend fun deleteTestRecordsForSubject(subjectId: Long)
+
+    @Query("DELETE FROM test_records")
+    suspend fun deleteAllTestRecords()
 }
 
 @Dao

@@ -24,9 +24,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import com.example.audio.CaliperHapticManager
 import com.example.audio.CaliperSoundManager
 import com.example.ui.components.MainTopBar
+import com.example.ui.dialogs.OtaUpdateDialog
 import com.example.ui.navigation.AppTab
 import com.example.ui.screens.audit.AuditScreen
 import com.example.ui.screens.settings.SettingsScreen
@@ -86,6 +90,9 @@ fun MainScaffold(
                     )
             )
 
+            val activeSemester by viewModel.activeSemester.collectAsState()
+            val isArchived by viewModel.isActiveSemesterArchived.collectAsState()
+
             Column(modifier = Modifier.fillMaxSize()) {
                 MainTopBar(
                     viewModel = viewModel,
@@ -95,6 +102,44 @@ fun MainScaffold(
                         showSettingsScreen = true
                     }
                 )
+
+                if (isArchived) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.warnAmber.copy(alpha = 0.14f))
+                            .border(0.5.dp, colors.warnAmber.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
+                            .clickable { showSettingsScreen = true }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .testTag("archived_readonly_banner"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Archived read-only",
+                                tint = colors.warnAmber,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "${activeSemester?.name ?: "Semester"} • ARCHIVED (READ-ONLY)",
+                                color = colors.warnAmber,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = "SWITCH",
+                            color = colors.primaryAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
 
                 Box(
                     modifier = Modifier
@@ -137,6 +182,8 @@ fun MainScaffold(
             )
         }
     }
+
+    OtaUpdateDialog(viewModel = viewModel)
 }
 
 /**

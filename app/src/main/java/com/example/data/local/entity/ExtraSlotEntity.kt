@@ -17,5 +17,6 @@ data class ExtraSlotEntity(
     val startTime: String, // "09:00"
     val endTime: String, // "10:00"
     val roomNo: String, // "LT-4", "Room 301"
-    val tag: String = "Extra Class" // "Extra Class", "Theory", "Lab", "Tutorial"
+    val tag: String = "Extra Class", // "Extra Class", "Theory", "Lab", "Tutorial"
+    val semesterId: Long = 1L
 )
