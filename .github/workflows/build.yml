@@ -39,9 +39,9 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > "${{ github.workspace }}/caliper-release.jks"
+          echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > "${{ github.workspace }}/caliper-release.jks"
 
-      - name: Build Signed Release APK
+      - name: Build Release APK
         env:
           KEYSTORE_FILE: ${{ github.workspace }}/caliper-release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -52,13 +52,35 @@ jobs:
         run: |
           gradle assembleRelease
 
-      - name: Extract Version & Prepare APK
+      - name: Align, Sign & Verify APK
         id: meta
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "2.0.0")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          ls -la app/build/outputs/apk/release
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          cp "$APK_PATH" "Caliper-v${VERSION}-release.apk"
+
+          SDK_DIR="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          BUILD_TOOLS=$(ls -d "$SDK_DIR/build-tools/"* | sort -V | tail -n 1)
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_PATH" aligned.apk
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "${{ github.workspace }}/caliper-release.jks" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "env:KEYSTORE_PASSWORD" \
+            --key-pass "env:KEY_PASSWORD" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "Caliper-v${VERSION}-release.apk" \
+            aligned.apk
+
+          "$BUILD_TOOLS/apksigner" verify --verbose "Caliper-v${VERSION}-release.apk"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
